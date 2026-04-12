@@ -19,7 +19,8 @@ public class RtsCharacter : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "State"
             }
         );
     }

@@ -21,6 +21,8 @@ struct FRtsCharacterInfo
     FText Name = FText::FromString("Unnamed Character");
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FSlateBrush Portrait = {};
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TSoftObjectPtr<class AState> StateOfBirth;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRtsCharacterEvent);
