@@ -4,6 +4,8 @@
 #include "Modules/ModuleManager.h"
 #include "RtsCharacter.generated.h"
 
+class USelfRole;
+
 class FRtsCharacterModule : public IModuleInterface
 {
 public:
@@ -25,6 +27,8 @@ struct FRtsCharacterInfo
     TSoftObjectPtr<class AState> StateOfBirth;
 };
 
+class UCharacterRole;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRtsCharacterEvent);
 
 UCLASS(Blueprintable)
@@ -36,12 +40,22 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FRtsCharacterEvent OnCharacterInfoChanged;
+
+    UPROPERTY(BlueprintAssignable)
+    FRtsCharacterEvent OnRolesChanged;
     
 private:
     UPROPERTY(EditAnywhere, Replicated, meta=(AllowPrivateAccess), ReplicatedUsing=OnRep_CharacterInfo, BlueprintGetter=GetCharacterInfo, BlueprintSetter=SetCharacterInfo)
     FRtsCharacterInfo CharacterInfo;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Roles, Instanced)
+    TArray<UCharacterRole*> Roles;
     
 public:
+    
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+    
     UFUNCTION(BlueprintGetter)
     const FRtsCharacterInfo& GetCharacterInfo() const
     {
@@ -59,6 +73,18 @@ public:
     FORCEINLINE void OnRep_CharacterInfo()
     {
         OnCharacterInfoChanged.Broadcast();
+    }
+    
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    void AddRole(UCharacterRole* InRole);
+    
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    void RemoveRole(UCharacterRole* InRole);
+    
+    UFUNCTION()
+    FORCEINLINE void OnRep_Roles()
+    {
+        OnRolesChanged.Broadcast();
     }
     
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;

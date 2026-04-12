@@ -1,0 +1,17 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "CharacterRole.h"
+
+UCharacterRole::UCharacterRole()
+{
+}
+
+void UCharacterRole::PlayCharacter_Implementation(ARtsCharacter* InCharacter)
+{
+}
+
+void UCharacterRole::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
