@@ -11,7 +11,6 @@ public:
     virtual void ShutdownModule() override;
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRtsCharacterEvent);
 
 USTRUCT(BlueprintType)
 struct FRtsCharacterInfo
@@ -23,6 +22,8 @@ struct FRtsCharacterInfo
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FSlateBrush Portrait = {};
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRtsCharacterEvent);
 
 UCLASS(Blueprintable)
 class RTSCHARACTER_API ARtsCharacter : public AActor
@@ -50,14 +51,12 @@ public:
     {
         CharacterInfo = NewCharacterInfo;
         OnCharacterInfoChanged.Broadcast();
-        UE_LOG(LogTemp, Warning, TEXT("Replicated %i"), (int32) HasAuthority());
     }
     
     UFUNCTION()
     FORCEINLINE void OnRep_CharacterInfo()
     {
         OnCharacterInfoChanged.Broadcast();
-        UE_LOG(LogTemp, Warning, TEXT("Replicated %i"), (int32) HasAuthority());
     }
     
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
