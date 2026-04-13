@@ -6,6 +6,7 @@
 #include "UObject/Object.h"
 #include "CharacterAction.generated.h"
 
+class ARtsCharacter;
 /**
  * 
  */
@@ -13,4 +14,10 @@ UCLASS(Abstract, Blueprintable)
 class RTSCHARACTER_API UCharacterAction : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
+public:
+	UCharacterAction();
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void Click(ARtsCharacter* InWithCharacterContext, APlayerController* InByPlayerController);
+	
 };
