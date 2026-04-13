@@ -44,9 +44,12 @@ void ARtsCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 	
-	for (UCharacterRole* T : Roles)
+	if (EndPlayReason == EEndPlayReason::Destroyed)
 	{
-		RemoveRole(T);
+		for (UCharacterRole* T : Roles)
+		{
+			RemoveRole(T);
+		}
 	}
 }
 
