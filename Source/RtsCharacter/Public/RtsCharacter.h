@@ -48,7 +48,7 @@ private:
     UPROPERTY(EditAnywhere, Replicated, meta=(AllowPrivateAccess), ReplicatedUsing=OnRep_CharacterInfo, BlueprintGetter=GetCharacterInfo, BlueprintSetter=SetCharacterInfo)
     FRtsCharacterInfo CharacterInfo;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Roles, Instanced)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Roles, Instanced, BlueprintGetter=GetRoles)
     TArray<UCharacterRole*> Roles;
     
 public:
@@ -73,6 +73,12 @@ public:
     FORCEINLINE void OnRep_CharacterInfo()
     {
         OnCharacterInfoChanged.Broadcast();
+    }
+    
+    UFUNCTION(BlueprintGetter)
+    const TArray<UCharacterRole*>& GetRoles() const
+    {
+        return Roles;
     }
     
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
