@@ -8,6 +8,8 @@
 
 class ARtsCharacter;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCharacterRoleEvent);
+
 /**
  * 
  */
@@ -17,11 +19,37 @@ class RTSCHARACTER_API UCharacterRole : public UObject
 	GENERATED_BODY()
 public:
 	UCharacterRole();
+
+	UPROPERTY(BlueprintAssignable)
+	FCharacterRoleEvent OnChanged;
+	
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintGetter=GetActions, Replicated, ReplicatedUsing=OnRep_Actions)
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetRoleName, Replicated, ReplicatedUsing=OnRep_Fields)
+	FText RoleName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetIcon, Replicated, ReplicatedUsing=OnRep_Fields)
+	FSlateBrush Icon;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintGetter=GetActions, Replicated, ReplicatedUsing=OnRep_Fields)
 	TArray<class UCharacterAction*> Actions;
 	
 public:
+	
+	UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
+	FORCEINLINE void SetRoleName(const FText& NewRoleName)
+	{
+		RoleName = NewRoleName;
+		OnChanged.Broadcast();
+	}
+	
+	UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
+	FORCEINLINE void SetIcon(const FSlateBrush& NewIcon)
+	{
+		Icon = NewIcon;
+		OnChanged.Broadcast();
+	}
+	
 	UFUNCTION(BlueprintGetter)
 	const TArray<UCharacterAction*>& GetActions() const { return Actions;}
 	
@@ -32,7 +60,7 @@ public:
 		ensureMsgf(!Actions.Contains(InAction), TEXT("Trying to add action that already exists"));
 		
 		Actions.Add(InAction);
-		UE_LOG(LogTemp, Warning, TEXT("Added Action"));
+		OnChanged.Broadcast();
 	}
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
@@ -42,7 +70,7 @@ public:
 		ensureMsgf(Actions.Contains(InAction), TEXT("Trying to add action that already exists"));
 		
 		Actions.Remove(InAction);
-		UE_LOG(LogTemp, Warning, TEXT("Removed Action"));
+		OnChanged.Broadcast();
 	}
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
@@ -54,9 +82,9 @@ public:
 
 private:
 	UFUNCTION()
-	FORCEINLINE void OnRep_Actions()
+	FORCEINLINE void OnRep_Fields()
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ActionsReplicated"));
+		OnChanged.Broadcast();
 	}
 	
 };
