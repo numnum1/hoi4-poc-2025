@@ -16,4 +16,6 @@ class BASICCHARACTERACTIONS_API UFoundOrganisationAction : public UCharacterActi
 	GENERATED_BODY()
 public:
 	UFoundOrganisationAction();
+	
+	virtual void Click_Implementation(APlayerController* InPlayer, AHUD* InHUD, ARtsCharacter* InCharacter, UObject* InRoleContext) override;
 };

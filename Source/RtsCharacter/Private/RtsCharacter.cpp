@@ -36,6 +36,7 @@ void ARtsCharacter::BeginPlay()
 	for (UCharacterRole* T : Roles)
 	{
 		verify(T);
+		T->RegisterAddedToCharacter(this);
 		AddReplicatedSubObject(T);
 	}
 }
@@ -59,8 +60,9 @@ void ARtsCharacter::AddRole(UCharacterRole* InRole)
 	ensureMsgf(!Roles.Contains(InRole), TEXT("Adding role that is already registered in character %s"), *CharacterInfo.Name.ToString());
 	
 	Roles.AddUnique(InRole);
+	InRole->RegisterAddedToCharacter(this);
 	AddReplicatedSubObject(InRole);
-	OnRolesChanged.Broadcast();
+	OnRolesChanged.Broadcast(this);
 }
 
 void ARtsCharacter::RemoveRole(UCharacterRole* InRole)
@@ -69,8 +71,9 @@ void ARtsCharacter::RemoveRole(UCharacterRole* InRole)
 	ensureMsgf(Roles.Contains(InRole), TEXT("Removing role that is not registered in character %s"), *CharacterInfo.Name.ToString());
 	
 	Roles.Remove(InRole);
+	InRole->RegisterRemoveFromCharacter(this);
 	RemoveReplicatedSubObject(InRole);
-	OnRolesChanged.Broadcast();
+	OnRolesChanged.Broadcast(this);
 }
 
 void ARtsCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

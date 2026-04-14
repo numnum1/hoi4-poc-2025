@@ -28,8 +28,9 @@ struct FRtsCharacterInfo
 };
 
 class UCharacterRole;
+class ARtsCharacter;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRtsCharacterEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRtsCharacterEvent, ARtsCharacter*, InCharacter);
 
 UCLASS(Blueprintable)
 class RTSCHARACTER_API ARtsCharacter : public AActor
@@ -66,13 +67,13 @@ public:
     FORCEINLINE void SetCharacterInfo(const FRtsCharacterInfo& NewCharacterInfo)
     {
         CharacterInfo = NewCharacterInfo;
-        OnCharacterInfoChanged.Broadcast();
+        OnCharacterInfoChanged.Broadcast(this);
     }
     
     UFUNCTION()
     FORCEINLINE void OnRep_CharacterInfo()
     {
-        OnCharacterInfoChanged.Broadcast();
+        OnCharacterInfoChanged.Broadcast(this);
     }
     
     UFUNCTION(BlueprintGetter)
@@ -90,7 +91,7 @@ public:
     UFUNCTION()
     FORCEINLINE void OnRep_Roles()
     {
-        OnRolesChanged.Broadcast();
+        OnRolesChanged.Broadcast(this);
     }
     
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;

@@ -36,6 +36,9 @@ private:
 	
 public:
 	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	UObject* GetRoleContext() const;
+	
 	UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
 	FORCEINLINE void SetRoleName(const FText& NewRoleName)
 	{
@@ -72,6 +75,12 @@ public:
 		Actions.Remove(InAction);
 		OnChanged.Broadcast();
 	}
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void RegisterAddedToCharacter(ARtsCharacter* InCharacter);
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void RegisterRemoveFromCharacter(ARtsCharacter* InCharacter); 
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 	void PlayCharacter(ARtsCharacter* InCharacter);

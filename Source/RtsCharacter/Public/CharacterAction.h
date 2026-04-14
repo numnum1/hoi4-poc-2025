@@ -17,7 +17,13 @@ class RTSCHARACTER_API UCharacterAction : public UPrimaryDataAsset
 public:
 	UCharacterAction();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText ActionName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FSlateBrush Icon;
+	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void Click(ARtsCharacter* InWithCharacterContext, APlayerController* InByPlayerController);
+	void Click(APlayerController* InPlayer, AHUD* InHUD, ARtsCharacter* InCharacter, UObject* InRoleContext);
 	
 };

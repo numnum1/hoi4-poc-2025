@@ -14,4 +14,12 @@ class RTSCHARACTER_API USelfRole : public UCharacterRole
 
 public:
 	USelfRole();
+	
+	virtual void RegisterAddedToCharacter_Implementation(ARtsCharacter* InCharacter) override;
+	virtual void RegisterRemoveFromCharacter_Implementation(ARtsCharacter* InCharacter) override;
+	
+private:
+	UFUNCTION()
+	void UpdateNameAndIcon(ARtsCharacter* InCharacter);
+	
 };
