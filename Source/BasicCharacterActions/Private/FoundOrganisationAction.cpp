@@ -3,18 +3,17 @@
 
 #include "FoundOrganisationAction.h"
 
-#include "RtsPlayerController.h"
+#include "JuristicPerson/Public/JuristicPerson.h"
 
 UFoundOrganisationAction::UFoundOrganisationAction()
 {
 	ActionName = FText::FromString("Found Organisation");
 }
 
-void UFoundOrganisationAction::Click_Implementation(ARtsPlayerController* InPlayer, AHUD* InHUD, ARtsCharacter* InCharacter, UObject* InRoleContext)
+void UFoundOrganisationAction::Click_Implementation(AActor* InRoleContext)
 {
-	verify(InPlayer);	
-	verify(InHUD);
-	verify(InCharacter);
+	verify(InRoleContext);
+	verify(InRoleContext->Implements<UJuristicPerson>());
 	
-	InPlayer->FoundOrganisation(InCharacter);
+	IJuristicPerson::Execute_FoundOrganisation(InRoleContext);
 }

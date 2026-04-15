@@ -10,7 +10,8 @@ public class BasicCharacterActions : ModuleRules
             new string[]
             {
                 "Core",
-                "RtsCharacter"
+                "JuristicPerson", 
+                "CharacterAction"
             }
         );
 

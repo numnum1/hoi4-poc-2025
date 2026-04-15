@@ -94,5 +94,5 @@ public:
         OnRolesChanged.Broadcast(this);
     }
     
-    virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

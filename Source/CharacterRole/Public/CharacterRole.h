@@ -1,12 +1,15 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿#pragma once
 
-#pragma once
-
-#include "Net/UnrealNetwork.h"
 #include "CoreMinimal.h"
+#include "Modules/ModuleManager.h"
 #include "CharacterRole.generated.h"
 
-class ARtsCharacter;
+class FCharacterRoleModule : public IModuleInterface
+{
+public:
+    virtual void StartupModule() override;
+    virtual void ShutdownModule() override;
+};
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCharacterRoleEvent);
 
@@ -14,7 +17,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCharacterRoleEvent);
  * 
  */
 UCLASS(BlueprintType, Blueprintable, Abstract, DefaultToInstanced, EditInlineNew)
-class RTSCHARACTER_API UCharacterRole : public UObject
+class CHARACTERROLE_API UCharacterRole : public UObject
 {
 	GENERATED_BODY()
 public:
@@ -31,13 +34,13 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetIcon, Replicated, ReplicatedUsing=OnRep_Fields)
 	FSlateBrush Icon;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Fields)
+	AActor* Context;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintGetter=GetActions, Replicated, ReplicatedUsing=OnRep_Fields)
 	TArray<class UCharacterAction*> Actions;
 	
 public:
-	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	UObject* GetRoleContext() const;
 	
 	UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
 	FORCEINLINE void SetRoleName(const FText& NewRoleName)
@@ -76,14 +79,8 @@ public:
 		OnChanged.Broadcast();
 	}
 	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void RegisterAddedToCharacter(ARtsCharacter* InCharacter);
-	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void RegisterRemoveFromCharacter(ARtsCharacter* InCharacter); 
-	
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void PlayCharacter(ARtsCharacter* InCharacter);
+	UFUNCTION(BlueprintAuthorityOnly, BlueprintCallable, BlueprintNativeEvent)
+	void SetupWithContext(AActor* InContext);
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	

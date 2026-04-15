@@ -10,6 +10,7 @@ public class RtsCharacter : ModuleRules
             new string[]
             {
                 "Core",
+                "CharacterRole"
             }
         );
 

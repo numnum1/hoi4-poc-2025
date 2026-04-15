@@ -17,5 +17,5 @@ class BASICCHARACTERACTIONS_API UFoundOrganisationAction : public UCharacterActi
 public:
 	UFoundOrganisationAction();
 	
-	virtual void Click_Implementation(ARtsPlayerController* InPlayer, AHUD* InHUD, ARtsCharacter* InCharacter, UObject* InRoleContext) override;
+	virtual void Click_Implementation(AActor* InRoleContext) override;
 };

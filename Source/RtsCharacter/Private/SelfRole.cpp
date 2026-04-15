@@ -2,8 +2,6 @@
 
 
 #include "SelfRole.h"
-
-#include "CharacterAction.h"
 #include "RtsCharacter.h"
 
 
@@ -11,7 +9,20 @@ USelfRole::USelfRole()
 {
 }
 
-void USelfRole::RegisterAddedToCharacter_Implementation(ARtsCharacter* InCharacter)
+void USelfRole::SetupWithContext_Implementation(AActor* InContext)
+{
+	ARtsCharacter* RtsCharacter = Cast<ARtsCharacter>(InContext);
+	
+	verify(RtsCharacter);
+
+	Super::SetupWithContext_Implementation(InContext);
+	
+	UpdateNameAndIcon(RtsCharacter);
+	RegisterAddedToCharacter(RtsCharacter);
+	RtsCharacter->OnDestroyed.AddDynamic(this, &USelfRole::RegisterRemoveFromCharacter);
+}
+
+void USelfRole::RegisterAddedToCharacter(ARtsCharacter* InCharacter)
 {
 	verify(InCharacter);
 	
@@ -20,11 +31,13 @@ void USelfRole::RegisterAddedToCharacter_Implementation(ARtsCharacter* InCharact
 	InCharacter->OnCharacterInfoChanged.AddDynamic(this, &USelfRole::UpdateNameAndIcon);
 }
 
-void USelfRole::RegisterRemoveFromCharacter_Implementation(ARtsCharacter* InCharacter)
+void USelfRole::RegisterRemoveFromCharacter(AActor* InCharacter)
 {
-	verify(InCharacter);
+	ARtsCharacter* RtsCharacter = Cast<ARtsCharacter>(InCharacter);
 	
-	InCharacter->OnCharacterInfoChanged.RemoveDynamic(this, &USelfRole::UpdateNameAndIcon);
+	verify(RtsCharacter);
+	
+	RtsCharacter->OnCharacterInfoChanged.RemoveDynamic(this, &USelfRole::UpdateNameAndIcon);
 }
 
 void USelfRole::UpdateNameAndIcon(ARtsCharacter* InCharacter)
