@@ -28,7 +28,6 @@ public:
 	
 private:
 	
-	void RegisterAddedToCharacter(ARtsCharacter* InCharacter);
 	UFUNCTION()
 	void HandleCharacterDestroyed(AActor* InCharacter);
 	

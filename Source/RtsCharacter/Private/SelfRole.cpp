@@ -44,5 +44,7 @@ void USelfRole::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 
 void USelfRole::FoundOrganisation_Implementation()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Found foundation"));	
+	verify(Character);
+
+	Character->FoundOrganisation.Broadcast();
 }

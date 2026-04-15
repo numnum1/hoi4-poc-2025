@@ -45,6 +45,10 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FRtsCharacterEvent OnRolesChanged;
+
+    // Events
+    UPROPERTY(BlueprintAssignable)
+    FRtsCharacterEvent FoundOrganisation;
     
 private:
     UPROPERTY(EditAnywhere, Replicated, meta=(AllowPrivateAccess), ReplicatedUsing=OnRep_CharacterInfo, BlueprintGetter=GetCharacterInfo, BlueprintSetter=SetCharacterInfo)
