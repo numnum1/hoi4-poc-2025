@@ -60,7 +60,7 @@ void ARtsCharacter::AddRole(UCharacterRole* InRole)
 	
 	Roles.AddUnique(InRole);
 	AddReplicatedSubObject(InRole);
-	OnRolesChanged.Broadcast(this);
+	OnRolesChanged.Broadcast();
 }
 
 void ARtsCharacter::RemoveRole(UCharacterRole* InRole)
@@ -70,7 +70,7 @@ void ARtsCharacter::RemoveRole(UCharacterRole* InRole)
 	
 	Roles.Remove(InRole);
 	RemoveReplicatedSubObject(InRole);
-	OnRolesChanged.Broadcast(this);
+	OnRolesChanged.Broadcast();
 }
 
 void ARtsCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

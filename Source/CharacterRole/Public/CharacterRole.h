@@ -34,9 +34,6 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetIcon, Replicated, ReplicatedUsing=OnRep_Fields)
 	FSlateBrush Icon;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Fields)
-	AActor* Context;
-	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintGetter=GetActions, Replicated, ReplicatedUsing=OnRep_Fields)
 	TArray<class UCharacterAction*> Actions;
 	
@@ -78,9 +75,6 @@ public:
 		Actions.Remove(InAction);
 		OnChanged.Broadcast();
 	}
-	
-	UFUNCTION(BlueprintAuthorityOnly, BlueprintCallable, BlueprintNativeEvent)
-	void SetupWithContext(AActor* InContext);
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	

@@ -3,47 +3,46 @@
 
 #include "SelfRole.h"
 #include "RtsCharacter.h"
+#include "Net/UnrealNetwork.h"
 
 
 USelfRole::USelfRole()
 {
 }
 
-void USelfRole::SetupWithContext_Implementation(AActor* InContext)
+void USelfRole::SetCharacter(ARtsCharacter* NewCharacter)
 {
-	ARtsCharacter* RtsCharacter = Cast<ARtsCharacter>(InContext);
+	verify(NewCharacter);
+	verify(!Character);
 	
-	verify(RtsCharacter);
-
-	Super::SetupWithContext_Implementation(InContext);
-	
-	UpdateNameAndIcon(RtsCharacter);
-	RegisterAddedToCharacter(RtsCharacter);
-	RtsCharacter->OnDestroyed.AddDynamic(this, &USelfRole::RegisterRemoveFromCharacter);
+	Character = NewCharacter;
+	UpdateNameAndIcon();
+	Character->OnDestroyed.AddDynamic(this, &USelfRole::HandleCharacterDestroyed);
+	Character->OnCharacterInfoChanged.AddDynamic(this, &USelfRole::UpdateNameAndIcon);
 }
 
-void USelfRole::RegisterAddedToCharacter(ARtsCharacter* InCharacter)
+void USelfRole::HandleCharacterDestroyed(AActor* InCharacter)
 {
-	verify(InCharacter);
-	
-	UpdateNameAndIcon(InCharacter);
-	
-	InCharacter->OnCharacterInfoChanged.AddDynamic(this, &USelfRole::UpdateNameAndIcon);
+	Character->OnDestroyed.RemoveDynamic(this, &USelfRole::HandleCharacterDestroyed);
+	Character->OnCharacterInfoChanged.RemoveDynamic(this, &USelfRole::UpdateNameAndIcon);
+	SetRoleName(FText::FromString("Missing character"));
+	SetIcon(FSlateNoResource());
 }
 
-void USelfRole::RegisterRemoveFromCharacter(AActor* InCharacter)
+void USelfRole::UpdateNameAndIcon()
 {
-	ARtsCharacter* RtsCharacter = Cast<ARtsCharacter>(InCharacter);
-	
-	verify(RtsCharacter);
-	
-	RtsCharacter->OnCharacterInfoChanged.RemoveDynamic(this, &USelfRole::UpdateNameAndIcon);
+	SetRoleName(Character->GetCharacterInfo().Name);
+	SetIcon(Character->GetCharacterInfo().Portrait);
 }
 
-void USelfRole::UpdateNameAndIcon(ARtsCharacter* InCharacter)
+void USelfRole::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	verify(InCharacter);
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
-	SetRoleName(InCharacter->GetCharacterInfo().Name);
-	SetIcon(InCharacter->GetCharacterInfo().Portrait);
+	DOREPLIFETIME(USelfRole, Character);
+}
+
+void USelfRole::FoundOrganisation_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Found foundation"));	
 }

@@ -22,15 +22,6 @@ UCharacterRole::UCharacterRole()
 {
 }
 
-void UCharacterRole::SetupWithContext_Implementation(AActor* InContext)
-{
-	verify(InContext);
-	verify(!Context);
-	
-	Context = InContext;
-	OnChanged.Broadcast();
-}
-
 void UCharacterRole::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

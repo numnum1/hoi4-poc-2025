@@ -10,7 +10,7 @@ UFoundOrganisationAction::UFoundOrganisationAction()
 	ActionName = FText::FromString("Found Organisation");
 }
 
-void UFoundOrganisationAction::Click_Implementation(AActor* InRoleContext)
+void UFoundOrganisationAction::Click_Implementation(UObject* InRoleContext)
 {
 	verify(InRoleContext);
 	verify(InRoleContext->Implements<UJuristicPerson>());

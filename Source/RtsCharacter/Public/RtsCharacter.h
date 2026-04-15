@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "JuristicPerson/Public/JuristicPerson.h"
 #include "Modules/ModuleManager.h"
 #include "RtsCharacter.generated.h"
 
@@ -30,7 +31,7 @@ struct FRtsCharacterInfo
 class UCharacterRole;
 class ARtsCharacter;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRtsCharacterEvent, ARtsCharacter*, InCharacter);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRtsCharacterEvent);
 
 UCLASS(Blueprintable)
 class RTSCHARACTER_API ARtsCharacter : public AActor
@@ -67,13 +68,13 @@ public:
     FORCEINLINE void SetCharacterInfo(const FRtsCharacterInfo& NewCharacterInfo)
     {
         CharacterInfo = NewCharacterInfo;
-        OnCharacterInfoChanged.Broadcast(this);
+        OnCharacterInfoChanged.Broadcast();
     }
     
     UFUNCTION()
     FORCEINLINE void OnRep_CharacterInfo()
     {
-        OnCharacterInfoChanged.Broadcast(this);
+        OnCharacterInfoChanged.Broadcast();
     }
     
     UFUNCTION(BlueprintGetter)
@@ -91,8 +92,9 @@ public:
     UFUNCTION()
     FORCEINLINE void OnRep_Roles()
     {
-        OnRolesChanged.Broadcast(this);
+        OnRolesChanged.Broadcast();
     }
     
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    
 };

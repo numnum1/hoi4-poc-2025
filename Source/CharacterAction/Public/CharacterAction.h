@@ -30,6 +30,6 @@ public:
     FSlateBrush Icon;
 	
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-    void Click(AActor* InRoleContext);
+    void Click(UObject* InRoleContext);
 	
 };

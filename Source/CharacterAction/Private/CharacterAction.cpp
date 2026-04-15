@@ -22,7 +22,7 @@ UCharacterAction::UCharacterAction()
 	Icon = FSlateNoResource();
 }
 
-void UCharacterAction::Click_Implementation(AActor* InRoleContext)
+void UCharacterAction::Click_Implementation(UObject* InRoleContext)
 {
 	ensureMsgf(false, TEXT("Missing implementation for handle click in %s"), *GetClass()->GetName());
 }
