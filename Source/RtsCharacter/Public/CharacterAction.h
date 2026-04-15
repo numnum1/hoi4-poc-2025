@@ -6,6 +6,7 @@
 #include "UObject/Object.h"
 #include "CharacterAction.generated.h"
 
+class ARtsPlayerController;
 class ARtsCharacter;
 /**
  * 
@@ -24,6 +25,6 @@ public:
 	FSlateBrush Icon;
 	
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void Click(APlayerController* InPlayer, AHUD* InHUD, ARtsCharacter* InCharacter, UObject* InRoleContext);
+	void Click(ARtsPlayerController* InPlayer, AHUD* InHUD, ARtsCharacter* InCharacter, UObject* InRoleContext);
 	
 };

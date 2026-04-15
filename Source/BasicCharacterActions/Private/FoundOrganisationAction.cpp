@@ -3,16 +3,18 @@
 
 #include "FoundOrganisationAction.h"
 
+#include "RtsPlayerController.h"
+
 UFoundOrganisationAction::UFoundOrganisationAction()
 {
 	ActionName = FText::FromString("Found Organisation");
 }
 
-void UFoundOrganisationAction::Click_Implementation(APlayerController* InPlayer, AHUD* InHUD, ARtsCharacter* InCharacter, UObject* InRoleContext)
+void UFoundOrganisationAction::Click_Implementation(ARtsPlayerController* InPlayer, AHUD* InHUD, ARtsCharacter* InCharacter, UObject* InRoleContext)
 {
 	verify(InPlayer);	
 	verify(InHUD);
 	verify(InCharacter);
 	
-	InCharacter->
+	InPlayer->FoundOrganisation(InCharacter);
 }

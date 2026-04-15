@@ -9,7 +9,7 @@ UCharacterAction::UCharacterAction()
 	Icon = FSlateNoResource();
 }
 
-void UCharacterAction::Click_Implementation(APlayerController* InPlayer, AHUD* InHUD, ARtsCharacter* InCharacter, UObject* InRoleContext)
+void UCharacterAction::Click_Implementation(ARtsPlayerController* InPlayer, AHUD* InHUD, ARtsCharacter* InCharacter, UObject* InRoleContext)
 {
 	ensureMsgf(false, TEXT("Missing implementation for handle click in %s"), *GetClass()->GetName());
 }
