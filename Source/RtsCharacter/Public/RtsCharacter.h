@@ -101,4 +101,8 @@ public:
     
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
+    // Actions
+    UFUNCTION(BlueprintCallable, Server, Reliable)
+    void Server_FoundOrganisation(const FText& InName, TSubclassOf<class AOrganisation> InOrgClass);
+    
 };

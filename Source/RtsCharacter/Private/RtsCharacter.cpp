@@ -2,6 +2,7 @@
 
 #include "SelfRole.h"
 #include "Net/UnrealNetwork.h"
+#include "Organisation.h"
 
 #define LOCTEXT_NAMESPACE "FRtsCharacterModule"
 
@@ -79,4 +80,12 @@ void ARtsCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	
 	DOREPLIFETIME(ARtsCharacter, CharacterInfo);
 	DOREPLIFETIME(ARtsCharacter, Roles);
+}
+
+void ARtsCharacter::Server_FoundOrganisation_Implementation(const FText& InName, const TSubclassOf<AOrganisation> InOrgClass)
+{
+	verify(InOrgClass);
+	ensure(!InName.IsEmptyOrWhitespace());
+	
+	AOrganisation* Founded = GetWorld()->SpawnActor<AOrganisation>(InOrgClass);
 }

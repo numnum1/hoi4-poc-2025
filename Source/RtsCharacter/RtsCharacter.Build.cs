@@ -11,7 +11,8 @@ public class RtsCharacter : ModuleRules
             {
                 "Core",
                 "CharacterRole",
-                "JuristicPerson"
+                "JuristicPerson",
+                "Organisation"
             }
         );
 
