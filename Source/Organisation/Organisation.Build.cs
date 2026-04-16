@@ -19,7 +19,7 @@ public class Organisation : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
             }
         );
     }

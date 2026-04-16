@@ -18,4 +18,5 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText TypeName;
+	
 };

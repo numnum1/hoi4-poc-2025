@@ -10,7 +10,6 @@ public class RtsCharacter : ModuleRules
             new string[]
             {
                 "Core",
-                "CharacterRole",
                 "JuristicPerson",
                 "Organisation"
             }
@@ -23,7 +22,9 @@ public class RtsCharacter : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "State"
+                "State",
+                "CharacterRole",
+                "Organisation"
             }
         );
     }

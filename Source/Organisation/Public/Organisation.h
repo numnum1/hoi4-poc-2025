@@ -4,6 +4,8 @@
 #include "Modules/ModuleManager.h"
 #include "Organisation.generated.h"
 
+class UOrganizationPosition;
+
 class FOrganisationModule : public IModuleInterface
 {
 public:
@@ -12,7 +14,7 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct ORGANISATION_API FOrganisationInfo
+struct ORGANISATION_API FOrganizationInfo
 {
     GENERATED_BODY()
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -23,30 +25,31 @@ struct ORGANISATION_API FOrganisationInfo
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOrganisationEvent);
 
-UCLASS(Abstract)
-class ORGANISATION_API AOrganisation : public AActor
+UCLASS()
+class ORGANISATION_API AOrganization : public AActor
 {
     GENERATED_BODY()
     
 public:
-    AOrganisation();
+    AOrganization();
 
     UPROPERTY(BlueprintAssignable)
     FOrganisationEvent OnInfoChanged;
     
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintGetter=GetInfo, BlueprintSetter=SetInfo, Replicated, ReplicatedUsing=OnRep_Info)
-    FOrganisationInfo Info;
+    FOrganizationInfo Info;
+
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
     UFUNCTION(BlueprintGetter)
-    const FOrganisationInfo& GetInfo() const
+    const FOrganizationInfo& GetInfo() const
     {
         return Info;
     }
     UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
-    FORCEINLINE void SetInfo(const FOrganisationInfo& NewInfo)
+    FORCEINLINE void SetInfo(const FOrganizationInfo& NewInfo)
     {
         Info = NewInfo;
         OnInfoChanged.Broadcast();

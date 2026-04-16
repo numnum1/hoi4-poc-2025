@@ -16,6 +16,6 @@ public class RtsEditorTarget : TargetRules
 
 	private void RegisterModulesCreatedByRider()
 	{
-		ExtraModuleNames.AddRange(new string[] { "RtsCharacter", "State", "BasicCharacterActions", "JuristicPerson", "CharacterAction", "CharacterRole", "Organisation", "Nation", "Activists" });
+		ExtraModuleNames.AddRange(new string[] { "RtsCharacter", "State", "BasicCharacterActions", "JuristicPerson", "CharacterAction", "CharacterRole", "Organisation", "Nation" });
 	}
 }

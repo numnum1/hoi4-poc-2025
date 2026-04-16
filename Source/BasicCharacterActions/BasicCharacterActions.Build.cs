@@ -10,8 +10,6 @@ public class BasicCharacterActions : ModuleRules
             new string[]
             {
                 "Core",
-                "JuristicPerson", 
-                "CharacterAction"
             }
         );
 
@@ -21,7 +19,10 @@ public class BasicCharacterActions : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "JuristicPerson", 
+                "CharacterAction",
+                "Organisation"
             }
         );
     }

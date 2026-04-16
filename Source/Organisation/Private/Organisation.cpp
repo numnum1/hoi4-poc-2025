@@ -18,15 +18,17 @@ void FOrganisationModule::ShutdownModule()
     
 IMPLEMENT_MODULE(FOrganisationModule, Organisation)
 
-AOrganisation::AOrganisation()
+AOrganization::AOrganization()
 {
 	bReplicates = true;
 	bAlwaysRelevant = true;
+	
+	Info = {};
 }
 
-void AOrganisation::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+void AOrganization::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
-	DOREPLIFETIME(AOrganisation, Info);
+	DOREPLIFETIME(AOrganization, Info);
 }

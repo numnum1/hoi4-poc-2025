@@ -5,6 +5,7 @@
 #include "Modules/ModuleManager.h"
 #include "RtsCharacter.generated.h"
 
+class UOrganizationPosition;
 class USelfRole;
 
 class FRtsCharacterModule : public IModuleInterface
@@ -102,7 +103,7 @@ public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
     // Actions
-    UFUNCTION(BlueprintCallable, Server, Reliable)
-    void Server_FoundOrganisation(const FText& InName, TSubclassOf<class AOrganisation> InOrgClass);
+    UFUNCTION(BlueprintCallable, Server, Reliable, meta=(UnsafafeDuringConstruction))
+    void Server_FoundOrganisation(const FText& InName, const FSlateBrush& InLogo, UOrganizationPosition* InPosition);
     
 };
