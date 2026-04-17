@@ -3,6 +3,7 @@
 
 #include "OrganizationRole.h"
 
+#include "Organisation.h"
 #include "Net/UnrealNetwork.h"
 
 UOrganizationRole::UOrganizationRole()
@@ -28,4 +29,25 @@ void UOrganizationRole::Setup(AOrganization* InOrganization, UOrganizationPositi
 	
 	Organization = InOrganization;
 	Position = InPosition;
+	
+	Organization->OnDestroyed.AddDynamic(this, &UOrganizationRole::UnbindFromOrganization);
+	Organization->OnInfoChanged.AddDynamic(this, &UOrganizationRole::UpdateInfoFromOrganization);
+	UpdateInfoFromOrganization();
+}
+
+void UOrganizationRole::UnbindFromOrganization(AActor* InRef)
+{
+	ensure(InRef == Organization);
+	
+	Organization->OnDestroyed.RemoveDynamic(this, &UOrganizationRole::UnbindFromOrganization);
+	Organization->OnInfoChanged.RemoveDynamic(this, &UOrganizationRole::UpdateInfoFromOrganization);
+	
+	SetRoleName(FText::FromString("Missing organization"));
+	SetIcon(FSlateNoResource());
+}
+
+void UOrganizationRole::UpdateInfoFromOrganization()
+{
+	SetRoleName(Organization->GetInfo().Name);
+	SetIcon(Organization->GetInfo().Logo);
 }

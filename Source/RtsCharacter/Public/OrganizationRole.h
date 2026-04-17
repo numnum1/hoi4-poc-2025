@@ -17,9 +17,9 @@ class RTSCHARACTER_API UOrganizationRole : public UCharacterRole
 public:
 	UOrganizationRole();
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated)
 	class AOrganization* Organization;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated)
 	UOrganizationPosition* Position;
 
 public:
@@ -27,7 +27,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	void Setup(AOrganization* InOrganization, UOrganizationPosition* InPosition);
-	
-	
-	
+private:
+	UFUNCTION()
+	void UnbindFromOrganization(AActor* InRef);
+	UFUNCTION()
+	void UpdateInfoFromOrganization();
 };
