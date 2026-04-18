@@ -4,6 +4,8 @@
 #include "Modules/ModuleManager.h"
 #include "State.generated.h"
 
+class UEcology;
+
 class FStateModule : public IModuleInterface
 {
 public:
@@ -20,6 +22,10 @@ struct STATE_API FStateInfo
     GENERATED_BODY()
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FText Name = FText::FromString("Unnamed State");
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    UEcology* Ecology = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    USoundBase* ClickSound = nullptr;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStateEvent);
