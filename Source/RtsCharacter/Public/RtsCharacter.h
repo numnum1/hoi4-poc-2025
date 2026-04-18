@@ -5,6 +5,7 @@
 #include "Modules/ModuleManager.h"
 #include "RtsCharacter.generated.h"
 
+class USchedule;
 class UOrganizationPosition;
 class USelfRole;
 
@@ -57,6 +58,9 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Roles, Instanced, BlueprintGetter=GetRoles)
     TArray<UCharacterRole*> Roles;
+
+    UPROPERTY(VisibleAnywhere)
+    USchedule* Schedule;
     
 public:
     

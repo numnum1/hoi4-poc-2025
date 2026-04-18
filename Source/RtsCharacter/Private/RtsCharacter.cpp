@@ -4,6 +4,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Organisation.h"
 #include "OrganizationRole.h"
+#include "Schedule.h"
 
 #define LOCTEXT_NAMESPACE "FRtsCharacterModule"
 
@@ -28,6 +29,8 @@ ARtsCharacter::ARtsCharacter()
 	CharacterInfo = {};
 
 	Roles = {};
+	
+	Schedule = CreateDefaultSubobject<USchedule>(TEXT("Schedule"));
 }
 
 void ARtsCharacter::BeginPlay()
