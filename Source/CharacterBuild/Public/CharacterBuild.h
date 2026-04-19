@@ -1,9 +1,11 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "JobLevel.h"
 #include "RacialLevel.h"
 #include "Modules/ModuleManager.h"
 #include "CharacterBuild.generated.h"
+
 
 class FCharacterBuildModule : public IModuleInterface
 {
@@ -19,6 +21,10 @@ class UCharacterBuild : public UActorComponent
 public:
     UCharacterBuild();
 private:
+    // Levels
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     TArray<FRacialLevel> RacialLevels;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    TArray<FJobLevel> JobLevels;
+    // Computations
 };

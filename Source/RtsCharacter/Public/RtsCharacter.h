@@ -5,6 +5,8 @@
 #include "Modules/ModuleManager.h"
 #include "RtsCharacter.generated.h"
 
+class UCharacterBuild;
+class URace;
 class USchedule;
 class UOrganizationPosition;
 class USelfRole;
@@ -27,7 +29,9 @@ struct FRtsCharacterInfo
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FSlateBrush Portrait = {};
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TSoftObjectPtr<class AState> StateOfBirth;
+    TSoftObjectPtr<class AState> StateOfBirth = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    URace* GeneticRace = nullptr;
 };
 
 class UCharacterRole;
@@ -59,8 +63,12 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Roles, Instanced, BlueprintGetter=GetRoles)
     TArray<UCharacterRole*> Roles;
 
+    // Components
     UPROPERTY(VisibleAnywhere)
     USchedule* Schedule;
+    
+    UPROPERTY(VisibleAnywhere)
+    UCharacterBuild* Build;
     
 public:
     

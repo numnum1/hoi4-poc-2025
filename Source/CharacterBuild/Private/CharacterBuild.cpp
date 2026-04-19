@@ -19,4 +19,5 @@ IMPLEMENT_MODULE(FCharacterBuildModule, CharacterBuild)
 UCharacterBuild::UCharacterBuild()
 {
 	RacialLevels = {};
+	JobLevels = {};
 }

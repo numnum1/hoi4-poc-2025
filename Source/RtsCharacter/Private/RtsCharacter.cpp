@@ -1,5 +1,6 @@
 ﻿#include "RtsCharacter.h"
 
+#include "CharacterBuild.h"
 #include "SelfRole.h"
 #include "Net/UnrealNetwork.h"
 #include "Organisation.h"
@@ -31,6 +32,7 @@ ARtsCharacter::ARtsCharacter()
 	Roles = {};
 	
 	Schedule = CreateDefaultSubobject<USchedule>(TEXT("Schedule"));
+	Build = CreateDefaultSubobject<UCharacterBuild>(TEXT("Build"));
 }
 
 void ARtsCharacter::BeginPlay()
