@@ -24,7 +24,9 @@ public class RtsCharacter : ModuleRules
                 "SlateCore",
                 "State",
                 "CharacterRole",
-                "Schedule"
+                "Schedule",
+                "Race",
+                "CharacterBuild"
             }
         );
     }
