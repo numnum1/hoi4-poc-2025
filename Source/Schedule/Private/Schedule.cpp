@@ -29,7 +29,7 @@ USchedule::USchedule()
 						0,8
 				},
 				FInt32Range{
-					22,23
+					22,24
 				}
 			}
 		}
@@ -41,4 +41,20 @@ void USchedule::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(USchedule, Entries);
+}
+
+bool USchedule::FindEntry(FScheduleEntry& OutEntry, const int32 InHour) const
+{
+	for (const auto& Entry : Entries)
+	{
+		for (const auto& Time : Entry.Times)
+		{
+			if (Time.Contains(InHour))
+			{
+				OutEntry = Entry;
+				return true;
+			}
+		}
+	}
+	return false;
 }

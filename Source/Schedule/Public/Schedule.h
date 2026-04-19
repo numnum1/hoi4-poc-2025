@@ -28,6 +28,10 @@ private:
     TArray<FScheduleEntry> Entries;
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+    UFUNCTION(BlueprintCallable)
+    bool FindEntry(FScheduleEntry& OutEntry, int32 InHour) const;
+    
 private:
     UFUNCTION()
     FORCEINLINE void OnRep_Entries()
