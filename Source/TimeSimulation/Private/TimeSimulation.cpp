@@ -22,7 +22,10 @@ ATimeSimulation::ATimeSimulation()
 	bReplicates = true;
 	bAlwaysRelevant = true;
 
-	PrimaryActorTick.TickInterval = 1.f;
+	PrimaryActorTick.bStartWithTickEnabled = true;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.TickInterval = 0.5f;
+	
 	DateTime = FDateTime{2026, 4, 19, 13, 0, 0, 0};
 }
 
@@ -43,5 +46,7 @@ void ATimeSimulation::Tick(const float DeltaSeconds)
 		DateTime += Timespan;
 
 		OnDateTimeChanged.Broadcast();
+		
+		UE_LOG(LogTemp, Warning, TEXT("Updated: %s"), *DateTime.ToString());
 	}
 }
