@@ -4,6 +4,7 @@
 #include "OrganizationRole.h"
 
 #include "Organisation.h"
+#include "OrganizationPosition.h"
 #include "Net/UnrealNetwork.h"
 
 UOrganizationRole::UOrganizationRole()
@@ -44,10 +45,12 @@ void UOrganizationRole::UnbindFromOrganization(AActor* InRef)
 	
 	SetRoleName(FText::FromString("Missing organization"));
 	SetIcon(FSlateNoResource());
+	SetTitle(FText::FromString(""));
 }
 
 void UOrganizationRole::UpdateInfoFromOrganization()
 {
 	SetRoleName(Organization->GetInfo().Name);
 	SetIcon(Organization->GetInfo().Logo);
+	SetTitle(Position->Title);
 }

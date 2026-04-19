@@ -28,4 +28,6 @@ void UCharacterRole::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	
 	DOREPLIFETIME(UCharacterRole, RoleName);
 	DOREPLIFETIME(UCharacterRole, Icon);
+	DOREPLIFETIME(UCharacterRole, Title);
+	DOREPLIFETIME(UCharacterRole, Actions);
 }

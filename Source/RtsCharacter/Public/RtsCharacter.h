@@ -64,10 +64,10 @@ private:
     TArray<UCharacterRole*> Roles;
 
     // Components
-    UPROPERTY(VisibleAnywhere)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     USchedule* Schedule;
     
-    UPROPERTY(VisibleAnywhere)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     UCharacterBuild* Build;
     
 public:

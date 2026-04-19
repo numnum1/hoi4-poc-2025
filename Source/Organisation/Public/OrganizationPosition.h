@@ -18,4 +18,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText PositionName = FText::FromString("Unnamed Position");
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText Title = FText::FromString("");
 };

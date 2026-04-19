@@ -34,6 +34,9 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetIcon, Replicated, ReplicatedUsing=OnRep_Fields)
 	FSlateBrush Icon;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetRoleName, Replicated, ReplicatedUsing=OnRep_Fields)
+	FText Title;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintGetter=GetActions, Replicated, ReplicatedUsing=OnRep_Fields)
 	TArray<class UCharacterAction*> Actions;
 	
@@ -50,6 +53,13 @@ public:
 	FORCEINLINE void SetIcon(const FSlateBrush& NewIcon)
 	{
 		Icon = NewIcon;
+		OnChanged.Broadcast();
+	}
+	
+	UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
+	FORCEINLINE void SetTitle(const FText& NewTitle)
+	{
+		Title = NewTitle;
 		OnChanged.Broadcast();
 	}
 	

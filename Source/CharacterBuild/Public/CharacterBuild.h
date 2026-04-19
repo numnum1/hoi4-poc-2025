@@ -27,4 +27,17 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     TArray<FJobLevel> JobLevels;
     // Computations
+    UFUNCTION(BlueprintCallable)
+    int32 ComputeStrength() const;
+    UFUNCTION(BlueprintCallable)
+    int32 ComputeDexterity() const;
+    UFUNCTION(BlueprintCallable)
+    int32 ComputeConstitution() const;
+    UFUNCTION(BlueprintCallable)
+    int32 ComputeIntelligence() const;
+    UFUNCTION(BlueprintCallable)
+    int32 ComputeWisdom() const;
+    UFUNCTION(BlueprintCallable)
+    int32 ComputeCharisma() const;
+    
 };
