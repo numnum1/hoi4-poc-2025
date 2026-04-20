@@ -4,6 +4,7 @@
 #include "Modules/ModuleManager.h"
 #include "State.generated.h"
 
+class ATimezone;
 class UEcology;
 
 class FStateModule : public IModuleInterface
@@ -43,6 +44,9 @@ public:
 private:
     UPROPERTY(EditAnywhere, Replicated, meta=(AllowPrivateAccess), ReplicatedUsing=OnRep_StateInfo, BlueprintGetter=GetStateInfo, BlueprintSetter=SetStateInfo)
     FStateInfo StateInfo;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
+    ATimezone* Timezone;
     
 public:
     UFUNCTION(BlueprintGetter)

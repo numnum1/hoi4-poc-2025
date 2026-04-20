@@ -19,7 +19,8 @@ public class State : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "TimeSimulation"
             }
         );
     }

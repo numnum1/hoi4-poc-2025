@@ -52,6 +52,9 @@ public:
     UPROPERTY(BlueprintAssignable)
     FRtsCharacterEvent OnRolesChanged;
 
+    UPROPERTY(BlueprintAssignable)
+    FRtsCharacterEvent OnCurrentStateChanged;
+
     // Events
     UPROPERTY(BlueprintAssignable)
     FRtsCharacterEvent FoundOrganisation;
@@ -62,6 +65,9 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Roles, Instanced, BlueprintGetter=GetRoles)
     TArray<UCharacterRole*> Roles;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_CurrentState)
+    AState* CurrentState;
 
     // Components
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
@@ -88,12 +94,6 @@ public:
         OnCharacterInfoChanged.Broadcast();
     }
     
-    UFUNCTION()
-    FORCEINLINE void OnRep_CharacterInfo()
-    {
-        OnCharacterInfoChanged.Broadcast();
-    }
-    
     UFUNCTION(BlueprintGetter)
     const TArray<UCharacterRole*>& GetRoles() const
     {
@@ -106,16 +106,25 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
     void RemoveRole(UCharacterRole* InRole);
     
-    UFUNCTION()
-    FORCEINLINE void OnRep_Roles()
-    {
-        OnRolesChanged.Broadcast();
-    }
-    
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
     // Actions
     UFUNCTION(BlueprintCallable, Server, Reliable, meta=(UnsafafeDuringConstruction))
     void Server_FoundOrganisation(const FText& InName, const FSlateBrush& InLogo, UOrganizationPosition* InPosition);
-    
+private:
+    UFUNCTION()
+    FORCEINLINE void OnRep_CharacterInfo()
+    {
+        OnCharacterInfoChanged.Broadcast();
+    }
+    UFUNCTION()
+    FORCEINLINE void OnRep_Roles()
+    {
+        OnRolesChanged.Broadcast();
+    }
+    UFUNCTION()
+    FORCEINLINE void OnRep_CurrentState()
+    {
+        OnCurrentStateChanged.Broadcast();
+    }
 };

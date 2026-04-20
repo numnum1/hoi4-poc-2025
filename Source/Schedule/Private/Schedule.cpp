@@ -26,10 +26,10 @@ USchedule::USchedule()
 			FLinearColor::Blue,
 			{
 				FInt32Range{
-						0,8
+					0, 8
 				},
 				FInt32Range{
-					22,24
+					22, 24
 				}
 			}
 		}

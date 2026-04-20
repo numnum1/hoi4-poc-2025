@@ -31,6 +31,8 @@ ARtsCharacter::ARtsCharacter()
 
 	Roles = {};
 	
+	CurrentState = nullptr;
+	
 	Schedule = CreateDefaultSubobject<USchedule>(TEXT("Schedule"));
 	Build = CreateDefaultSubobject<UCharacterBuild>(TEXT("Build"));
 }
@@ -85,6 +87,7 @@ void ARtsCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 
 	DOREPLIFETIME(ARtsCharacter, CharacterInfo);
 	DOREPLIFETIME(ARtsCharacter, Roles);
+	DOREPLIFETIME(ARtsCharacter, CurrentState);
 }
 
 void ARtsCharacter::Server_FoundOrganisation_Implementation(const FText& InName, const FSlateBrush& InLogo, UOrganizationPosition* InPosition)

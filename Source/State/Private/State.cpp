@@ -24,6 +24,7 @@ AState::AState()
 	bAlwaysRelevant = true;
 	
 	StateInfo = {};
+	Timezone = nullptr;
 }
 
 void AState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

@@ -26,11 +26,17 @@ void ATimezone::Update()
 {
 	const FDateTime& DateTime = TimeSimulation->GetDateTime();
 	const FDateTime NewDateTime = DateTime + FTimespan(Offset, 0, 0);
-	const FTimespan Diff = NewDateTime - ActualDateTime;
+	
+	const int32 NewHours = NewDateTime.ToUnixTimestamp() / 3600;
+	const int32 OldHours = ActualDateTime.ToUnixTimestamp() / 3600;
+	
+	const int32 NewDays = NewHours / 24.f;
+	const int32 OldDays = OldHours / 24.f;
+	
 	ActualDateTime = NewDateTime;
 	
-	int32 PassedDays = Diff.GetDays();
-	int32 PassedHours = Diff.GetHours();
+	const auto PassedHours = NewHours - OldHours;
+	const auto PassedDays = NewDays - OldDays;
 	
 	if (PassedDays > 0) OnDaysPassed.Broadcast(PassedDays);
 	if (PassedHours > 0) OnHoursPassed.Broadcast(PassedHours);

@@ -23,6 +23,7 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FScheduleEvent OnEntriesChanged;
+    
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Entries)
     TArray<FScheduleEntry> Entries;

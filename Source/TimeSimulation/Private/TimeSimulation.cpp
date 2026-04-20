@@ -24,8 +24,9 @@ ATimeSimulation::ATimeSimulation()
 
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = 0.5f;
+	PrimaryActorTick.TickInterval = 0.25f;
 	
+	Speed = 1;
 	DateTime = FDateTime{2026, 4, 19, 13, 0, 0, 0};
 }
 
@@ -34,6 +35,7 @@ void ATimeSimulation::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ATimeSimulation, DateTime);
+	DOREPLIFETIME(ATimeSimulation, Speed);
 }
 
 void ATimeSimulation::Tick(const float DeltaSeconds)
@@ -42,11 +44,9 @@ void ATimeSimulation::Tick(const float DeltaSeconds)
 
 	if (HasAuthority())
 	{
-		const auto Timespan = UKismetMathLibrary::MakeTimespan(0, 0, 0, DeltaSeconds * 3600, 0);
+		const auto Timespan = UKismetMathLibrary::MakeTimespan(0, 0, 0, DeltaSeconds * 3600 * Speed, 0);
 		DateTime += Timespan;
 
 		OnDateTimeChanged.Broadcast();
-		
-		UE_LOG(LogTemp, Warning, TEXT("Updated: %s"), *DateTime.ToString());
 	}
 }
