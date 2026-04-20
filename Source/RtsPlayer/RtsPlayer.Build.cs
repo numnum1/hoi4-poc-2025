@@ -20,7 +20,8 @@ public class RtsPlayer : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "TimeSimulation"
+                "TimeSimulation",
+                "RtsCharacter"
             }
         );
     }

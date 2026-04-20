@@ -24,6 +24,8 @@ struct STATE_API FStateInfo
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FText Name = FText::FromString("Unnamed State");
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FSlateBrush Portrait = FSlateNoResource();
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     UEcology* Ecology = nullptr;
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     USoundBase* ClickSound = nullptr;

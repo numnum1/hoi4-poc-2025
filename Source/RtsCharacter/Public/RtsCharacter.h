@@ -38,6 +38,7 @@ class UCharacterRole;
 class ARtsCharacter;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRtsCharacterEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInspectStateEvent, AState*, InState);
 
 UCLASS(Blueprintable)
 class RTSCHARACTER_API ARtsCharacter : public AActor
@@ -58,6 +59,8 @@ public:
     // Events
     UPROPERTY(BlueprintAssignable)
     FRtsCharacterEvent FoundOrganisation;
+    UPROPERTY(BlueprintAssignable, BlueprintCallable)
+    FInspectStateEvent InspectState;
     
 private:
     UPROPERTY(EditAnywhere, Replicated, meta=(AllowPrivateAccess), ReplicatedUsing=OnRep_CharacterInfo, BlueprintGetter=GetCharacterInfo, BlueprintSetter=SetCharacterInfo)
