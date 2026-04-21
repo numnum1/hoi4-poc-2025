@@ -19,7 +19,8 @@ public class Race : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "Skills"
             }
         );
     }

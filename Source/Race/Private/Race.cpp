@@ -19,4 +19,5 @@ IMPLEMENT_MODULE(FRaceModule, Race)
 URace::URace()
 {
 	RaceName = FText::FromString("Unnamed Race");
+	BaseSkills = {};
 }

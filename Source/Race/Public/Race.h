@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "SkillSet.h"
 #include "Modules/ModuleManager.h"
 #include "Race.generated.h"
 
@@ -23,4 +24,8 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FText RaceName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FSkillSet BaseSkills;
+    
 };
