@@ -20,7 +20,8 @@ public class State : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "TimeSimulation"
+                "TimeSimulation",
+                "Flag"
             }
         );
     }

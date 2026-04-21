@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Flag.h"
 #include "Modules/ModuleManager.h"
 #include "Nation.generated.h"
 
@@ -15,6 +16,11 @@ USTRUCT(BlueprintType)
 struct NATION_API FNationInfo
 {
     GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FText Name = FText::FromString("Unnamed Nation");
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FFlag Flag = {};
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNationEvent);

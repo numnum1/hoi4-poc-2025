@@ -25,6 +25,7 @@ AState::AState()
 	
 	StateInfo = {};
 	Timezone = nullptr;
+	StateOwner = nullptr;
 }
 
 void AState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -32,4 +33,5 @@ void AState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimePr
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(AState, StateInfo);
+	DOREPLIFETIME(AState, StateOwner);
 }

@@ -42,15 +42,23 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FStateEvent OnInfoChanged;
+
+    UPROPERTY(BlueprintAssignable)
+    FStateEvent OnStateOwnerChanged;
     
 private:
     UPROPERTY(EditAnywhere, Replicated, meta=(AllowPrivateAccess), ReplicatedUsing=OnRep_StateInfo, BlueprintGetter=GetStateInfo, BlueprintSetter=SetStateInfo)
     FStateInfo StateInfo;
     
+    UPROPERTY(EditAnywhere, Replicated, meta=(AllowPrivateAccess), ReplicatedUsing=OnRep_StateInfo, BlueprintSetter=SetStateOwner, BlueprintReadWrite)
+    AActor* StateOwner;    
+    
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     ATimezone* Timezone;
     
 public:
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    
     UFUNCTION(BlueprintGetter)
     const FStateInfo& GetStateInfo() const
     {
@@ -64,16 +72,28 @@ public:
         OnInfoChanged.Broadcast();
     }
     
+    UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
+    FORCEINLINE void SetStateOwner(AActor* NewStateOwner)
+    {
+        StateOwner = NewStateOwner;
+        OnStateOwnerChanged.Broadcast();
+    }
+    
+    // Visuals
+    UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+    void SetHighlighted(bool bNewHighlighted);
+    
+private:
     UFUNCTION()
     FORCEINLINE void OnRep_StateInfo()
     {
         OnInfoChanged.Broadcast();
     }
     
-    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-    
-    // Visuals
-    UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
-    void SetHighlighted(bool bNewHighlighted);
+    UFUNCTION()
+    FORCEINLINE void OnRep_StateOwner()
+    {
+        OnStateOwnerChanged.Broadcast();
+    }
     
 };

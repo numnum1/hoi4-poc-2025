@@ -20,7 +20,8 @@ public class Nation : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "Flag"
             }
         );
     }
