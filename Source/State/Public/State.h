@@ -82,6 +82,8 @@ public:
     // Visuals
     UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
     void SetHighlighted(bool bNewHighlighted);
+    UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+    void SetSelected(bool bNewSelected);
     
 private:
     UFUNCTION()
