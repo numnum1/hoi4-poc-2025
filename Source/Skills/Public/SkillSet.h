@@ -12,15 +12,15 @@ struct FSkillSet
 	GENERATED_BODY()
     
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=1, ClampMax=20))
-	int32 Strength = 0;
+	int32 Strength = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=1, ClampMax=20))
-	int32 Dexterity = 0;
+	int32 Dexterity = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=1, ClampMax=20))
-	int32 Constitution = 0;
+	int32 Constitution = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=1, ClampMax=20))
-	int32 Intelligence = 0;
+	int32 Intelligence = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=1, ClampMax=20))
-	int32 Wisdom = 0;
+	int32 Wisdom = 1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=1, ClampMax=20))
-	int32 Charisma = 0;
+	int32 Charisma = 1;
 };
