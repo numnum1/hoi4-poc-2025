@@ -9,7 +9,7 @@ public class Race : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core",
+                "Core", "Skills",
             }
         );
 
@@ -20,7 +20,6 @@ public class Race : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "Skills"
             }
         );
     }

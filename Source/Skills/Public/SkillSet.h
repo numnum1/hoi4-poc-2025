@@ -7,7 +7,7 @@
 #include "SkillSet.generated.h"
 
 USTRUCT(BlueprintType)
-struct FSkillSet
+struct SKILLS_API FSkillSet
 {
 	GENERATED_BODY()
     
