@@ -4,6 +4,7 @@
 #include "Modules/ModuleManager.h"
 #include "State.generated.h"
 
+class UEconomy;
 class ATimezone;
 class UEcology;
 
@@ -55,6 +56,10 @@ private:
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     ATimezone* Timezone;
+    
+    // Components
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
+    UEconomy* Ecology;
     
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

@@ -10,6 +10,7 @@ public class State : ModuleRules
             new string[]
             {
                 "Core",
+                "Economy"
             }
         );
 

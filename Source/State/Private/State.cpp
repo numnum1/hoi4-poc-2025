@@ -1,5 +1,6 @@
 ﻿#include "State.h"
 
+#include "Economy.h"
 #include "Net/UnrealNetwork.h"
 
 #define LOCTEXT_NAMESPACE "FStateModule"
@@ -26,6 +27,8 @@ AState::AState()
 	StateInfo = {};
 	Timezone = nullptr;
 	StateOwner = nullptr;
+	
+	Ecology = CreateDefaultSubobject<UEconomy>(TEXT("Economy"));
 }
 
 void AState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
