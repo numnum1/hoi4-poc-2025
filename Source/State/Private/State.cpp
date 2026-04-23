@@ -1,5 +1,6 @@
 ﻿#include "State.h"
 
+#include "Demography.h"
 #include "Economy.h"
 #include "Net/UnrealNetwork.h"
 
@@ -29,6 +30,7 @@ AState::AState()
 	StateOwner = nullptr;
 	
 	Ecology = CreateDefaultSubobject<UEconomy>(TEXT("Economy"));
+	Demography = CreateDefaultSubobject<UDemography>(TEXT("Demography"));
 }
 
 void AState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

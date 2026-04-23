@@ -33,5 +33,4 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FSkillSet BaseSkills;
     
-    
 };
