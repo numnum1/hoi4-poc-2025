@@ -5,6 +5,8 @@
 #include "Modules/ModuleManager.h"
 #include "Race.generated.h"
 
+class URaceCategory;
+
 class FRaceModule : public IModuleInterface
 {
 public:
@@ -26,6 +28,10 @@ public:
     FText RaceName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    URaceCategory* Category;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FSkillSet BaseSkills;
+    
     
 };
