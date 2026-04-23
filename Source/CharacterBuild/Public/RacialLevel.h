@@ -6,7 +6,7 @@
 #include "UObject/Object.h"
 #include "RacialLevel.generated.h"
 
-class URace;
+class UGenome;
 /**
  * 
  */
@@ -15,9 +15,9 @@ struct CHARACTERBUILD_API FRacialLevel
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
-	URace* Race = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=1, ClampMax=10))
+	UGenome* Genome = nullptr;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
-	int32 Level = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=1, ClampMax=10))
+	int32 Level = 1;
 };

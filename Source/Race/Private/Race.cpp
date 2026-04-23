@@ -18,7 +18,8 @@ IMPLEMENT_MODULE(FRaceModule, Race)
 
 URace::URace()
 {
+	Species = nullptr;
 	RaceName = FText::FromString("Unnamed Race");
-	Category = nullptr;
 	BaseSkills = {};
+	Traits = {};
 }

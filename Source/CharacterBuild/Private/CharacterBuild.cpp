@@ -21,6 +21,7 @@ UCharacterBuild::UCharacterBuild()
 	RacialLevels = {};
 	JobLevels = {};
 	SkillSet = {};
+	
 }
 
 void UCharacterBuild::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -32,11 +33,28 @@ void UCharacterBuild::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(UCharacterBuild, SkillSet);
 }
 
+void UCharacterBuild::PostInitProperties()
+{
+	Super::PostInitProperties();
+
+	RecomputeValues();
+}
+
 void UCharacterBuild::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	
-	UE_LOG(LogTemp, Warning, TEXT("Updated property"));
+	RecomputeValues();
+}
+
+void UCharacterBuild::RecomputeValues()
+{
+	SkillSet.Strength = ComputeStrength();
+	SkillSet.Dexterity = ComputeDexterity();
+	SkillSet.Constitution = ComputeConstitution();
+	SkillSet.Intelligence = ComputeIntelligence();
+	SkillSet.Wisdom = ComputeWisdom();
+	SkillSet.Charisma = ComputeCharisma();
 }
 
 int32 UCharacterBuild::ComputeStrength() const

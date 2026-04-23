@@ -42,6 +42,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
+	virtual void PostInitProperties() override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 private:
@@ -52,6 +53,8 @@ private:
 	}
 
 	// Computations
+	void RecomputeValues();
+
 	UFUNCTION(BlueprintCallable)
 	int32 ComputeStrength() const;
 	UFUNCTION(BlueprintCallable)
@@ -92,8 +95,18 @@ private:
 	FORCEINLINE int32 GetBaseSkill(T Extractor) const
 	{
 		TArray<TTuple<int32, int32>> Skills = {};
-		for (const auto& [Race, Level] : RacialLevels)
+		for (const auto& [Genome, Level] : RacialLevels)
 		{
+			#if WITH_EDITOR
+				if (!GIsEditor)
+				{
+					ensureMsgf(Genome, TEXT("Character %s has nullptr in race level"), *GetOwner()->GetName());
+					ensureMsgf(Level, TEXT("Character %s has 0 level"), *GetOwner()->GetName());
+					if (!Genome || Level <= 0) continue;		
+				}
+			#endif 
+			URace* Race = Cast<URace>(Genome);
+			if (!Race) continue; // Is something else
 			Skills.Add(TTuple<int32, int32>{Extractor(Race->BaseSkills), Level});
 		}
 		const float Avg = CalculateWeightedAverage(Skills);

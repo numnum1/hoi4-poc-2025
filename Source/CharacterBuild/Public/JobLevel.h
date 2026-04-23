@@ -19,13 +19,13 @@ struct CHARACTERBUILD_API FJobLevel
 	UJob* Race = nullptr;
 	
 	// Can level faster
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=1, ClampMax=5))
 	int32 FocusPoints = 0;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=0, ClampMax=10))
 	int32 Level = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ClampMin=0, ClampMax=1000000))
 	int32 EXP = 0;
 	
 };
