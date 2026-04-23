@@ -20,7 +20,8 @@ public class CharacterBuild : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "Race"
+                "Race",
+                "Skills"
             }
         );
     }

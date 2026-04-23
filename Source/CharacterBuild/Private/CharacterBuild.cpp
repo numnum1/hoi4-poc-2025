@@ -1,5 +1,7 @@
 ﻿#include "CharacterBuild.h"
 
+#include "Net/UnrealNetwork.h"
+
 #define LOCTEXT_NAMESPACE "FCharacterBuildModule"
 
 void FCharacterBuildModule::StartupModule()
@@ -18,6 +20,23 @@ UCharacterBuild::UCharacterBuild()
 {
 	RacialLevels = {};
 	JobLevels = {};
+	SkillSet = {};
+}
+
+void UCharacterBuild::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(UCharacterBuild, RacialLevels);
+	DOREPLIFETIME(UCharacterBuild, JobLevels);
+	DOREPLIFETIME(UCharacterBuild, SkillSet);
+}
+
+void UCharacterBuild::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	
+	UE_LOG(LogTemp, Warning, TEXT("Updated property"));
 }
 
 int32 UCharacterBuild::ComputeStrength() const
