@@ -16,6 +16,6 @@ public class RtsTarget : TargetRules
 
 	private void RegisterModulesCreatedByRider()
 	{
-		ExtraModuleNames.AddRange(new string[] { "RtsCharacter", "State", "BasicCharacterActions", "JuristicPerson", "CharacterAction", "CharacterRole", "Organisation", "Nation", "Schedule", "CharacterBuild", "Race", "TimeSimulation", "RtsPlayer", "Flag", "Skills", "Economy", "Demography", "RoleResource", "BankingSystem" });
+		ExtraModuleNames.AddRange(new string[] { "RtsCharacter", "State", "BasicCharacterActions", "JuristicPerson", "CharacterAction", "CharacterRole", "Organisation", "Nation", "Schedule", "CharacterBuild", "Race", "TimeSimulation", "RtsPlayer", "Flag", "Skills", "Economy", "Demography", "RoleResource", "BankingSystem", "Job" });
 	}
 }

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Job/Public/Job.h"
 #include "JuristicPerson/Public/JuristicPerson.h"
 #include "Modules/ModuleManager.h"
 #include "RtsCharacter.generated.h"
@@ -42,6 +43,7 @@ class ARtsCharacter;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRtsCharacterEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInspectStateEvent, AState*, InState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHireEvent, const FJob&, InJob);
 
 UCLASS(Blueprintable)
 class RTSCHARACTER_API ARtsCharacter : public AActor
@@ -64,6 +66,8 @@ public:
     FRtsCharacterEvent FoundOrganisation;
     UPROPERTY(BlueprintAssignable, BlueprintCallable)
     FInspectStateEvent InspectState;
+    UPROPERTY(BlueprintAssignable)
+    FHireEvent Hire;
     
 private:
     UPROPERTY(EditAnywhere, Replicated, meta=(AllowPrivateAccess), ReplicatedUsing=OnRep_CharacterInfo, BlueprintGetter=GetCharacterInfo, BlueprintSetter=SetCharacterInfo)

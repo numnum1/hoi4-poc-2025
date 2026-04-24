@@ -32,3 +32,8 @@ void AOrganization::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	
 	DOREPLIFETIME(AOrganization, Info);
 }
+
+void AOrganization::Hire()
+{
+	
+}
