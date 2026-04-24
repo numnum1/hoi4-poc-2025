@@ -1,7 +1,7 @@
 ﻿#include "RtsCharacter.h"
 
+#include "BankAccountHolder.h"
 #include "CharacterBuild.h"
-#include "SelfRole.h"
 #include "Net/UnrealNetwork.h"
 #include "Organisation.h"
 #include "OrganizationRole.h"
@@ -36,6 +36,7 @@ ARtsCharacter::ARtsCharacter()
 	
 	Schedule = CreateDefaultSubobject<USchedule>(TEXT("Schedule"));
 	Build = CreateDefaultSubobject<UCharacterBuild>(TEXT("Build"));
+	Banking = CreateDefaultSubobject<UBankAccountHolder>(TEXT("Banking"));
 }
 
 void ARtsCharacter::BeginPlay()

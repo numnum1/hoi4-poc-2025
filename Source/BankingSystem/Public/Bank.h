@@ -16,7 +16,7 @@ class BANKINGSYSTEM_API ABank : public AInfo
 public:
 	ABank();
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated)
 	TArray<UBankAccount*> Accounts;
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

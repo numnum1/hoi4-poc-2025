@@ -5,6 +5,7 @@
 #include "Modules/ModuleManager.h"
 #include "RtsCharacter.generated.h"
 
+class UBankAccountHolder;
 class UCharacterBuild;
 class URace;
 class USchedule;
@@ -80,6 +81,9 @@ private:
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     UCharacterBuild* Build;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    UBankAccountHolder* Banking;
     
 public:
     
