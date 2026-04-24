@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
+#include "RoleResourceCount.h"
 #include "CharacterRole.generated.h"
 
 class FCharacterRoleModule : public IModuleInterface
@@ -25,6 +26,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FCharacterRoleEvent OnChanged;
+
+	UPROPERTY(BlueprintAssignable)
+	FCharacterRoleEvent OnResourcesChanged;
 	
 private:
 	
@@ -39,6 +43,9 @@ private:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintGetter=GetActions, Replicated, ReplicatedUsing=OnRep_Fields)
 	TArray<class UCharacterAction*> Actions;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetResources, Replicated, ReplicatedUsing=OnRep_Resources, BlueprintGetter=GetResources)
+	TArray<FRoleResourceCount> Resources;
 	
 public:
 	
@@ -86,6 +93,16 @@ public:
 		OnChanged.Broadcast();
 	}
 	
+	UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
+	FORCEINLINE void SetResources(const TArray<FRoleResourceCount>& NewResources)
+	{
+		Resources = NewResources;
+		OnResourcesChanged.Broadcast();
+	}
+	
+	UFUNCTION(BlueprintGetter)
+	const TArray<FRoleResourceCount>& GetResources() const { return Resources; }
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	virtual bool IsSupportedForNetworking() const override { return true; }
@@ -95,6 +112,12 @@ private:
 	FORCEINLINE void OnRep_Fields()
 	{
 		OnChanged.Broadcast();
+	}
+	
+	UFUNCTION()
+	FORCEINLINE void OnRep_Resources()
+	{
+		OnResourcesChanged.Broadcast();
 	}
 	
 };

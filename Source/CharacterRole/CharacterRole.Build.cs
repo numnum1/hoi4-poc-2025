@@ -10,7 +10,8 @@ public class CharacterRole : ModuleRules
             new string[]
             {
                 "Core",
-                "CharacterAction"
+                "CharacterAction",
+                "RoleResource"
             }
         );
 
@@ -20,7 +21,7 @@ public class CharacterRole : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
             }
         );
     }
