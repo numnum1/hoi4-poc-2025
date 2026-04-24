@@ -19,7 +19,8 @@ public class BankingSystem : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "RoleResource"
             }
         );
     }

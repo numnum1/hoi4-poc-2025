@@ -23,7 +23,7 @@ private:
 	
 public:
 	
-	UFUNCTION(BlueprintSetter)
+	UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
 	void SetCharacter(ARtsCharacter* NewCharacter);
 	
 private:

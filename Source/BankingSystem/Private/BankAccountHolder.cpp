@@ -3,6 +3,7 @@
 
 #include "BankAccountHolder.h"
 
+#include "Bank.h"
 #include "Net/UnrealNetwork.h"
 
 UBankAccountHolder::UBankAccountHolder()
@@ -11,6 +12,8 @@ UBankAccountHolder::UBankAccountHolder()
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	
 	SetIsReplicatedByDefault(true);
+	
+	HoldAccounts = {};
 }
 
 void UBankAccountHolder::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -18,4 +21,18 @@ void UBankAccountHolder::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(UBankAccountHolder, HoldAccounts);
+}
+
+int32 UBankAccountHolder::Count(URoleResource*& OutCurrency) const
+{
+	int32 Res = 0;
+	OutCurrency = nullptr;
+	for (const auto& Account : HoldAccounts)
+	{
+		verify(Account.Bank);
+		OutCurrency = Account.Bank->GetCurrency();
+		Res += Account.Request();
+	}
+	
+	return Res;
 }

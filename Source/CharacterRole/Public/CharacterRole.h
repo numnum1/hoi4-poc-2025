@@ -49,6 +49,9 @@ private:
 	
 public:
 	
+	UFUNCTION(BlueprintAuthorityOnly)
+	void PutResource(const FRoleResourceCount& NewResourceCount);
+	
 	UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
 	FORCEINLINE void SetRoleName(const FText& NewRoleName)
 	{

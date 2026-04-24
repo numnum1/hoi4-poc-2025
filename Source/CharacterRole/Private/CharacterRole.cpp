@@ -22,6 +22,19 @@ UCharacterRole::UCharacterRole()
 {
 }
 
+void UCharacterRole::PutResource(const FRoleResourceCount& NewResourceCount)
+{
+	verify(NewResourceCount.Resource);
+
+	Resources.RemoveAll([NewResourceCount](const FRoleResourceCount& T)
+	{
+		return NewResourceCount.Resource == T.Resource;
+	});
+	if (NewResourceCount.Amount == 0) return;
+	
+	Resources.Add(NewResourceCount);
+}
+
 void UCharacterRole::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

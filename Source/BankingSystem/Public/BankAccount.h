@@ -16,12 +16,15 @@ class BANKINGSYSTEM_API UBankAccount : public UObject
 public:
 	UBankAccount();
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated)
 	FGuid ID;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated)
 	int32 Balance;
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	FORCEINLINE virtual bool IsSupportedForNetworking() const override { return true; }
+	
+	FORCEINLINE const FGuid& GetID() const { return ID; }
+	FORCEINLINE const int32& GetBalance() const { return Balance; }
 };

@@ -20,4 +20,6 @@ struct BANKINGSYSTEM_API FBankAccountReference
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGuid AccountID = FGuid();
+	
+	int32 Request() const;
 };

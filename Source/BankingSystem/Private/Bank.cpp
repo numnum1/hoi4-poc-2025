@@ -10,10 +10,12 @@ ABank::ABank()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
+	bReplicateUsingRegisteredSubObjectList = true;
 	
 	bReplicates = true;
 	bAlwaysRelevant = true;
 	
+	Currency = nullptr;
 	Accounts = {};
 }
 
@@ -22,6 +24,18 @@ void ABank::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimePro
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(ABank, Accounts);
+}
+
+int32 ABank::GetBalance(const FGuid& InAccountID) const
+{
+	for (UBankAccount* Account : Accounts)
+	{
+		if (Account->GetID() == InAccountID)
+		{
+			return Account->GetBalance();
+		}
+	}
+	return 0;
 }
 
 void ABank::BeginPlay()

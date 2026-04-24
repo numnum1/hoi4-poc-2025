@@ -2,6 +2,8 @@
 
 
 #include "SelfRole.h"
+
+#include "BankAccountHolder.h"
 #include "RtsCharacter.h"
 #include "Net/UnrealNetwork.h"
 
@@ -19,6 +21,11 @@ void USelfRole::SetCharacter(ARtsCharacter* NewCharacter)
 	UpdateNameAndIcon();
 	Character->OnDestroyed.AddDynamic(this, &USelfRole::HandleCharacterDestroyed);
 	Character->OnCharacterInfoChanged.AddDynamic(this, &USelfRole::UpdateNameAndIcon);
+	
+	UBankAccountHolder* BankAccountHolder = Character->GetComponentByClass<UBankAccountHolder>();
+	URoleResource* Currency = nullptr;
+	int32 Count = BankAccountHolder->Count(Currency);
+	PutResource(FRoleResourceCount{Currency, Count});
 }
 
 void USelfRole::HandleCharacterDestroyed(AActor* InCharacter)
