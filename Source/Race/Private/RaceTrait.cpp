@@ -6,4 +6,5 @@
 URaceTrait::URaceTrait()
 {
 	TraitName = FText::FromString("Unnamed Trait");
+	Description = FText::FromString("");
 }

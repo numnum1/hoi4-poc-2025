@@ -38,4 +38,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TArray<URaceTrait*> Traits;
     
+    virtual TArray<URaceTrait*> CollectTraits_Implementation() const override; 
+    
 };

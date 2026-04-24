@@ -6,4 +6,5 @@
 ULifeType::ULifeType()
 {
 	TypeName = FText::FromString("Unnamed LifeType");
+	Traits = {};
 }

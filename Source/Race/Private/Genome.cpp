@@ -6,3 +6,8 @@
 UGenome::UGenome()
 {
 }
+
+TArray<URaceTrait*> UGenome::CollectTraits_Implementation() const
+{
+	return {};
+}

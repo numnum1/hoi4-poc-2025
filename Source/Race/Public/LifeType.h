@@ -6,6 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "LifeType.generated.h"
 
+class URaceTrait;
 /**
  * 
  */
@@ -18,4 +19,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText TypeName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<URaceTrait*> Traits;
 };

@@ -28,6 +28,7 @@ ARtsCharacter::ARtsCharacter()
 	bReplicateUsingRegisteredSubObjectList = true;
 
 	CharacterInfo = {};
+	CharacterInfo.bMale = true;
 
 	Roles = {};
 	

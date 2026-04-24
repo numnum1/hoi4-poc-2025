@@ -18,4 +18,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText TraitName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText Description;
 };

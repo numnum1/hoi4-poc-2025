@@ -37,6 +37,8 @@ private:
 	// Stats
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Fields)
 	FSkillSet SkillSet;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Fields)
+	TArray<URaceTrait*> Traits;
 
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -53,8 +55,11 @@ private:
 	}
 
 	// Computations
+	UFUNCTION(CallInEditor, Category="CharacterBuild")
 	void RecomputeValues();
-
+	
+	void RecollectTraits();
+	
 	UFUNCTION(BlueprintCallable)
 	int32 ComputeStrength() const;
 	UFUNCTION(BlueprintCallable)

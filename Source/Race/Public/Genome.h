@@ -6,6 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "Genome.generated.h"
 
+class URaceTrait;
 /**
  * 
  */
@@ -15,4 +16,7 @@ class RACE_API UGenome : public UDataAsset
 	GENERATED_BODY()
 public:
 	UGenome();
+	
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	TArray<URaceTrait*> CollectTraits() const;
 };

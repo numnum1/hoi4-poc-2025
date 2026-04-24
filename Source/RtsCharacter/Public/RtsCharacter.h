@@ -32,6 +32,8 @@ struct FRtsCharacterInfo
     TSoftObjectPtr<class AState> StateOfBirth = nullptr;
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     URace* GeneticRace = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    bool bMale = false;
 };
 
 class UCharacterRole;
