@@ -27,5 +27,7 @@ class JURISTICPERSON_API IJuristicPerson
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
     void FoundOrganisation();
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+    void BuyProperty();
 };
 

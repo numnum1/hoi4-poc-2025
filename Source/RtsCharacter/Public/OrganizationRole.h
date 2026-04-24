@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "JuristicPerson.h"
 #include "CoreMinimal.h"
 #include "CharacterRole.h"
 #include "OrganizationRole.generated.h"
@@ -11,7 +12,7 @@ class UOrganizationPosition;
  * 
  */
 UCLASS()
-class RTSCHARACTER_API UOrganizationRole : public UCharacterRole
+class RTSCHARACTER_API UOrganizationRole : public UCharacterRole, public IJuristicPerson
 {
 	GENERATED_BODY()
 public:
@@ -27,6 +28,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	void Setup(AOrganization* InOrganization, UOrganizationPosition* InPosition);
+
+	// Interfaces
+	virtual void BuyProperty_Implementation() override;
 private:
 	UFUNCTION()
 	void UnbindFromOrganization(AActor* InRef);

@@ -35,6 +35,10 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FOrganisationEvent OnInfoChanged;
+
+    // Actions
+    UPROPERTY(BlueprintAssignable)
+    FOrganisationEvent BuyProperty;
     
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintGetter=GetInfo, BlueprintSetter=SetInfo, Replicated, ReplicatedUsing=OnRep_Info)

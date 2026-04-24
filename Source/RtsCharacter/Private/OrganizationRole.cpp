@@ -3,6 +3,7 @@
 
 #include "OrganizationRole.h"
 
+#include "BuyPropertyAction.h"
 #include "Organisation.h"
 #include "OrganizationPosition.h"
 #include "Net/UnrealNetwork.h"
@@ -11,6 +12,8 @@ UOrganizationRole::UOrganizationRole()
 {
 	Organization = nullptr;
 	Position = nullptr;
+	
+	AddAction(UBuyPropertyAction::StaticClass()->GetDefaultObject<UBuyPropertyAction>());
 }
 
 void UOrganizationRole::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -34,6 +37,13 @@ void UOrganizationRole::Setup(AOrganization* InOrganization, UOrganizationPositi
 	Organization->OnDestroyed.AddDynamic(this, &UOrganizationRole::UnbindFromOrganization);
 	Organization->OnInfoChanged.AddDynamic(this, &UOrganizationRole::UpdateInfoFromOrganization);
 	UpdateInfoFromOrganization();
+}
+
+void UOrganizationRole::BuyProperty_Implementation()
+{
+	verify(Organization);
+	
+	Organization->BuyProperty.Broadcast();
 }
 
 void UOrganizationRole::UnbindFromOrganization(AActor* InRef)

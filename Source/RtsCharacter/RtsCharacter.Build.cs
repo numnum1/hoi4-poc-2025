@@ -27,7 +27,8 @@ public class RtsCharacter : ModuleRules
                 "Schedule",
                 "Race",
                 "CharacterBuild",
-                "BankingSystem"
+                "BankingSystem", 
+                "BasicCharacterActions"
             }
         );
     }

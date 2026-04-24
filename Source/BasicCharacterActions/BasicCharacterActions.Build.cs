@@ -22,7 +22,8 @@ public class BasicCharacterActions : ModuleRules
                 "SlateCore",
                 "JuristicPerson", 
                 "CharacterAction",
-                "Organisation"
+                "Organisation",
+                "UMG"
             }
         );
     }
