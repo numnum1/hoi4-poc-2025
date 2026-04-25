@@ -36,6 +36,7 @@ void UOrganizationRole::Setup(AOrganization* InOrganization, UOrganizationPositi
 	
 	Organization->OnDestroyed.AddDynamic(this, &UOrganizationRole::UnbindFromOrganization);
 	Organization->OnInfoChanged.AddDynamic(this, &UOrganizationRole::UpdateInfoFromOrganization);
+	
 	UpdateInfoFromOrganization();
 }
 
@@ -43,7 +44,7 @@ void UOrganizationRole::BuyProperty_Implementation()
 {
 	verify(Organization);
 	
-	Organization->BuyProperty.Broadcast();
+	Organization->BuyProperty();
 }
 
 void UOrganizationRole::UnbindFromOrganization(AActor* InRef)

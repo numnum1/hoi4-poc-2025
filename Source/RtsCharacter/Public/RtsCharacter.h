@@ -1,11 +1,11 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "Job/Public/Job.h"
-#include "JuristicPerson/Public/JuristicPerson.h"
+#include "PositionHolder.h"
 #include "Modules/ModuleManager.h"
 #include "RtsCharacter.generated.h"
 
+class AOrganization;
 class UBankAccountHolder;
 class UCharacterBuild;
 class URace;
@@ -43,10 +43,10 @@ class ARtsCharacter;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRtsCharacterEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInspectStateEvent, AState*, InState);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHireEvent, const FJob&, InJob);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuyPropertyEvent, AActor*, InFor);
 
 UCLASS(Blueprintable)
-class RTSCHARACTER_API ARtsCharacter : public AActor
+class RTSCHARACTER_API ARtsCharacter : public AActor, public IPositionHolder
 {
     GENERATED_BODY()
 public:
@@ -67,7 +67,7 @@ public:
     UPROPERTY(BlueprintAssignable, BlueprintCallable)
     FInspectStateEvent InspectState;
     UPROPERTY(BlueprintAssignable)
-    FHireEvent Hire;
+    FBuyPropertyEvent BuyProperty;
     
 private:
     UPROPERTY(EditAnywhere, Replicated, meta=(AllowPrivateAccess), ReplicatedUsing=OnRep_CharacterInfo, BlueprintGetter=GetCharacterInfo, BlueprintSetter=SetCharacterInfo)
@@ -121,10 +121,14 @@ public:
     
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
+    // Interfaces
+    virtual void BuyProperty_Implementation(AOrganization* InFor) override;
+    
     // Actions
     UFUNCTION(BlueprintCallable, Server, Reliable, meta=(UnsafafeDuringConstruction))
     void Server_FoundOrganisation(const FText& InName, const FSlateBrush& InLogo, UOrganizationPosition* InPosition);
 private:
+    // Rep notifies
     UFUNCTION()
     FORCEINLINE void OnRep_CharacterInfo()
     {
@@ -140,4 +144,8 @@ private:
     {
         OnCurrentStateChanged.Broadcast();
     }
+    
+    // Delegates
+    UFUNCTION()
+    void BuyPropertyDelegate(AOrganization* InFor);
 };

@@ -92,6 +92,16 @@ void ARtsCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(ARtsCharacter, CurrentState);
 }
 
+void ARtsCharacter::BuyProperty_Implementation(AOrganization* InFor)
+{
+	BuyProperty.Broadcast(InFor);
+}
+
+void ARtsCharacter::BuyPropertyDelegate(AOrganization* InFor)
+{
+	BuyProperty.Broadcast(InFor);
+}
+
 void ARtsCharacter::Server_FoundOrganisation_Implementation(const FText& InName, const FSlateBrush& InLogo, UOrganizationPosition* InPosition)
 {
 	ensure(!InName.IsEmptyOrWhitespace());
@@ -99,6 +109,7 @@ void ARtsCharacter::Server_FoundOrganisation_Implementation(const FText& InName,
 	AOrganization* Founded = GetWorld()->SpawnActor<AOrganization>(AOrganization::StaticClass());
 	verify(Founded);
 	Founded->SetInfo({InName, InLogo});
+	Founded->RegisterNewWorker(this);
 	
 	// Setup with self as leader of new organization
 	UOrganizationRole* OrganizationRole = NewObject<UOrganizationRole>(this);

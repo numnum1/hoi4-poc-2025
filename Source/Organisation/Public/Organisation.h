@@ -39,12 +39,18 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintGetter=GetInfo, BlueprintSetter=SetInfo, Replicated, ReplicatedUsing=OnRep_Info)
     FOrganizationInfo Info;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated)
+    TArray<AActor*> PositionHolders;
 
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+    // Actions
+    UFUNCTION(BlueprintCallable)
+    void BuyProperty();
     
     UFUNCTION(BlueprintCallable)
-    void Hire();
+    void RegisterNewWorker(AActor* InNewPositionHolder);
     
     UFUNCTION(BlueprintGetter)
     const FOrganizationInfo& GetInfo() const

@@ -7,7 +7,9 @@
 #include "CharacterRole.h"
 #include "OrganizationRole.generated.h"
 
+class AOrganization;
 class UOrganizationPosition;
+
 /**
  * 
  */
@@ -19,7 +21,7 @@ public:
 	UOrganizationRole();
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated)
-	class AOrganization* Organization;
+	AOrganization* Organization;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated)
 	UOrganizationPosition* Position;
 
