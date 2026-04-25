@@ -23,7 +23,8 @@ public class BasicCharacterActions : ModuleRules
                 "JuristicPerson", 
                 "CharacterAction",
                 "Organisation",
-                "UMG"
+                "UMG",
+                "Buildings"
             }
         );
     }

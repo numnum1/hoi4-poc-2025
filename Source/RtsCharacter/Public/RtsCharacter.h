@@ -94,6 +94,9 @@ public:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     
+    UFUNCTION(BlueprintCallable)
+    void StartPlacingBuildable(class UBuildable* InBuildable, AActor* InFor);
+    
     UFUNCTION(BlueprintGetter)
     const FRtsCharacterInfo& GetCharacterInfo() const
     {

@@ -18,5 +18,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText TypeName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<class UBuildable*> Buildables;
 	
 };

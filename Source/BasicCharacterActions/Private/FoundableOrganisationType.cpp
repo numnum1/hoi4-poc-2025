@@ -6,4 +6,5 @@
 UFoundableOrganisationType::UFoundableOrganisationType()
 {
 	TypeName = FText::FromString("Unnamed Organisation Type");
+	Buildables = {};
 }

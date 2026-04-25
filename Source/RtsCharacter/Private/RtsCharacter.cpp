@@ -63,6 +63,11 @@ void ARtsCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 }
 
+void ARtsCharacter::StartPlacingBuildable(UBuildable* InBuildable, AActor* InFor)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Place buildable"));
+}
+
 void ARtsCharacter::AddRole(UCharacterRole* InRole)
 {
 	verify(InRole);
