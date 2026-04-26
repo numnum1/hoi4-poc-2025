@@ -20,6 +20,11 @@ IMPLEMENT_MODULE(FCharacterRoleModule, CharacterRole)
 
 UCharacterRole::UCharacterRole()
 {
+	RoleName = FText::FromString(TEXT("Unnamed Role"));
+	Icon = FSlateNoResource();
+	Title = FText::FromString(TEXT(""));
+	Actions = {};
+	Resources = {};
 }
 
 void UCharacterRole::PutResource(const FRoleResourceCount& NewResourceCount)

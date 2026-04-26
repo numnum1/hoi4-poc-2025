@@ -28,7 +28,6 @@ public class RtsCharacter : ModuleRules
                 "Race",
                 "CharacterBuild",
                 "BankingSystem", 
-                "BasicCharacterActions",
                 "Buildings"
             }
         );

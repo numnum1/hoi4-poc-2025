@@ -3,7 +3,6 @@
 
 #include "OrganizationRole.h"
 
-#include "BuyPropertyAction.h"
 #include "Organisation.h"
 #include "OrganizationPosition.h"
 #include "Net/UnrealNetwork.h"
@@ -13,7 +12,7 @@ UOrganizationRole::UOrganizationRole()
 	Organization = nullptr;
 	Position = nullptr;
 	
-	AddAction(UBuyPropertyAction::StaticClass()->GetDefaultObject<UBuyPropertyAction>());
+	// AddAction(UBuyPropertyAction::StaticClass()->GetDefaultObject<UBuyPropertyAction>());
 }
 
 void UOrganizationRole::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

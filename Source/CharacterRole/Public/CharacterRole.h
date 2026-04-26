@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "CharacterAction.h"
 #include "Modules/ModuleManager.h"
 #include "RoleResourceCount.h"
 #include "CharacterRole.generated.h"
@@ -15,7 +16,7 @@ public:
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCharacterRoleEvent);
 
 /**
- * 
+ * This creates the actions
  */
 UCLASS(BlueprintType, Blueprintable, Abstract, DefaultToInstanced, EditInlineNew)
 class CHARACTERROLE_API UCharacterRole : public UObject
@@ -42,7 +43,7 @@ private:
 	FText Title;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintGetter=GetActions, Replicated, ReplicatedUsing=OnRep_Fields)
-	TArray<class UCharacterAction*> Actions;
+	TArray<UCharacterAction*> Actions;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetResources, Replicated, ReplicatedUsing=OnRep_Resources, BlueprintGetter=GetResources)
 	TArray<FRoleResourceCount> Resources;
@@ -76,20 +77,19 @@ public:
 	UFUNCTION(BlueprintGetter)
 	const TArray<UCharacterAction*>& GetActions() const { return Actions;}
 	
+protected:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	FORCEINLINE void AddAction(UCharacterAction* InAction)
 	{
-		verify(InAction);
 		ensureMsgf(!Actions.Contains(InAction), TEXT("Trying to add action that already exists"));
 		
 		Actions.Add(InAction);
 		OnChanged.Broadcast();
 	}
-	
+public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	FORCEINLINE void RemoveAction(UCharacterAction* InAction)
 	{
-		ensureMsgf(InAction, TEXT("Trying to remove null action"));
 		ensureMsgf(Actions.Contains(InAction), TEXT("Trying to add action that already exists"));
 		
 		Actions.Remove(InAction);

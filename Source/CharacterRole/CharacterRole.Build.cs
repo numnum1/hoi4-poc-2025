@@ -10,7 +10,6 @@ public class CharacterRole : ModuleRules
             new string[]
             {
                 "Core",
-                "CharacterAction",
                 "RoleResource"
             }
         );
