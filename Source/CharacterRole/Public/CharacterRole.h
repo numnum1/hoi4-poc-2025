@@ -6,6 +6,8 @@
 #include "RoleResourceCount.h"
 #include "CharacterRole.generated.h"
 
+class UCharacterAction;
+
 class FCharacterRoleModule : public IModuleInterface
 {
 public:
@@ -18,8 +20,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCharacterRoleEvent);
 /**
  * This creates the actions
  */
-UCLASS(BlueprintType, Blueprintable, Abstract, DefaultToInstanced, EditInlineNew)
-class CHARACTERROLE_API UCharacterRole : public UObject
+UCLASS(BlueprintType, Blueprintable)
+class CHARACTERROLE_API UCharacterRole : public UActorComponent
 {
 	GENERATED_BODY()
 public:
@@ -30,7 +32,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FCharacterRoleEvent OnResourcesChanged;
-	
+
 private:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetRoleName, Replicated, ReplicatedUsing=OnRep_Fields)
@@ -49,6 +51,7 @@ private:
 	TArray<FRoleResourceCount> Resources;
 	
 public:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	UFUNCTION(BlueprintAuthorityOnly)
 	void PutResource(const FRoleResourceCount& NewResourceCount);
@@ -84,6 +87,7 @@ protected:
 		ensureMsgf(!Actions.Contains(InAction), TEXT("Trying to add action that already exists"));
 		
 		Actions.Add(InAction);
+		AddReplicatedSubObject(InAction);
 		OnChanged.Broadcast();
 	}
 public:
@@ -93,6 +97,7 @@ public:
 		ensureMsgf(Actions.Contains(InAction), TEXT("Trying to add action that already exists"));
 		
 		Actions.Remove(InAction);
+		RemoveReplicatedSubObject(InAction);
 		OnChanged.Broadcast();
 	}
 	
@@ -106,10 +111,6 @@ public:
 	UFUNCTION(BlueprintGetter)
 	const TArray<FRoleResourceCount>& GetResources() const { return Resources; }
 	
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
-	virtual bool IsSupportedForNetworking() const override { return true; }
-
 private:
 	UFUNCTION()
 	FORCEINLINE void OnRep_Fields()

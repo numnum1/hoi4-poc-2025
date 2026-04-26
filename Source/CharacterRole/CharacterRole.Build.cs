@@ -21,6 +21,7 @@ public class CharacterRole : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
+                "CharacterAction"
             }
         );
     }

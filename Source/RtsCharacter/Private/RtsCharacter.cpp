@@ -6,6 +6,7 @@
 #include "Organisation.h"
 #include "OrganizationRole.h"
 #include "Schedule.h"
+#include "SelfRole.h"
 
 #define LOCTEXT_NAMESPACE "FRtsCharacterModule"
 
@@ -31,36 +32,13 @@ ARtsCharacter::ARtsCharacter()
 	CharacterInfo.bMale = true;
 
 	Roles = {};
+	AddRole(CreateDefaultSubobject<USelfRole>(TEXT("SelfRole")));
 	
 	CurrentState = nullptr;
 	
 	Schedule = CreateDefaultSubobject<USchedule>(TEXT("Schedule"));
 	Build = CreateDefaultSubobject<UCharacterBuild>(TEXT("Build"));
 	Banking = CreateDefaultSubobject<UBankAccountHolder>(TEXT("Banking"));
-}
-
-void ARtsCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-
-	for (UCharacterRole* T : Roles)
-	{
-		verify(T);
-		AddReplicatedSubObject(T);
-	}
-}
-
-void ARtsCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-
-	if (EndPlayReason == EEndPlayReason::Destroyed)
-	{
-		for (UCharacterRole* T : Roles)
-		{
-			RemoveRole(T);
-		}
-	}
 }
 
 void ARtsCharacter::StartPlacingBuildable(UBuildable* InBuildable, AActor* InFor)
@@ -74,7 +52,6 @@ void ARtsCharacter::AddRole(UCharacterRole* InRole)
 	ensureMsgf(!Roles.Contains(InRole), TEXT("Adding role that is already registered in character %s"), *CharacterInfo.Name.ToString());
 
 	Roles.AddUnique(InRole);
-	AddReplicatedSubObject(InRole);
 	OnRolesChanged.Broadcast();
 }
 
@@ -85,6 +62,11 @@ void ARtsCharacter::RemoveRole(UCharacterRole* InRole)
 
 	Roles.Remove(InRole);
 	RemoveReplicatedSubObject(InRole);
+	for (UCharacterAction* Action : InRole->GetActions())
+	{
+		verify(Action);
+		RemoveReplicatedSubObject(Action);
+	}
 	OnRolesChanged.Broadcast();
 }
 

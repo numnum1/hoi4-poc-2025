@@ -90,9 +90,7 @@ private:
     UBankAccountHolder* Banking;
     
 public:
-    
-    virtual void BeginPlay() override;
-    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
     UFUNCTION(BlueprintCallable)
     void StartPlacingBuildable(class UBuildable* InBuildable, AActor* InFor);
@@ -122,8 +120,6 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
     void RemoveRole(UCharacterRole* InRole);
     
-    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-    
     // Interfaces
     virtual void BuyProperty_Implementation(AOrganization* InFor) override;
     
@@ -149,6 +145,9 @@ private:
     }
     
     // Delegates
+    /**
+     * @deprecated 
+     */
     UFUNCTION()
     void BuyPropertyDelegate(AOrganization* InFor);
 };

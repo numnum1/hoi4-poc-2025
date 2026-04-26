@@ -20,6 +20,9 @@ IMPLEMENT_MODULE(FCharacterRoleModule, CharacterRole)
 
 UCharacterRole::UCharacterRole()
 {
+	SetIsReplicatedByDefault(true);
+	bReplicateUsingRegisteredSubObjectList = true;
+	
 	RoleName = FText::FromString(TEXT("Unnamed Role"));
 	Icon = FSlateNoResource();
 	Title = FText::FromString(TEXT(""));
@@ -48,4 +51,5 @@ void UCharacterRole::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(UCharacterRole, Icon);
 	DOREPLIFETIME(UCharacterRole, Title);
 	DOREPLIFETIME(UCharacterRole, Actions);
+	DOREPLIFETIME(UCharacterRole, Resources);
 }
