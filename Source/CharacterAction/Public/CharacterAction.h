@@ -11,14 +11,13 @@ public:
     virtual void ShutdownModule() override;
 };
 
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCharacterActionEvent);
 
 /**
  * 
  */
 UCLASS(BlueprintType, Abstract, Blueprintable, DefaultToInstanced, EditInlineNew)
-class CHARACTERROLE_API UCharacterAction : public UObject
+class CHARACTERACTION_API UCharacterAction : public UObject
 {
     GENERATED_BODY()
 

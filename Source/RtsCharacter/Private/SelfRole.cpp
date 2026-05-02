@@ -4,18 +4,31 @@
 #include "SelfRole.h"
 
 #include "BankAccountHolder.h"
+#include "CreateOrganizationAction.h"
 #include "RtsCharacter.h"
 #include "Net/UnrealNetwork.h"
 
 
 USelfRole::USelfRole()
 {
+	UCreateOrganizationAction* CreateOrganizationAction = CreateDefaultSubobject<UCreateOrganizationAction>("CreateOrganizationAction");
+	AddAction(CreateOrganizationAction);
+	AddReplicatedSubObject(CreateOrganizationAction);
 }
 
 void USelfRole::SetCharacter(ARtsCharacter* NewCharacter)
 {
 	verify(NewCharacter);
 	verify(!Character);
+	
+	for (UCharacterAction* Action : GetActions())
+	{
+		UCreateOrganizationAction* OrganizationAction = Cast<UCreateOrganizationAction>(Action);
+		if (OrganizationAction)
+		{
+			OrganizationAction->SetCharacter(NewCharacter);
+		}
+	}
 	
 	Character = NewCharacter;
 	UpdateNameAndIcon();

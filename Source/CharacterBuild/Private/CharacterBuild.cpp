@@ -65,6 +65,7 @@ void UCharacterBuild::RecollectTraits()
 	Traits.Empty();
 	for (const auto& [Genome, Level] : RacialLevels)
 	{
+		if (!Genome) continue;
 		Traits.Append(Genome->CollectTraits());
 	}
 	Traits = TSet(Traits).Array();

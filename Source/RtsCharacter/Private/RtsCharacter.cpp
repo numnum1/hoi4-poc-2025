@@ -39,6 +39,7 @@ ARtsCharacter::ARtsCharacter()
 	Schedule = CreateDefaultSubobject<USchedule>(TEXT("Schedule"));
 	Build = CreateDefaultSubobject<UCharacterBuild>(TEXT("Build"));
 	Banking = CreateDefaultSubobject<UBankAccountHolder>(TEXT("Banking"));
+	
 }
 
 void ARtsCharacter::StartPlacingBuildable(UBuildable* InBuildable, AActor* InFor)
