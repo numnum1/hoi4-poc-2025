@@ -7,6 +7,7 @@
 #include "CreateOrganizationAction.generated.h"
 
 class ARtsCharacter;
+
 /**
  * 
  */

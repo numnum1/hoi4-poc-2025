@@ -4,6 +4,7 @@
 #include "CreateOrganizationAction.h"
 #include "RtsCharacter.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/PlayerController.h"
 
 UCreateOrganizationAction::UCreateOrganizationAction()
 {

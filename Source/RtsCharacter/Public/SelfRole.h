@@ -20,7 +20,6 @@ public:
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetCharacter, Replicated)
 	ARtsCharacter* Character;
-	
 public:
 	
 	UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
