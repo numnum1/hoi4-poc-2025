@@ -15,3 +15,11 @@ void FNationsModule::ShutdownModule()
 #undef LOCTEXT_NAMESPACE
     
 IMPLEMENT_MODULE(FNationsModule, Nations)
+
+UNations::UNations()
+{
+	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+	
+	SetIsReplicatedByDefault(true);
+}
