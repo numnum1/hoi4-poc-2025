@@ -11,10 +11,15 @@ public:
     virtual void ShutdownModule() override;
 };
 
-UCLASS(BlueprintType)
-class BUILDINGS_API ABuilding : public AActor
+
+/**
+ * 
+ */
+UCLASS(ClassGroup=(Map), meta=(BlueprintSpawnableComponent))
+class BUILDINGS_API UBuildings : public UActorComponent
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 public:
-    ABuilding();
+	UBuildings();
+private:
 };

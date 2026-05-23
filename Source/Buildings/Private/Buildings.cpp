@@ -16,6 +16,10 @@ void FBuildingsModule::ShutdownModule()
     
 IMPLEMENT_MODULE(FBuildingsModule, Buildings)
 
-ABuilding::ABuilding()
+UBuildings::UBuildings()
 {
+	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+	
+	SetIsReplicatedByDefault(true);
 }
