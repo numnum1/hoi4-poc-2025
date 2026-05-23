@@ -18,7 +18,6 @@ class PROVINCES_API UProvinces : public UActorComponent
     GENERATED_BODY()
 public:
     UProvinces();
-	
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
     TArray<FProvinceInfo> Infos;
@@ -30,4 +29,9 @@ private:
 public:
     UFUNCTION(BlueprintCallable)
     FORCEINLINE int32 GetNumOfProvinces() const { return Infos.Num(); }
+protected:
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+private:
+    UFUNCTION(CallInEditor)
+    void InitValuesFromInfos();
 };

@@ -31,5 +31,11 @@ struct PROVINCES_API FProvinceInfo
 	UEcology* Ecology = nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 TimezoneOffset = 0;
+
+	/**
+	 * This is only used on start-up and will not be looked up during the games runtime
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName OwningNationId = NAME_None;
 };
