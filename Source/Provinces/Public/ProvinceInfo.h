@@ -6,6 +6,7 @@
 #include "UObject/Object.h"
 #include "ProvinceInfo.generated.h"
 
+class UEcology;
 /**
  * 
  */
@@ -15,7 +16,10 @@ struct PROVINCES_API FProvinceInfo
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FText Name = FText::FromString("Province");
+	FName MapId = NAME_None;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FText Name = FText::FromString("Unnamed Province");
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FSlateBrush Picture = FSlateNoResource();
@@ -24,5 +28,8 @@ struct PROVINCES_API FProvinceInfo
 	USoundBase* InspectionSound = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FText EcologyName = FText::FromString("");
+	UEcology* Ecology = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName OwningNationId = NAME_None;
 };

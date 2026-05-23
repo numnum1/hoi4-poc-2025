@@ -21,9 +21,13 @@ public:
 	
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    TMap<FName, int32> MapIds;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
     TArray<FProvinceInfo> Infos;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    // Optimization
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    TMap<FName, int32> MapIds;
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
     TArray<FName> OwningNations;
+public:
+    UFUNCTION(BlueprintCallable)
+    FORCEINLINE int32 GetNumOfProvinces() const { return Infos.Num(); }
 };

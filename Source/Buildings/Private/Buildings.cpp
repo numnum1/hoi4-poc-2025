@@ -22,4 +22,14 @@ UBuildings::UBuildings()
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	
 	SetIsReplicatedByDefault(true);
+	
+	InitWithProvinceAmount();
+}
+
+void UBuildings::InitWithProvinceAmount(const int32 InProvinceAmount)
+{
+	verify(InProvinceAmount >= 0);
+	static_assert(MAX_BUILDINGS_PER_PROVINCE >= 0);
+	
+	BuildingPool.Init({}, InProvinceAmount * MAX_BUILDINGS_PER_PROVINCE);
 }
