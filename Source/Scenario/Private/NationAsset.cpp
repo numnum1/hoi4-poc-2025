@@ -6,4 +6,5 @@
 UNationAsset::UNationAsset()
 {
 	NationName = FText::FromString("Unnamed Nation");
+	Flag = FSlateNoResource();
 }

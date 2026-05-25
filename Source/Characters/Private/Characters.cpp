@@ -23,25 +23,3 @@ UCharacters::UCharacters()
 	
 	SetIsReplicatedByDefault(true);
 }
-
-void UCharacters::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-	Super::PostEditChangeProperty(PropertyChangedEvent);
-
-	InitValuesFromInfos();
-}
-
-void UCharacters::InitValuesFromInfos()
-{
-	// Set containers to exact sizes
-	CharacterIds.Empty(Infos.Num());
-	CurrentProvinces.SetNumUninitialized(Infos.Num());
-	Schedules.Empty(Infos.Num());
-	
-	// For each info initialize fitting entry
-	for (int I = 0; I < Infos.Num(); ++I)
-	{
-		CharacterIds.Emplace(Infos[I].Guid, I);
-		CurrentProvinces[I] = Infos[I].CurrentProvince;
-	}
-}

@@ -22,17 +22,10 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TArray<FCharacterInfo> Infos;
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    TMap<FGuid, int32> CharacterIds;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
-    TArray<FName> CurrentProvinces;
+    TArray<int32> CurrentProvinceIndexes;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
-    TArray<int32> ScheduleCharacterMapping;
+    TArray<int32> ScheduleCharacterIndexMapping;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TArray<FSchedule> Schedules;
-protected:
-    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-private:
-    UFUNCTION(CallInEditor)
-    void InitValuesFromInfos();
 };
