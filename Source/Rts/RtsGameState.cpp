@@ -1,0 +1,15 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "RtsGameState.h"
+
+#include "Characters.h"
+#include "Nations.h"
+#include "Provinces.h"
+
+ARtsGameState::ARtsGameState()
+{
+	CharactersContainer = CreateDefaultSubobject<UCharacters>(TEXT("CharactersContainer"));
+	NationsContainer = CreateDefaultSubobject<UNations>(TEXT("NationsContainer"));
+	ProvincesContainer = CreateDefaultSubobject<UProvinces>(TEXT("ProvincesContainer"));
+}
