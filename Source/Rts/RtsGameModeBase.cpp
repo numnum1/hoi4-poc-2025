@@ -48,5 +48,7 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 	
 	const auto[Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping, Schedules] = ScenarioLoader::ExtractCharacters(InScenario->GetCharacters(), InScenario->GetProvinces(), RaceIndexes);
 	RtsGameState->GetCharactersContainer()->Setup(Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping, Schedules);
+	
+	RtsGameState->GetBuildingsContainer()->InitWithProvinceAmount(Provinces.Num());
 }
 

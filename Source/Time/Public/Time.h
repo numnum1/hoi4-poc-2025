@@ -27,22 +27,29 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_CurrentTime)
     FDateTime CurrentTime;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Speed)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Speed, BlueprintSetter=SetSpeed)
     int32 Speed;
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
     FORCEINLINE const FDateTime& GetCurrentTime() const { return CurrentTime; }
+    
+    UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
+    FORCEINLINE void SetSpeed(const int32 NewSpeed)
+    {
+        Speed = NewSpeed;
+        OnSpeedChanged.Broadcast();
+    }
 protected:
     virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 private:
     UFUNCTION()
-    void OnRep_CurrentTime()
+    FORCEINLINE void OnRep_CurrentTime()
     {
         OnCurrentTimeChanged.Broadcast();
     }
     UFUNCTION()
-    void OnRep_Speed()
+    FORCEINLINE void OnRep_Speed()
     {
         OnSpeedChanged.Broadcast();
     }

@@ -3,9 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Buildings.h"
 #include "GameFramework/GameStateBase.h"
 #include "RtsGameState.generated.h"
 
+class UBuildings;
 class UTime;
 class URaces;
 class UProvinces;
@@ -21,7 +23,7 @@ class RTS_API ARtsGameState : public AGameStateBase
 public:
 	ARtsGameState();
 private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UCharacters* CharactersContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UNations* NationsContainer;
@@ -29,6 +31,8 @@ private:
 	UProvinces* ProvincesContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	URaces* RacesContainer;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UBuildings* BuildingsContainer;
 	
 	// Simulation
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
@@ -39,11 +43,21 @@ public:
 	FORCEINLINE UNations* GetNationsContainer() { return NationsContainer; }
 	FORCEINLINE UProvinces* GetProvincesContainer() { return ProvincesContainer; }
 	FORCEINLINE URaces* GetRacesContainer() { return RacesContainer; }
+	FORCEINLINE UBuildings* GetBuildingsContainer() const { return BuildingsContainer; }
 	
 	FORCEINLINE UTime* GetTime() const { return Time; }
 	
 	// Utils
+	// Time
 	UFUNCTION(BlueprintCallable)
 	int32 GetTimezoneOffsetOfProvince(int32 InProvinceIndex) const;
-	
+	// Buildings
+	UFUNCTION(BlueprintCallable)
+	TArray<UBuildingType*> CollectBuildingsInProvince(int32 InProvinceIndex) const;
+	UFUNCTION(BlueprintCallable)
+	int32 CountBuildingByType(int32 InProvinceIndex, UBuildingType* InBuildingType) const;
+	UFUNCTION(BlueprintCallable)
+	int32 FindBuildingsBySlot(int32 InProvinceIndex, const FName& InSlotName) const;
+	UFUNCTION(BlueprintCallable)
+	void AddBuilding(UBuildingType* InBuilding, int32 InProvinceIndex, const FBuildingOwner& InBuildingOwner);
 };

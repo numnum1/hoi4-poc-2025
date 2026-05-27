@@ -22,7 +22,7 @@ struct BUILDINGS_API FBuildingOwner
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName Id = NAME_None;
+	int32 OwnerIndex = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EBuildingOwnerType OwnerType = EBuildingOwnerType::BOT_Character;

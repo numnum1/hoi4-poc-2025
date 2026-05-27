@@ -3,21 +3,20 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingType.h"
 #include "UObject/Object.h"
-#include "Building.generated.h"
+#include "OrganizationInfo.generated.h"
 
 /**
  * 
  */
 USTRUCT(BlueprintType)
-struct BUILDINGS_API FBuilding
+struct ORGANIZATIONS_API FOrganizationInfo
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UBuildingType* Type = nullptr;
+	FText OrganizationName = FText::FromString("Unnamed Organization");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName Owner = NAME_None;
+	FSlateBrush Logo = FSlateNoResource();
 };

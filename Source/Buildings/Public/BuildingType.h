@@ -19,5 +19,14 @@ private:
 	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess), EditDefaultsOnly)
 	FText BuildingName;
 	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess), EditDefaultsOnly)
-	FSlateBrush Icon;	
+	FSlateBrush Icon;
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess), EditDefaultsOnly)
+	FName BuildingSlotName;
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess), EditDefaultsOnly)
+	int32 MaxPerProvince;
+public:
+	FORCEINLINE const FText& GetBuildingName() const { return BuildingName; }
+	FORCEINLINE const FSlateBrush& GetIcon() const { return Icon; }
+	FORCEINLINE const FName& GetBuildingSlotName() const { return BuildingSlotName; }
+	FORCEINLINE int32 GetMaxPerProvince() const { return MaxPerProvince; }
 };
