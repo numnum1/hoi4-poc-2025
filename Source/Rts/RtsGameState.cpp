@@ -73,7 +73,7 @@ void ARtsGameState::AddBuilding(UBuildingType* InBuilding, const int32 InProvinc
 	BuildingsContainer->Add(InBuilding, InProvinceIndex, InBuildingOwner);
 }
 
-TArray<FOrganizationInfo> ARtsGameState::CollectOrganizationsForCharacter(int32 InCharacterIndex) const
+TArray<FOrganizationInfo> ARtsGameState::CollectOrganizationsForCharacter(const int32 InCharacterIndex) const
 {
 	TArray<FOrganizationInfo> Res;
 	const auto Roles = CharactersContainer->GetRoles()[InCharacterIndex].OrganizationIndexes;

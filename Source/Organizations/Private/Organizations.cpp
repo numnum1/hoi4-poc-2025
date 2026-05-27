@@ -28,11 +28,19 @@ void UOrganizations::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	
 	DOREPLIFETIME(UOrganizations, Infos);
 	DOREPLIFETIME(UOrganizations, SettledNations);
+	DOREPLIFETIME(UOrganizations, Alignments);
 }
 
 int32 UOrganizations::Add(const FOrganizationInfo& NewOrg)
 {
 	Infos.Add(NewOrg);
 	SettledNations.Add({});
+	Alignments.Add({});
 	return Infos.Num() - 1;
+}
+
+void UOrganizations::PublishAlignment(const int32 InOrganizationIndex, const TArray<float>& InAlignment)
+{
+	Alignments[InOrganizationIndex].bPublished = true;
+	Alignments[InOrganizationIndex].Branches = InAlignment;
 }

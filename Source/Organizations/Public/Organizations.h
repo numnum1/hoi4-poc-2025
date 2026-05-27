@@ -22,6 +22,19 @@ struct ORGANIZATIONS_API FSettledNations
     TArray<int32> Value = {};
 };
 
+USTRUCT(BlueprintType)
+struct ORGANIZATIONS_API FOrganizationAlignment
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    bool bPublished = false;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TArray<float> Branches = {};
+    
+};
+
 UCLASS(ClassGroup=(Rts), meta=(BlueprintSpawnableComponent))
 class ORGANIZATIONS_API UOrganizations : public UActorComponent
 {
@@ -33,6 +46,8 @@ private:
     TArray<FOrganizationInfo> Infos;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess), Replicated)
     TArray<FSettledNations> SettledNations;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess), Replicated)
+    TArray<FOrganizationAlignment> Alignments; 
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
@@ -41,4 +56,7 @@ public:
     
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
     int32 Add(const FOrganizationInfo& NewOrg);
+    
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    void PublishAlignment(int32 InOrganizationIndex, const TArray<float>& InAlignment);
 };
