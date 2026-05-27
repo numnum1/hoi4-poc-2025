@@ -36,6 +36,9 @@ private:
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
+    UFUNCTION(BlueprintCallable)
+    FORCEINLINE FOrganizationInfo GetOrganizationInfo(const int32 InIndex) const { return Infos[InIndex]; }
+    
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
     int32 Add(const FOrganizationInfo& NewOrg);
 };

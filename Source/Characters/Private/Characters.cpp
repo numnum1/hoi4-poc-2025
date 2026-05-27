@@ -34,7 +34,7 @@ void UCharacters::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(UCharacters, CurrentProvinceIndexes);
 	DOREPLIFETIME(UCharacters, ScheduleCharacterIndexMapping);
 	DOREPLIFETIME(UCharacters, Schedules);
-	
+	DOREPLIFETIME(UCharacters, Roles);
 }
 
 void UCharacters::Setup(const TArray<FCharacterInfo>& NewInfos, const TArray<int32>& NewCurrentProvinceIndexes, const TArray<int32>& NewScheduleCharacterIndexMapping, const TArray<FSchedule>& NewSchedules)
@@ -43,4 +43,10 @@ void UCharacters::Setup(const TArray<FCharacterInfo>& NewInfos, const TArray<int
 	CurrentProvinceIndexes = NewCurrentProvinceIndexes;
 	ScheduleCharacterIndexMapping = NewScheduleCharacterIndexMapping;
 	Schedules = NewSchedules;
+	Roles.Init({}, Infos.Num());
+}
+
+void UCharacters::AddRole(const int32 InCharacterIndex, const int32 InAtOrganizationIndex)
+{
+	Roles[InCharacterIndex].OrganizationIndexes.Add(InAtOrganizationIndex);
 }

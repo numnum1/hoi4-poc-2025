@@ -13,7 +13,16 @@ public:
     virtual void ShutdownModule() override;
 };
 
-UCLASS(ClassGroup=(Map), meta=(BlueprintSpawnableComponent))
+USTRUCT(BlueprintType)
+struct CHARACTERS_API FOrganizationRoles
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TArray<int32> OrganizationIndexes = {};
+};
+
+UCLASS()
 class CHARACTERS_API UCharacters : public UActorComponent
 {
     GENERATED_BODY()
@@ -28,8 +37,12 @@ private:
     TArray<int32> ScheduleCharacterIndexMapping;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess), Replicated)
     TArray<FSchedule> Schedules;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess), Replicated)
+    TArray<FOrganizationRoles> Roles;
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    
+    FORCEINLINE const TArray<FOrganizationRoles>& GetRoles() const { return Roles; }
     
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
     void Setup(
@@ -38,5 +51,8 @@ public:
         const TArray<int32>& NewScheduleCharacterIndexMapping,
         const TArray<FSchedule>& NewSchedules
     );
+    
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    void AddRole(int32 InCharacterIndex, int32 InAtOrganizationIndex);
     
 };

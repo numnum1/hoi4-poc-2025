@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Buildings.h"
+#include "OrganizationInfo.h"
 #include "GameFramework/GameStateBase.h"
 #include "RtsGameState.generated.h"
 
@@ -63,4 +64,7 @@ public:
 	int32 FindBuildingsBySlot(int32 InProvinceIndex, const FName& InSlotName) const;
 	UFUNCTION(BlueprintCallable)
 	void AddBuilding(UBuildingType* InBuilding, int32 InProvinceIndex, const FBuildingOwner& InBuildingOwner);
+	// Characters
+	UFUNCTION(BlueprintCallable)
+	TArray<FOrganizationInfo> CollectOrganizationsForCharacter(int32 InCharacterIndex) const;
 };
