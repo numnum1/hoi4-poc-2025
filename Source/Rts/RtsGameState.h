@@ -7,6 +7,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "RtsGameState.generated.h"
 
+class UOrganizations;
 class UBuildings;
 class UTime;
 class URaces;
@@ -33,6 +34,8 @@ private:
 	URaces* RacesContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UBuildings* BuildingsContainer;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UOrganizations* OrganizationsContainer;
 	
 	// Simulation
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))

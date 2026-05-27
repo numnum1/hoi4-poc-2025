@@ -8,7 +8,7 @@ public class Rts : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Buildings", "Characters", "Nations", "Provinces", "Races", "Scenario", "Time" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Buildings", "Characters", "Nations", "Provinces", "Organizations", "Races", "Scenario", "Time" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 

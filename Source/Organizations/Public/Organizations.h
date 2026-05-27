@@ -35,4 +35,7 @@ private:
     TArray<FSettledNations> SettledNations;
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    int32 Add(const FOrganizationInfo& NewOrg);
 };

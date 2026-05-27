@@ -29,3 +29,10 @@ void UOrganizations::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(UOrganizations, Infos);
 	DOREPLIFETIME(UOrganizations, SettledNations);
 }
+
+int32 UOrganizations::Add(const FOrganizationInfo& NewOrg)
+{
+	Infos.Add(NewOrg);
+	SettledNations.Add({});
+	return Infos.Num() - 1;
+}

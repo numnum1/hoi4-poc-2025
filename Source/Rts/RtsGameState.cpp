@@ -7,6 +7,7 @@
 #include "Time.h"
 #include "Characters.h"
 #include "Nations.h"
+#include "Organizations.h"
 #include "Provinces.h"
 #include "Races.h"
 
@@ -17,6 +18,7 @@ ARtsGameState::ARtsGameState()
 	ProvincesContainer = CreateDefaultSubobject<UProvinces>(TEXT("ProvincesContainer"));
 	RacesContainer = CreateDefaultSubobject<URaces>(TEXT("RacesContainer"));
 	BuildingsContainer = CreateDefaultSubobject<UBuildings>(TEXT("BuildingsContainer"));
+	OrganizationsContainer = CreateDefaultSubobject<UOrganizations>(TEXT("OrganizationsContainer"));
 	
 	Time = CreateDefaultSubobject<UTime>(TEXT("Time"));
 }
