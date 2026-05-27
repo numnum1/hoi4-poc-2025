@@ -6,7 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "ProvinceAsset.generated.h"
 
-class UEcologyAsset;
+class UEcology;
 class UNationAsset;
 /**
  * 
@@ -30,7 +30,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	USoundBase* InspectionSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
-	UEcologyAsset* Ecology;
+	UEcology* Ecology;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	int32 TimezoneOffset;
+public:
+	FORCEINLINE const FName& GetMapId() const { return MapId; }
+	FORCEINLINE const FText& GetProvinceName() const { return ProvinceName; }
+	FORCEINLINE const FSlateBrush& GetPicture() const { return Picture; }
+	FORCEINLINE UNationAsset* GetOwningNation() const { return OwningNation; }
+	FORCEINLINE USoundBase* GetInspectionSound() const { return InspectionSound; }
+	FORCEINLINE UEcology* GetEcology() const { return Ecology; }
+	FORCEINLINE int32 GetTimezoneOffset() const { return TimezoneOffset; }
 };

@@ -25,15 +25,15 @@ public:
     
 private:
     UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, meta = (AllowPrivateAccess = true), Replicated, ReplicatedUsing=OnRep_ControlledCharacterId, BlueprintSetter=SetControlledCharacterId)
-    FGuid ControlledCharacterId;
+    int32 ControlledCharacterIndex;
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
-    FORCEINLINE const FGuid& GetControlledCharacterId() const { return ControlledCharacterId; }
+    FORCEINLINE const int32& GetControlledCharacterId() const { return ControlledCharacterIndex; }
     UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
-    FORCEINLINE void SetControlledCharacterId(const FGuid& NewControlledCharacterId)
+    FORCEINLINE void SetControlledCharacterId(const int32 NewControlledCharacterId)
     {
-        ControlledCharacterId = NewControlledCharacterId;
+        ControlledCharacterIndex = NewControlledCharacterId;
         OnControlledCharacterIdChanged.Broadcast();
     }
 private:

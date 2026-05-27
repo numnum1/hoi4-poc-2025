@@ -3,6 +3,11 @@
 
 #include "RtsGameModeBase.h"
 
+#include "Characters.h"
+#include "Nations.h"
+#include "Provinces.h"
+#include "Races.h"
+#include "ScenarioLoading.h"
 #include "RtsGameState.h"
 #include "Scenario.h"
 
@@ -33,7 +38,15 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 		return;
 	}
 	
-	InScenario->GetCharacters();
-	InScenario->GetProvinces();
+	const auto[Races, RaceIndexes] = ScenarioLoader::ExtractRaces(InScenario->GetCharacters());
+	RtsGameState->GetRacesContainer()->SetRaces(Races);
+
+	const auto[Nations, Provinces] = ScenarioLoader::ExtractNationsAndProvinces(InScenario->GetProvinces());
+	
+	RtsGameState->GetNationsContainer()->SetInfos(Nations);
+	RtsGameState->GetProvincesContainer()->Setup(Provinces);
+	
+	const auto[Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping, Schedules] = ScenarioLoader::ExtractCharacters(InScenario->GetCharacters(), InScenario->GetProvinces(), RaceIndexes);
+	RtsGameState->GetCharactersContainer()->Setup(Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping, Schedules);
 }
 

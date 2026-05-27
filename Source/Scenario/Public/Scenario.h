@@ -26,4 +26,7 @@ private:
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Characters", meta=(AllowPrivateAccess=true))
     TArray<UCharacterAsset*> Characters;
+public:
+    FORCEINLINE const TArray<UProvinceAsset*>& GetProvinces() const { return Provinces; }
+    FORCEINLINE const TArray<UCharacterAsset*>& GetCharacters() const { return Characters; }
 };

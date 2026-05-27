@@ -15,9 +15,6 @@ struct NATIONS_API FNationInfo
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName ID = NAME_None;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText NationName = FText::FromString("Unnamed Nation");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

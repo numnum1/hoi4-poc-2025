@@ -19,7 +19,8 @@ public class Provinces : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "Ecology"
             }
         );
     }

@@ -18,4 +18,6 @@ public:
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	FText RaceName;
+public:
+	FORCEINLINE FText GetRaceName() const { return RaceName; }
 };

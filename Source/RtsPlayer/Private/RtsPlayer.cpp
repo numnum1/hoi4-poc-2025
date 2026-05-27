@@ -20,11 +20,12 @@ IMPLEMENT_MODULE(FRtsPlayerModule, RtsPlayer)
 
 ARtsPlayer::ARtsPlayer()
 {
+	ControlledCharacterIndex = -1;
 }
 
 void ARtsPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
-	DOREPLIFETIME(ARtsPlayer, ControlledCharacterId);
+	DOREPLIFETIME(ARtsPlayer, ControlledCharacterIndex);
 }

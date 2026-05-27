@@ -27,4 +27,5 @@ protected:
 	
 	UFUNCTION(BlueprintCallable)
 	void LoadScenario(UScenario* InScenario);
+	
 };

@@ -19,8 +19,17 @@ public class Races : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
             }
         );
+
+        if (Target.bBuildEditor)
+        {
+            PrivateDependencyModuleNames.AddRange(new string[]
+            {
+                "UnrealEd",
+                "PropertyEditor",
+            });
+        }
     }
 }

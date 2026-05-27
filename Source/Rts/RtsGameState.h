@@ -6,6 +6,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "RtsGameState.generated.h"
 
+class URaces;
 class UProvinces;
 class UNations;
 class UCharacters;
@@ -25,4 +26,11 @@ private:
 	UNations* NationsContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UProvinces* ProvincesContainer;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	URaces* RacesContainer;
+public:
+	FORCEINLINE UCharacters*& GetCharactersContainer() { return CharactersContainer; }
+	FORCEINLINE UNations*& GetNationsContainer() { return NationsContainer; }
+	FORCEINLINE UProvinces*& GetProvincesContainer() { return ProvincesContainer; }
+	FORCEINLINE URaces*& GetRacesContainer() { return RacesContainer; }
 };

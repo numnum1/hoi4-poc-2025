@@ -19,19 +19,20 @@ class PROVINCES_API UProvinces : public UActorComponent
 public:
     UProvinces();
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess), Replicated, ReplicatedUsing=OnRep_Infos)
     TArray<FProvinceInfo> Infos;
     // Optimization
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TMap<FName, int32> MapIds;
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    TArray<FName> OwningNations;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
+    TArray<int32> OwningNationIndexes;
 public:
-    UFUNCTION(BlueprintCallable)
-    FORCEINLINE int32 GetNumOfProvinces() const { return Infos.Num(); }
-protected:
-    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    void Setup(const TArray<FProvinceInfo>& NewInfos);
+    
 private:
-    UFUNCTION(CallInEditor)
-    void InitValuesFromInfos();
+    UFUNCTION()
+    void OnRep_Infos();
 };

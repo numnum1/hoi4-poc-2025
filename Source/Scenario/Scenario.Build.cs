@@ -19,7 +19,8 @@ public class Scenario : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "Ecology"
             }
         );
     }

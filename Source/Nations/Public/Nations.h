@@ -19,6 +19,14 @@ class NATIONS_API UNations : public UActorComponent
 public:
     UNations();
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess), Replicated)
     TArray<FNationInfo> Infos;
+public:
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    FORCEINLINE void SetInfos(const TArray<FNationInfo>& NewInfos)
+    {
+        Infos = NewInfos;
+    }
 };

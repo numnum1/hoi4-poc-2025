@@ -21,4 +21,7 @@ private:
 	FText NationName;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	FSlateBrush Flag;
+public:
+	FORCEINLINE const FText& GetNationName() const { return NationName; }
+	FORCEINLINE const FSlateBrush& GetFlag() const { return Flag; }
 };
