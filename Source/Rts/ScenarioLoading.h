@@ -20,6 +20,7 @@ namespace ScenarioLoader
 			OutRaces.Add(FRace{
 				T->GetBaseRace()->GetRaceName()
 			});
+			Assets.Add(T->GetBaseRace());
 		}
 		return {OutRaces, Assets};
 	}
@@ -85,15 +86,15 @@ namespace ScenarioLoader
 	>
 	ExtractCharacters(const TArray<UCharacterAsset*>& InCharacters, const TArray<UProvinceAsset*> InProvinces, const TArray<URaceAsset*>& InRaceIndex)
 	{
-		TArray<FCharacterInfo> Infos;
-		TArray<int32> CurrentProvinceIndexes;
-		TArray<int32> ScheduleCharacterIndexMapping;
-		TArray<FSchedule> Schedules;
+		TArray<FCharacterInfo> Infos{};
+		TArray<int32> CurrentProvinceIndexes{};
+		TArray<int32> ScheduleCharacterIndexMapping{};
+		TArray<FSchedule> Schedules{};
 		
-		Infos.Reserve(InCharacters.Num());
-		CurrentProvinceIndexes.Reserve(InCharacters.Num());
-		ScheduleCharacterIndexMapping.Reserve(InCharacters.Num());
-		Schedules.Reserve(InCharacters.Num());
+		Infos.SetNum(InCharacters.Num());
+		CurrentProvinceIndexes.SetNum(InCharacters.Num());
+		ScheduleCharacterIndexMapping.SetNum(InCharacters.Num());
+		Schedules.SetNum(InCharacters.Num());
 
 		for (int I = 0; I < InCharacters.Num(); ++I)
 		{

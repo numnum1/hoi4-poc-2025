@@ -16,6 +16,6 @@ public class RtsTarget : TargetRules
 
 	private void RegisterModulesCreatedByRider()
 	{
-		ExtraModuleNames.AddRange(new string[] { "Buildings", "Provinces", "Nations", "Races", "Characters", "RtsPlayer", "Scenario", "Ecology" });
+		ExtraModuleNames.AddRange(new string[] { "Buildings", "Provinces", "Nations", "Races", "Characters", "RtsPlayer", "Scenario", "Ecology", "Time" });
 	}
 }

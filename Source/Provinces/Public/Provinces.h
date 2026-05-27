@@ -29,6 +29,8 @@ private:
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
+    FORCEINLINE const TArray<FProvinceInfo>& GetInfos() const { return Infos; }
+    
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
     void Setup(const TArray<FProvinceInfo>& NewInfos);
     
