@@ -10,6 +10,7 @@
 #include "ScenarioLoading.h"
 #include "RtsGameState.h"
 #include "Scenario.h"
+#include "Schedules.h"
 
 ARtsGameModeBase::ARtsGameModeBase()
 {
@@ -46,8 +47,10 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 	RtsGameState->GetNationsContainer()->SetInfos(Nations);
 	RtsGameState->GetProvincesContainer()->Setup(Provinces);
 	
-	const auto[Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping, Schedules] = ScenarioLoader::ExtractCharacters(InScenario->GetCharacters(), InScenario->GetProvinces(), RaceIndexes);
-	RtsGameState->GetCharactersContainer()->Setup(Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping, Schedules);
+	const auto[Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping] = ScenarioLoader::ExtractCharacters(InScenario->GetCharacters(), InScenario->GetProvinces(), RaceIndexes);
+	RtsGameState->GetCharactersContainer()->Setup(Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping);
+
+	// TODO: Somehow initialize schedules
 	
 	RtsGameState->GetBuildingsContainer()->InitWithProvinceAmount(Provinces.Num());
 }

@@ -41,8 +41,6 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TArray<int32> ScheduleCharacterIndexMapping;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
-    TArray<FSchedule> Schedules;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TArray<FOrganizationRoles> Roles;
 public:
     FORCEINLINE const TArray<FOrganizationRoles>& GetRoles() const { return Roles; }
@@ -51,8 +49,7 @@ public:
     void Setup(
         const TArray<FCharacterInfo>& NewInfos,
         const TArray<int32>& NewCurrentProvinceIndexes,
-        const TArray<int32>& NewScheduleCharacterIndexMapping,
-        const TArray<FSchedule>& NewSchedules
+        const TArray<int32>& NewScheduleCharacterIndexMapping
     );
     
     UFUNCTION(BlueprintCallable)

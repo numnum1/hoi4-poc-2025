@@ -81,20 +81,17 @@ namespace ScenarioLoader
 	__inline TTuple<
 	TArray<FCharacterInfo>,
 	TArray<int32>,
-	TArray<int32>,
-	TArray<FSchedule>
+	TArray<int32>
 	>
 	ExtractCharacters(const TArray<UCharacterAsset*>& InCharacters, const TArray<UProvinceAsset*> InProvinces, const TArray<URaceAsset*>& InRaceIndex)
 	{
 		TArray<FCharacterInfo> Infos{};
 		TArray<int32> CurrentProvinceIndexes{};
 		TArray<int32> ScheduleCharacterIndexMapping{};
-		TArray<FSchedule> Schedules{};
 		
 		Infos.SetNum(InCharacters.Num());
 		CurrentProvinceIndexes.SetNum(InCharacters.Num());
 		ScheduleCharacterIndexMapping.SetNum(InCharacters.Num());
-		Schedules.SetNum(InCharacters.Num());
 
 		for (int I = 0; I < InCharacters.Num(); ++I)
 		{
@@ -108,7 +105,7 @@ namespace ScenarioLoader
 			};
 		}
 		
-		return {Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping, Schedules};
+		return {Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping};
 	}
 	
 	

@@ -10,7 +10,7 @@
  * 
  */
 USTRUCT(BlueprintType)
-struct CHARACTERS_API FScheduleEntry
+struct SCHEDULES_API FScheduleEntry
 {
 	GENERATED_BODY()
 

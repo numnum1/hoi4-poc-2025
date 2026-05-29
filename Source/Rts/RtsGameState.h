@@ -15,6 +15,8 @@ class URaces;
 class UProvinces;
 class UNations;
 class UCharacters;
+class USchedules;
+
 /**
  * 
  */
@@ -40,6 +42,9 @@ private:
 	
 	// Simulation
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	USchedules* SchedulesContainer;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UTime* Time;
 	
 public:
@@ -48,6 +53,9 @@ public:
 	FORCEINLINE UProvinces* GetProvincesContainer() { return ProvincesContainer; }
 	FORCEINLINE URaces* GetRacesContainer() { return RacesContainer; }
 	FORCEINLINE UBuildings* GetBuildingsContainer() const { return BuildingsContainer; }
+	
+	// Simulation
+	FORCEINLINE USchedules* GetSchedules() const { return SchedulesContainer; }
 	
 	FORCEINLINE UTime* GetTime() const { return Time; }
 	

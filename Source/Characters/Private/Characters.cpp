@@ -22,12 +22,11 @@ UCharacters::UCharacters()
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 }
 
-void UCharacters::Setup(const TArray<FCharacterInfo>& NewInfos, const TArray<int32>& NewCurrentProvinceIndexes, const TArray<int32>& NewScheduleCharacterIndexMapping, const TArray<FSchedule>& NewSchedules)
+void UCharacters::Setup(const TArray<FCharacterInfo>& NewInfos, const TArray<int32>& NewCurrentProvinceIndexes, const TArray<int32>& NewScheduleCharacterIndexMapping)
 {
 	Infos = NewInfos;
 	CurrentProvinceIndexes = NewCurrentProvinceIndexes;
 	ScheduleCharacterIndexMapping = NewScheduleCharacterIndexMapping;
-	Schedules = NewSchedules;
 	Roles.Init({}, Infos.Num());
 }
 
