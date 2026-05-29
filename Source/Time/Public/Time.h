@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Components/ActorComponent.h"
 #include "Modules/ModuleManager.h"
 #include "Time.generated.h"
 

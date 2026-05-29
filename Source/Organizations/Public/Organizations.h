@@ -35,28 +35,39 @@ struct ORGANIZATIONS_API FOrganizationAlignment
     
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOrganizationsEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOrganizationEvent, int32, InOrganizationIndex);
+
 UCLASS(ClassGroup=(Rts), meta=(BlueprintSpawnableComponent))
 class ORGANIZATIONS_API UOrganizations : public UActorComponent
 {
     GENERATED_BODY()
 public:
     UOrganizations();
+
+    UPROPERTY(BlueprintAssignable)
+    FOrganizationsEvent OnOrganizationAdded;
+    // Org events
+    UPROPERTY(BlueprintAssignable)
+    FOrganizationEvent OnNationSettled;
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess), Replicated)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
     TArray<FOrganizationInfo> Infos;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess), Replicated)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
     TArray<FSettledNations> SettledNations;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess), Replicated)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
     TArray<FOrganizationAlignment> Alignments; 
 public:
-    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-    
     UFUNCTION(BlueprintCallable)
     FORCEINLINE FOrganizationInfo GetOrganizationInfo(const int32 InIndex) const { return Infos[InIndex]; }
     
-    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    UFUNCTION(BlueprintCallable)
     int32 Add(const FOrganizationInfo& NewOrg);
     
-    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    UFUNCTION(BlueprintCallable)
     void PublishAlignment(int32 InOrganizationIndex, const TArray<float>& InAlignment);
+    
+    UFUNCTION(BlueprintCallable)
+    void SettleNation(int32 InOrganizationIndex, int32 InNationIndex);
+    
 };

@@ -49,6 +49,6 @@ void UTime::UpdateTime(const float DeltaTime)
 	if (Speed == 0) return;
 	check(DeltaTime >= 0);
 	
-	CurrentTime += FTimespan::FromHours(DeltaTime * Speed);
+	CurrentTime += FTimespan::FromSeconds(DeltaTime * 60 * 60 * Speed);
 	OnCurrentTimeChanged.Broadcast();
 }

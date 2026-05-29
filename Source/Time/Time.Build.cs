@@ -9,7 +9,7 @@ public class Time : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core",
+                "Core", "Engine",
             }
         );
 

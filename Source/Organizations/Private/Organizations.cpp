@@ -19,16 +19,10 @@ IMPLEMENT_MODULE(FOrganizationsModule, Organizations)
 
 UOrganizations::UOrganizations()
 {
-	Infos = {};
-}
-
-void UOrganizations::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.bCanEverTick = false;
 	
-	DOREPLIFETIME(UOrganizations, Infos);
-	DOREPLIFETIME(UOrganizations, SettledNations);
-	DOREPLIFETIME(UOrganizations, Alignments);
+	Infos = {};
 }
 
 int32 UOrganizations::Add(const FOrganizationInfo& NewOrg)
@@ -43,4 +37,12 @@ void UOrganizations::PublishAlignment(const int32 InOrganizationIndex, const TAr
 {
 	Alignments[InOrganizationIndex].bPublished = true;
 	Alignments[InOrganizationIndex].Branches = InAlignment;
+}
+
+void UOrganizations::SettleNation(const int32 InOrganizationIndex, const int32 InNationIndex)
+{
+	check(!SettledNations[InOrganizationIndex].Value.Contains(InNationIndex));
+	
+	SettledNations[InOrganizationIndex].Value.Add(InNationIndex);
+	OnNationSettled.Broadcast(InOrganizationIndex);
 }
