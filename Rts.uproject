@@ -68,11 +68,6 @@
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "Simulation",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
 			"Name": "Schedules",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
