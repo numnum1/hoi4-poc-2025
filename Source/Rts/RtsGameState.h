@@ -43,7 +43,6 @@ private:
 	// Simulation
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	USchedules* SchedulesContainer;
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UTime* Time;
 	
@@ -56,7 +55,6 @@ public:
 	
 	// Simulation
 	FORCEINLINE USchedules* GetSchedules() const { return SchedulesContainer; }
-	
 	FORCEINLINE UTime* GetTime() const { return Time; }
 	
 	// Utils

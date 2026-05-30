@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Schedule.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "ScheduleStatics.generated.h"
 
@@ -16,5 +17,8 @@ class SCHEDULES_API UScheduleStatics : public UBlueprintFunctionLibrary
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	static bool TestFunction();
+	static FORCEINLINE EScheduleEntryType GetEntryAtHour(const FSchedule& InTarget, const uint8 InHour)
+	{
+		return InTarget[InHour];
+	}
 };

@@ -2,8 +2,3 @@
 
 
 #include "ScheduleStatics.h"
-
-bool UScheduleStatics::TestFunction()
-{
-	return true;
-}

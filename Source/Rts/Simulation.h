@@ -12,7 +12,7 @@ public:
 };
 
 UCLASS()
-class SIMULATION_API USimulation : public UActorComponent
+class RTS_API USimulation : public UActorComponent
 {
     GENERATED_BODY()
 public:
