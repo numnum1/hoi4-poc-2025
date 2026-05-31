@@ -4,7 +4,6 @@
 #include "CharacterInfo.h"
 #include "Race.h"
 #include "RaceAsset.h"
-#include "Schedule.h"
 #include "NationAsset.h"
 #include "ProvinceAsset.h"
 
@@ -17,15 +16,24 @@ namespace ScenarioLoader
 		for (UCharacterAsset* T : InCharacters)
 		{
 			if (Assets.Contains(T->GetBaseRace())) continue;
+			TArray<FRaceTrait> Traits{};
+			Algo::Transform(T->GetBaseRace()->CollectRaceTraits(), Traits, [](const URaceTraitAsset* Trait)
+			{
+				return FRaceTrait{
+					Trait->GetTraitName(),
+					Trait->GetTraitDescription()
+				};
+			});
 			OutRaces.Add(FRace{
-				T->GetBaseRace()->GetRaceName()
+				T->GetBaseRace()->GetRaceName(),
+				Traits
 			});
 			Assets.Add(T->GetBaseRace());
 		}
 		return {OutRaces, Assets};
 	}
-	
-	
+
+
 	__inline TTuple<TArray<FNationInfo>, TArray<FProvinceInfo>> ExtractNationsAndProvinces(const TArray<UProvinceAsset*>& InProvinces)
 	{
 		TTuple<TArray<FNationInfo>, TArray<FProvinceInfo>> Res;
@@ -77,18 +85,18 @@ namespace ScenarioLoader
 
 		return Res;
 	}
-	
+
 	__inline TTuple<
-	TArray<FCharacterInfo>,
-	TArray<int32>,
-	TArray<int32>
+		TArray<FCharacterInfo>,
+		TArray<int32>,
+		TArray<int32>
 	>
 	ExtractCharacters(const TArray<UCharacterAsset*>& InCharacters, const TArray<UProvinceAsset*> InProvinces, const TArray<URaceAsset*>& InRaceIndex)
 	{
 		TArray<FCharacterInfo> Infos{};
 		TArray<int32> CurrentProvinceIndexes{};
 		TArray<int32> ScheduleCharacterIndexMapping{};
-		
+
 		Infos.SetNum(InCharacters.Num());
 		CurrentProvinceIndexes.SetNum(InCharacters.Num());
 		ScheduleCharacterIndexMapping.SetNum(InCharacters.Num());
@@ -104,9 +112,7 @@ namespace ScenarioLoader
 				InProvinces.Find(Char->GetCurrentProvince())
 			};
 		}
-		
+
 		return {Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping};
 	}
-	
-	
 }

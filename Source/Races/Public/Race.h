@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RaceTrait.h"
 #include "UObject/Object.h"
 #include "Race.generated.h"
 
@@ -16,5 +17,6 @@ struct RACES_API FRace
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText RaceName = FText::FromString("Unnamed Race");
-	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FRaceTrait> Traits = {};
 };
