@@ -13,6 +13,8 @@ public:
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTimeEvent);
+/** Fired on the server once per crossed game hour. InHoursElapsed is >= 1 and may be > 1 at high Speed. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTimeHourEvent, int32, InHoursElapsed);
 
 UCLASS(BlueprintType)
 class TIME_API UTime : public UActorComponent
@@ -25,11 +27,15 @@ public:
     FTimeEvent OnCurrentTimeChanged;
     UPROPERTY(BlueprintAssignable)
     FTimeEvent OnSpeedChanged;
+    UPROPERTY(BlueprintAssignable)
+    FTimeHourEvent OnHourElapsed;
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_CurrentTime)
     FDateTime CurrentTime;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Speed, BlueprintSetter=SetSpeed)
     int32 Speed;
+    /** Start of the last game hour we broadcast for. Server-only, deliberately not replicated. */
+    FDateTime LastHourBoundary;
 public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     
@@ -56,4 +62,7 @@ private:
     }
     
     void UpdateTime(float DeltaTime);
+
+    /** Drops minutes/seconds so hour boundaries can be compared directly. */
+    static FDateTime TruncateToHour(const FDateTime& In);
 };

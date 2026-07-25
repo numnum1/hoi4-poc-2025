@@ -78,11 +78,11 @@ void ARtsGameState::AddBuilding(UBuildingType* InBuilding, const int32 InProvinc
 TArray<FOrganizationInfo> ARtsGameState::CollectOrganizationsForCharacter(const int32 InCharacterIndex) const
 {
 	TArray<FOrganizationInfo> Res;
-	const auto Roles = CharactersContainer->GetRoles()[InCharacterIndex].OrganizationIndexes;
-	Res.SetNum(Roles.Num());
-	for (int32 I = 0; I < Roles.Num(); I++)
+	const TArray<FPosition> Positions = CharactersContainer->GetPositions(InCharacterIndex);
+	Res.SetNum(Positions.Num());
+	for (int32 I = 0; I < Positions.Num(); I++)
 	{
-		Res[I] = OrganizationsContainer->GetOrganizationInfo(Roles[I]);
+		Res[I] = OrganizationsContainer->GetOrganizationInfo(Positions[I].OrganizationIndex);
 	}
 	return Res;
 }

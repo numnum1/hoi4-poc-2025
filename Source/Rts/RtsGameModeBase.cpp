@@ -3,6 +3,7 @@
 
 #include "RtsGameModeBase.h"
 
+#include "CharacterEntitySubsystem.h"
 #include "Characters.h"
 #include "Nations.h"
 #include "Provinces.h"
@@ -11,6 +12,7 @@
 #include "RtsGameState.h"
 #include "Scenario.h"
 #include "Schedules.h"
+#include "Time.h"
 
 ARtsGameModeBase::ARtsGameModeBase()
 {
@@ -39,16 +41,31 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 		return;
 	}
 	
-	const auto[Races, RaceIndexes] = ScenarioLoader::ExtractRaces(InScenario->GetCharacters());
-	RtsGameState->GetRacesContainer()->SetRaces(Races);
+	const auto [Categories, LifeTypes, Species, Races, RaceIndexes] = ScenarioLoader::ExtractRaces(InScenario->GetCharacters());
+	URaces* RacesContainer = RtsGameState->GetRacesContainer();
+	RacesContainer->SetCategories(Categories);
+	RacesContainer->SetLifeTypes(LifeTypes);
+	RacesContainer->SetSpecies(Species);
+	RacesContainer->SetRaces(Races);
 
 	const auto[Nations, Provinces] = ScenarioLoader::ExtractNationsAndProvinces(InScenario->GetProvinces());
 	
 	RtsGameState->GetNationsContainer()->SetInfos(Nations);
 	RtsGameState->GetProvincesContainer()->Setup(Provinces);
 	
-	const auto[Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping] = ScenarioLoader::ExtractCharacters(InScenario->GetCharacters(), InScenario->GetProvinces(), RaceIndexes);
-	RtsGameState->GetCharactersContainer()->Setup(Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping);
+	const TArray<FCharacterSpawnData> CharacterSpawnData = ScenarioLoader::ExtractCharacters(
+		InScenario->GetCharacters(), InScenario->GetProvinces(), Provinces, RaceIndexes, Races);
+
+	UCharacterEntitySubsystem* CharacterEntities = GetWorld()->GetSubsystem<UCharacterEntitySubsystem>();
+	if (CharacterEntities == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("No UCharacterEntitySubsystem — characters will not be simulated"));
+		return;
+	}
+	CharacterEntities->CreateCharacters(CharacterSpawnData);
+	CharacterEntities->BindToTime(RtsGameState->GetTime());
+
+	RtsGameState->GetCharactersContainer()->SetupDisplay(CharacterSpawnData);
 
 	// TODO: Somehow initialize schedules
 	

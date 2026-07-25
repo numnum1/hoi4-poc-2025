@@ -56,6 +56,8 @@ public:
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	FText CategoryName;
+public:
+	FORCEINLINE const FText& GetCategoryName() const { return CategoryName; }
 };
 
 /**
@@ -70,15 +72,21 @@ public:
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	FText SpeciesName;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	URaceCategoryAsset* Category;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	ULifeTypeAsset* LifeType;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	TArray<URaceTraitAsset*> Traits;
 public:
+	FORCEINLINE const FText& GetSpeciesName() const { return SpeciesName; }
+	FORCEINLINE URaceCategoryAsset* GetCategory() const { return Category; }
+	FORCEINLINE ULifeTypeAsset* GetLifeType() const { return LifeType; }
+	/** Own traits of this species (does not include LifeType traits) */
+	FORCEINLINE const TArray<URaceTraitAsset*>& GetTraits() const { return Traits; }
+
 	virtual TArray<URaceTraitAsset*> CollectRaceTraits_Implementation() const override;
 };
 
@@ -115,13 +123,16 @@ private:
 	
 public:
 	FORCEINLINE FText GetRaceName() const { return RaceName; }
-	
+	FORCEINLINE USpeciesAsset* GetSpecies() const { return Species; }
+	/** Own traits of this race (does not include Species or LifeType traits) */
+	FORCEINLINE const TArray<URaceTraitAsset*>& GetTraits() const { return Traits; }
+
 	FORCEINLINE uint8 GetStrength() const { return Strength; }
 	FORCEINLINE uint8 GetDexterity() const { return Dexterity; }
 	FORCEINLINE uint8 GetConstitution() const { return Constitution; }
 	FORCEINLINE uint8 GetIntelligence() const { return Intelligence; }
 	FORCEINLINE uint8 GetWisdom() const { return Wisdom; }
 	FORCEINLINE uint8 GetCharisma() const { return Charisma; }
-	
+
 	virtual TArray<URaceTraitAsset*> CollectRaceTraits_Implementation() const override;
 };

@@ -10,6 +10,8 @@ public class Scenario : ModuleRules
             new string[]
             {
                 "Core",
+                // ECharacterSimTier lives with the character types it describes
+                "Characters"
             }
         );
 

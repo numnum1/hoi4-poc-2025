@@ -10,7 +10,13 @@ public class Characters : ModuleRules
             new string[]
             {
                 "Core",
-                "Races"
+                "Races",
+                "MassCore",
+                "MassEntity",
+                // Public because FCharacterScheduleSharedFragment exposes FSchedule in a public header
+                "Schedules",
+                // UCharacterEntitySubsystem drives its processor off UTime::OnHourElapsed
+                "Time"
             }
         );
 

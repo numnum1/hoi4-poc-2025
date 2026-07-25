@@ -1,36 +1,98 @@
 #pragma once
 
+#include "Algo/Transform.h"
 #include "CharacterAsset.h"
 #include "CharacterInfo.h"
 #include "Race.h"
+#include "RaceCategory.h"
+#include "LifeType.h"
+#include "Species.h"
 #include "RaceAsset.h"
 #include "NationAsset.h"
 #include "ProvinceAsset.h"
+#include "ProvinceInfo.h"
 
 namespace ScenarioLoader
 {
-	__inline TTuple<TArray<FRace>, TArray<URaceAsset*>> ExtractRaces(const TArray<UCharacterAsset*>& InCharacters)
+	__inline TTuple<TArray<FRaceCategory>, TArray<FLifeType>, TArray<FSpecies>, TArray<FRace>, TArray<URaceAsset*>>
+	ExtractRaces(const TArray<UCharacterAsset*>& InCharacters)
 	{
-		TArray<FRace> OutRaces{};
-		TArray<URaceAsset*> Assets{};
-		for (UCharacterAsset* T : InCharacters)
+		// --- Collect unique assets from all characters ---
+		TArray<URaceAsset*>        RaceAssets;
+		TArray<USpeciesAsset*>     SpeciesAssets;
+		TArray<ULifeTypeAsset*>    LifeTypeAssets;
+		TArray<URaceCategoryAsset*> CategoryAssets;
+
+		for (const UCharacterAsset* Char : InCharacters)
 		{
-			if (Assets.Contains(T->GetBaseRace())) continue;
-			TArray<FRaceTrait> Traits{};
-			Algo::Transform(T->GetBaseRace()->CollectRaceTraits(), Traits, [](const URaceTraitAsset* Trait)
+			if (!Char) continue;
+			URaceAsset* Race = Char->GetBaseRace();
+			if (!Race || RaceAssets.Contains(Race)) continue;
+			RaceAssets.Add(Race);
+
+			USpeciesAsset* Sp = Race->GetSpecies();
+			if (Sp && !SpeciesAssets.Contains(Sp))
 			{
-				return FRaceTrait{
-					Trait->GetTraitName(),
-					Trait->GetTraitDescription()
-				};
-			});
-			OutRaces.Add(FRace{
-				T->GetBaseRace()->GetRaceName(),
-				Traits
-			});
-			Assets.Add(T->GetBaseRace());
+				SpeciesAssets.Add(Sp);
+
+				if (ULifeTypeAsset* LT = Sp->GetLifeType())
+					if (!LifeTypeAssets.Contains(LT))
+						LifeTypeAssets.Add(LT);
+
+				if (URaceCategoryAsset* Cat = Sp->GetCategory())
+					if (!CategoryAssets.Contains(Cat))
+						CategoryAssets.Add(Cat);
+			}
 		}
-		return {OutRaces, Assets};
+
+		// --- Helper: convert asset traits to runtime traits ---
+		auto ConvertTraits = [](const TArray<URaceTraitAsset*>& InTraits) -> TArray<FRaceTrait>
+		{
+			TArray<FRaceTrait> Out;
+			Algo::Transform(InTraits, Out, [](const URaceTraitAsset* T)
+			{
+				return FRaceTrait{ T->GetTraitName(), T->GetTraitDescription() };
+			});
+			return Out;
+		};
+
+		// --- Build runtime structs ---
+		TArray<FRaceCategory> OutCategories;
+		OutCategories.Reserve(CategoryAssets.Num());
+		for (const URaceCategoryAsset* Cat : CategoryAssets)
+			OutCategories.Add(FRaceCategory{ Cat->GetCategoryName() });
+
+		TArray<FLifeType> OutLifeTypes;
+		OutLifeTypes.Reserve(LifeTypeAssets.Num());
+		for (const ULifeTypeAsset* LT : LifeTypeAssets)
+			OutLifeTypes.Add(FLifeType{ LT->GetLifeTypeName(), ConvertTraits(LT->GetTraits()) });
+
+		TArray<FSpecies> OutSpecies;
+		OutSpecies.Reserve(SpeciesAssets.Num());
+		for (const USpeciesAsset* Sp : SpeciesAssets)
+			OutSpecies.Add(FSpecies{
+				Sp->GetSpeciesName(),
+				CategoryAssets.Find(Sp->GetCategory()),
+				LifeTypeAssets.Find(Sp->GetLifeType()),
+				ConvertTraits(Sp->GetTraits())
+			});
+
+		TArray<FRace> OutRaces;
+		OutRaces.Reserve(RaceAssets.Num());
+		for (const URaceAsset* Race : RaceAssets)
+			OutRaces.Add(FRace{
+				Race->GetRaceName(),
+				SpeciesAssets.Find(Race->GetSpecies()),
+				ConvertTraits(Race->GetTraits()),
+				Race->GetStrength(),
+				Race->GetDexterity(),
+				Race->GetConstitution(),
+				Race->GetIntelligence(),
+				Race->GetWisdom(),
+				Race->GetCharisma()
+			});
+
+		return { OutCategories, OutLifeTypes, OutSpecies, OutRaces, RaceAssets };
 	}
 
 
@@ -86,33 +148,53 @@ namespace ScenarioLoader
 		return Res;
 	}
 
-	__inline TTuple<
-		TArray<FCharacterInfo>,
-		TArray<int32>,
-		TArray<int32>
-	>
-	ExtractCharacters(const TArray<UCharacterAsset*>& InCharacters, const TArray<UProvinceAsset*> InProvinces, const TArray<URaceAsset*>& InRaceIndex)
+	/**
+	 * Everything a character needs at creation, resolved to runtime indexes.
+	 * InProvinceInfos must be the array ExtractNationsAndProvinces produced from InProvinces,
+	 * so index i of both refers to the same province; it supplies the timezone offset that
+	 * gets cached on the entity.
+	 */
+	__inline TArray<FCharacterSpawnData>
+	ExtractCharacters(const TArray<UCharacterAsset*>& InCharacters, const TArray<UProvinceAsset*>& InProvinces,
+	                  const TArray<FProvinceInfo>& InProvinceInfos, const TArray<URaceAsset*>& InRaceIndex,
+	                  const TArray<FRace>& InRaces)
 	{
-		TArray<FCharacterInfo> Infos{};
-		TArray<int32> CurrentProvinceIndexes{};
-		TArray<int32> ScheduleCharacterIndexMapping{};
+		TArray<FCharacterSpawnData> Out;
+		Out.Reserve(InCharacters.Num());
 
-		Infos.SetNum(InCharacters.Num());
-		CurrentProvinceIndexes.SetNum(InCharacters.Num());
-		ScheduleCharacterIndexMapping.SetNum(InCharacters.Num());
-
-		for (int I = 0; I < InCharacters.Num(); ++I)
+		for (const UCharacterAsset* Char : InCharacters)
 		{
-			const UCharacterAsset* Char = InCharacters[I];
-			Infos[I] = FCharacterInfo{
-				Char->GetCharacterName(),
-				Char->GetPortrait(),
-				InProvinces.Find(Char->GetProvinceOfBirth()),
-				InRaceIndex.Find(Char->GetBaseRace()),
-				InProvinces.Find(Char->GetCurrentProvince())
-			};
+			if (!Char) continue;
+
+			const int32 CurrentProvinceIndex = InProvinces.Find(Char->GetCurrentProvince());
+			const int32 RaceIndex = InRaceIndex.Find(Char->GetBaseRace());
+
+			FCharacterSpawnData Data;
+			Data.Display.CharacterName = Char->GetCharacterName();
+			Data.Display.Portrait = Char->GetPortrait();
+			Data.BirthProvinceIndex = InProvinces.Find(Char->GetProvinceOfBirth());
+			Data.BaseRaceIndex = RaceIndex;
+			Data.CurrentProvinceIndex = CurrentProvinceIndex;
+			Data.SimTier = Char->GetSimTier();
+
+			if (InProvinceInfos.IsValidIndex(CurrentProvinceIndex))
+			{
+				Data.TimezoneOffset = InProvinceInfos[CurrentProvinceIndex].TimezoneOffset;
+			}
+
+			if (InRaces.IsValidIndex(RaceIndex))
+			{
+				const FRace& Race = InRaces[RaceIndex];
+				Data.RaceModifiers = FAbilities{
+					Race.Strength, Race.Dexterity, Race.Constitution,
+					Race.Intelligence, Race.Wisdom, Race.Charisma
+				};
+			}
+
+			// TODO: schedules are not authored yet, so this stays an all-NONE default.
+			Out.Add(MoveTemp(Data));
 		}
 
-		return {Infos, CurrentProvinceIndexes, ScheduleCharacterIndexMapping};
+		return Out;
 	}
 }
