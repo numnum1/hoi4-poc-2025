@@ -27,7 +27,7 @@ ARtsGameState::ARtsGameState()
 
 int32 ARtsGameState::GetTimezoneOffsetOfProvince(const int32 InProvinceIndex) const
 {
-	return ProvincesContainer->GetInfos()[InProvinceIndex].TimezoneOffset;
+	return ProvincesContainer->GetDisplayInfo(InProvinceIndex).TimezoneOffset;
 }
 
 TArray<UBuildingType*> ARtsGameState::CollectBuildingsInProvince(const int32 InProvinceIndex) const

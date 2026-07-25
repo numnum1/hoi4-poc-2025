@@ -96,9 +96,9 @@ namespace ScenarioLoader
 	}
 
 
-	__inline TTuple<TArray<FNationInfo>, TArray<FProvinceInfo>> ExtractNationsAndProvinces(const TArray<UProvinceAsset*>& InProvinces)
+	__inline TTuple<TArray<FNationInfo>, TArray<FProvinceSpawnData>> ExtractNationsAndProvinces(const TArray<UProvinceAsset*>& InProvinces)
 	{
-		TTuple<TArray<FNationInfo>, TArray<FProvinceInfo>> Res;
+		TTuple<TArray<FNationInfo>, TArray<FProvinceSpawnData>> Res;
 
 		TArray<UNationAsset*> NationAssets;
 		NationAssets.Reserve(InProvinces.Num());
@@ -134,15 +134,15 @@ namespace ScenarioLoader
 			UNationAsset* Nation = Province->GetOwningNation();
 			const int32 NationIndex = NationAssets.Find(Nation);
 
-			Res.Value.Add(FProvinceInfo{
-				Province->GetMapId(),
-				Province->GetProvinceName(),
-				Province->GetPicture(),
-				Province->GetInspectionSound(),
-				Province->GetEcology(),
-				Province->GetTimezoneOffset(),
-				NationIndex
-			});
+			FProvinceSpawnData SpawnData;
+			SpawnData.Display.MapId = Province->GetMapId();
+			SpawnData.Display.Name = Province->GetProvinceName();
+			SpawnData.Display.Picture = Province->GetPicture();
+			SpawnData.Display.InspectionSound = Province->GetInspectionSound();
+			SpawnData.Display.Ecology = Province->GetEcology();
+			SpawnData.Display.TimezoneOffset = Province->GetTimezoneOffset();
+			SpawnData.OwningNationIndex = NationIndex;
+			Res.Value.Add(MoveTemp(SpawnData));
 		}
 
 		return Res;
@@ -156,7 +156,7 @@ namespace ScenarioLoader
 	 */
 	__inline TArray<FCharacterSpawnData>
 	ExtractCharacters(const TArray<UCharacterAsset*>& InCharacters, const TArray<UProvinceAsset*>& InProvinces,
-	                  const TArray<FProvinceInfo>& InProvinceInfos, const TArray<URaceAsset*>& InRaceIndex,
+	                  const TArray<FProvinceSpawnData>& InProvinceInfos, const TArray<URaceAsset*>& InRaceIndex,
 	                  const TArray<FRace>& InRaces)
 	{
 		TArray<FCharacterSpawnData> Out;
@@ -179,7 +179,7 @@ namespace ScenarioLoader
 
 			if (InProvinceInfos.IsValidIndex(CurrentProvinceIndex))
 			{
-				Data.TimezoneOffset = InProvinceInfos[CurrentProvinceIndex].TimezoneOffset;
+				Data.TimezoneOffset = InProvinceInfos[CurrentProvinceIndex].Display.TimezoneOffset;
 			}
 
 			if (InRaces.IsValidIndex(RaceIndex))

@@ -55,9 +55,6 @@ void UTime::UpdateTime(const float DeltaTime)
 {
 	if (Speed == 0) return;
 	check(DeltaTime >= 0);
-	// CurrentTime is replicated, so only the server may advance it. Without this the client
-	// integrates locally and fights every incoming OnRep_CurrentTime.
-	if (GetOwner() && !GetOwner()->HasAuthority()) return;
 
 	CurrentTime += FTimespan::FromSeconds(DeltaTime * 60 * 60 * Speed);
 	OnCurrentTimeChanged.Broadcast();

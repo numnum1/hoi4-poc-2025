@@ -1,55 +1,82 @@
-﻿#include "Provinces.h"
+#include "Provinces.h"
 
-#include "Net/UnrealNetwork.h"
+#include "ProvinceEntitySubsystem.h"
+#include "Engine/World.h"
 
 #define LOCTEXT_NAMESPACE "FProvincesModule"
 
 void FProvincesModule::StartupModule()
 {
-    
+
 }
 
 void FProvincesModule::ShutdownModule()
 {
-    
+
 }
 
 #undef LOCTEXT_NAMESPACE
-    
+
 IMPLEMENT_MODULE(FProvincesModule, Provinces)
 
 UProvinces::UProvinces()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
-	
-	SetIsReplicatedByDefault(true);
 }
 
-void UProvinces::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+UProvinceEntitySubsystem* UProvinces::GetEntities() const
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
-	DOREPLIFETIME(UProvinces, Infos);
+	const UWorld* World = GetWorld();
+	return World ? World->GetSubsystem<UProvinceEntitySubsystem>() : nullptr;
 }
 
-void UProvinces::Setup(const TArray<FProvinceInfo>& NewInfos)
+FProvinceDisplayInfo UProvinces::GetDisplayInfo(const int32 InProvinceIndex) const
 {
-	Infos = NewInfos;
-	
-	// Set containers to exact sizes
-	MapIds.Empty(Infos.Num());
-	OwningNationIndexes.SetNumUninitialized(Infos.Num());
-	
-	// For each info initialize fitting entry
-	for (int I = 0; I < Infos.Num(); ++I)
+	return Display.IsValidIndex(InProvinceIndex) ? Display[InProvinceIndex] : FProvinceDisplayInfo();
+}
+
+int32 UProvinces::FindByMapId(const FName InMapId) const
+{
+	const int32* Found = MapIds.Find(InMapId);
+	return Found ? *Found : INDEX_NONE;
+}
+
+int32 UProvinces::GetOwningNation(const int32 InProvinceIndex) const
+{
+	const UProvinceEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->GetOwningNation(InProvinceIndex) : INDEX_NONE;
+}
+
+TArray<int32> UProvinces::CollectProvincesOfNation(const int32 InNationIndex) const
+{
+	const UProvinceEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->CollectProvincesOfNation(InNationIndex) : TArray<int32>();
+}
+
+void UProvinces::Setup(const TArray<FProvinceSpawnData>& NewProvinces)
+{
+	Display.Reset(NewProvinces.Num());
+	MapIds.Empty(NewProvinces.Num());
+
+	for (int32 I = 0; I < NewProvinces.Num(); ++I)
 	{
-		MapIds.Emplace(Infos[I].MapId, I);
-		OwningNationIndexes[I] = Infos[I].OwningNationIndex;
+		Display.Add(NewProvinces[I].Display);
+		MapIds.Emplace(NewProvinces[I].Display.MapId, I);
+	}
+
+	UProvinceEntitySubsystem* Entities = GetEntities();
+	if (Entities)
+	{
+		Entities->CreateProvinces(NewProvinces);
 	}
 }
 
-void UProvinces::OnRep_Infos()
+void UProvinces::SetOwningNation(const int32 InProvinceIndex, const int32 InNationIndex)
 {
-	Setup(Infos);
+	UProvinceEntitySubsystem* Entities = GetEntities();
+	if (Entities)
+	{
+		Entities->SetOwningNation(InProvinceIndex, InNationIndex);
+	}
 }

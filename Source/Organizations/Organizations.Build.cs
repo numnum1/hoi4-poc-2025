@@ -1,4 +1,4 @@
-﻿using UnrealBuildTool;
+using UnrealBuildTool;
 
 public class Organizations : ModuleRules
 {
@@ -10,6 +10,8 @@ public class Organizations : ModuleRules
             new string[]
             {
                 "Core",
+                "MassCore",
+                "MassEntity",
             }
         );
 
