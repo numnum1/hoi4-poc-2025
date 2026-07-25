@@ -1,0 +1,7 @@
+# Ignore everything by default, only Config/, Source/ and Rts.uproject are tracked
+/*
+
+!/Config/
+!/Source/
+!/Rts.uproject
+!/.gitignore
