@@ -6,17 +6,20 @@
 #include "MVVMViewModelBase.h"
 #include "ScheduleViewModel.generated.h"
 
-class UScheduleProxy;
+class UCharacterProxy;
 
 /**
- * A read-only C++ MVVM view model for a single authored schedule from USchedules' library,
- * addressed by FScheduleId. Follows the pattern set by UCharacterViewModel: Initialize(Id) takes
- * a single parameter so it stays usable as an MVVM function binding target and fetches the
- * matching UScheduleProxy from URtsProxySubsystem.
+ * A read-only C++ MVVM view model for a single character's actual running schedule, addressed by
+ * FCharacterId rather than FScheduleId: the hours shown here are the character's own copy (which
+ * can diverge from the library entry it was copied from) and displaying them meaningfully also
+ * needs the character's current timezone offset, so both have to come from the same character.
+ * Follows the pattern set by UCharacterViewModel: Initialize(Id) takes a single parameter so it
+ * stays usable as an MVVM function binding target, fetches the matching UCharacterProxy from
+ * URtsProxySubsystem, and refreshes flat FieldNotify properties whenever that proxy reports a
+ * change — a moving character can end up in a different timezone without its schedule changing.
  *
- * Unlike the other view models there is nothing to subscribe to: USchedules is filled once at
- * scenario load and is read-only afterwards, so Refresh only ever runs from Initialize and
- * UScheduleProxy has no events to offer.
+ * ScheduleId/ScheduleName still identify the USchedules library entry the running schedule was
+ * copied from, read through UCharacterProxy::GetScheduleTemplate, purely for display.
  *
  * FSchedule is taken apart into one property per hour, the same way UCharacterViewModel exposes
  * a character's own schedule — UMG binds single values, not structs.
@@ -27,9 +30,6 @@ class RTSPROXY_API UScheduleViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintNativeEvent, Category="Schedule Viewmodel")
-	void Initialize(FScheduleId InScheduleId);
-
 	/** The schedule entry for one hour of the day, 0-23. Out-of-range hours return SET_NONE. */
 	UFUNCTION(BlueprintPure, Category="Schedule Viewmodel")
 	EScheduleEntryType GetScheduleAtHour(int32 InHour) const;
@@ -37,21 +37,34 @@ public:
 protected:
 	//~ Identity ---------------------------------------------------------------------------------
 
-	/** False when the id names no entry in the library. */
+	/** False once the character's entity has been destroyed. Display keeps its last known values. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsValid, Category="Schedule Viewmodel", meta=(AllowPrivateAccess))
 	bool bIsValid = false;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Schedule Viewmodel", meta=(AllowPrivateAccess))
+	FCharacterId CharacterId;
+
+	/** CharacterId as a plain int32, for widgets that cannot bind the id struct. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Schedule Viewmodel", meta=(AllowPrivateAccess))
+	int32 CharacterIdValue = INDEX_NONE;
+
+	//~ Schedule template, for display only -------------------------------------------------------
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Schedule Viewmodel|Display", meta=(AllowPrivateAccess))
 	FScheduleId ScheduleId;
 
 	/** ScheduleId as a plain int32, for widgets that cannot bind the id struct. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Schedule Viewmodel", meta=(AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Schedule Viewmodel|Display", meta=(AllowPrivateAccess))
 	int32 ScheduleIdValue = INDEX_NONE;
-
-	//~ FScheduleInfo ------------------------------------------------------------------------------
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Schedule Viewmodel|Display", meta=(AllowPrivateAccess))
 	FText ScheduleName;
+
+	//~ Timezone ---------------------------------------------------------------------------------
+
+	/** Hours offset from game time for the character's current province, read through its proxy. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Schedule Viewmodel", meta=(AllowPrivateAccess))
+	int32 TimezoneOffset = 0;
 
 	//~ FSchedule --------------------------------------------------------------------------------
 	// One property per hour so a 24-slot day view can bind each slot directly. GetScheduleAtHour
@@ -131,10 +144,14 @@ protected:
 
 public:
 	bool IsValid() const { return bIsValid; }
+	FCharacterId GetCharacterId() const { return CharacterId; }
+	int32 GetCharacterIdValue() const { return CharacterIdValue; }
+
 	FScheduleId GetScheduleId() const { return ScheduleId; }
 	int32 GetScheduleIdValue() const { return ScheduleIdValue; }
-
 	FText GetScheduleName() const { return ScheduleName; }
+
+	int32 GetTimezoneOffset() const { return TimezoneOffset; }
 
 	EScheduleEntryType GetScheduleHour00() const { return ScheduleHour00; }
 	EScheduleEntryType GetScheduleHour01() const { return ScheduleHour01; }
@@ -161,9 +178,23 @@ public:
 	EScheduleEntryType GetScheduleHour22() const { return ScheduleHour22; }
 	EScheduleEntryType GetScheduleHour23() const { return ScheduleHour23; }
 
-private:
+protected:
+	UFUNCTION(BlueprintCallable, Category="Schedule Viewmodel")
+	void Initialize(FCharacterId InCharacterId);
+
+	UFUNCTION(BlueprintCallable, Category="Schedule Viewmodel")
 	void Refresh();
 
+private:
+	//~ Begin UObject interface
+	virtual void BeginDestroy() override;
+	//~ End UObject interface
+
+	void Unbind();
+
+	UFUNCTION()
+	void HandleProxyChanged();
+
 	UPROPERTY()
-	TObjectPtr<UScheduleProxy> Proxy;
+	TObjectPtr<UCharacterProxy> Proxy;
 };

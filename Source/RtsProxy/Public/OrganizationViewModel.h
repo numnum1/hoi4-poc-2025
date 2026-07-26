@@ -24,9 +24,6 @@ class RTSPROXY_API UOrganizationViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintNativeEvent, Category="Organization Viewmodel")
-	void Initialize(FOrganizationId InOrganizationId);
-
 	/** One branch of the published alignment, or 0 if the index is out of range. */
 	UFUNCTION(BlueprintPure, Category="Organization Viewmodel|Alignment")
 	float GetAlignmentBranch(int32 InIndex) const;
@@ -95,12 +92,18 @@ public:
 	const TArray<int32>& GetSettledNationIdValues() const { return SettledNationIdValues; }
 	int32 GetSettledNationCount() const { return SettledNationCount; }
 
+protected:
+	UFUNCTION(BlueprintCallable, Category="Organization Viewmodel")
+	void Initialize(FOrganizationId InOrganizationId);
+
+	UFUNCTION(BlueprintCallable, Category="Organization Viewmodel")
+	void Refresh();
+
 private:
 	//~ Begin UObject interface
 	virtual void BeginDestroy() override;
 	//~ End UObject interface
 
-	void Refresh();
 	void Unbind();
 
 	UFUNCTION()

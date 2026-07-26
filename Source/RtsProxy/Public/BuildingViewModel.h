@@ -25,11 +25,10 @@ class RTSPROXY_API UBuildingViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
-public:
-	UFUNCTION(BlueprintNativeEvent, Category="Building Viewmodel")
+protected:
+	UFUNCTION(BlueprintCallable, Category="Building Viewmodel")
 	void Initialize(FBuildingId InBuildingId);
 
-protected:
 	//~ Identity ---------------------------------------------------------------------------------
 
 	/** False once the building's entity has been destroyed. */
@@ -96,12 +95,15 @@ public:
 	FOrganizationId GetOwnerOrganizationId() const { return OwnerOrganizationId; }
 	int32 GetOwnerOrganizationIdValue() const { return OwnerOrganizationIdValue; }
 
+protected:
+	UFUNCTION(BlueprintCallable, Category="Building Viewmodel")
+	void Refresh();
+
 private:
 	//~ Begin UObject interface
 	virtual void BeginDestroy() override;
 	//~ End UObject interface
 
-	void Refresh();
 	void Unbind();
 
 	UFUNCTION()

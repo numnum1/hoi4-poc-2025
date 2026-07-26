@@ -1,27 +1,41 @@
 #include "ScheduleViewModel.h"
 
+#include "CharacterProxy.h"
+#include "ProvinceProxy.h"
 #include "RtsProxySubsystem.h"
 #include "ScheduleProxy.h"
 
-void UScheduleViewModel::Initialize_Implementation(const FScheduleId InScheduleId)
+void UScheduleViewModel::Initialize(const FCharacterId InCharacterId)
 {
-	UScheduleProxy* NewProxy = nullptr;
+	UCharacterProxy* NewProxy = nullptr;
 	if (URtsProxySubsystem* ProxySubsystem = URtsProxySubsystem::Get(this))
 	{
-		NewProxy = ProxySubsystem->GetSchedule(InScheduleId);
+		NewProxy = ProxySubsystem->GetCharacter(InCharacterId);
 	}
 
-	if (Proxy == NewProxy && ScheduleId == InScheduleId)
+	if (Proxy == NewProxy && CharacterId == InCharacterId)
 	{
 		return;
 	}
 
+	Unbind();
+
 	Proxy = NewProxy;
 
-	ScheduleId = InScheduleId;
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ScheduleId);
-	UE_MVVM_SET_PROPERTY_VALUE(ScheduleIdValue, ScheduleId.Value);
+	CharacterId = InCharacterId;
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(CharacterId);
+	UE_MVVM_SET_PROPERTY_VALUE(CharacterIdValue, CharacterId.Value);
 
+	if (Proxy)
+	{
+		Proxy->OnChanged.AddDynamic(this, &UScheduleViewModel::HandleProxyChanged);
+	}
+
+	Refresh();
+}
+
+void UScheduleViewModel::HandleProxyChanged()
+{
 	Refresh();
 }
 
@@ -33,7 +47,14 @@ void UScheduleViewModel::Refresh()
 	}
 
 	UE_MVVM_SET_PROPERTY_VALUE(bIsValid, Proxy->IsAlive());
-	UE_MVVM_SET_PROPERTY_VALUE(ScheduleName, Proxy->GetDisplayName());
+
+	const UScheduleProxy* Template = Proxy->GetScheduleTemplate();
+	UE_MVVM_SET_PROPERTY_VALUE(ScheduleId, Template ? Template->GetId() : FScheduleId());
+	UE_MVVM_SET_PROPERTY_VALUE(ScheduleIdValue, Template ? Template->GetId().Value : INDEX_NONE);
+	UE_MVVM_SET_PROPERTY_VALUE(ScheduleName, Template ? Template->GetDisplayName() : FText::GetEmpty());
+
+	const UProvinceProxy* Province = Proxy->GetProvince();
+	UE_MVVM_SET_PROPERTY_VALUE(TimezoneOffset, Province ? Province->GetTimezoneOffset() : 0);
 
 	const FSchedule NewSchedule = Proxy->GetSchedule();
 	UE_MVVM_SET_PROPERTY_VALUE(ScheduleHour00, NewSchedule.Zero);
@@ -92,4 +113,18 @@ EScheduleEntryType UScheduleViewModel::GetScheduleAtHour(const int32 InHour) con
 	case 23: return ScheduleHour23;
 	default: return EScheduleEntryType::SET_NONE;
 	}
+}
+
+void UScheduleViewModel::Unbind()
+{
+	if (Proxy)
+	{
+		Proxy->OnChanged.RemoveAll(this);
+	}
+}
+
+void UScheduleViewModel::BeginDestroy()
+{
+	Unbind();
+	Super::BeginDestroy();
 }

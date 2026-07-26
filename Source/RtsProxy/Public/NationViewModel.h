@@ -26,11 +26,10 @@ class RTSPROXY_API UNationViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
-public:
-	UFUNCTION(BlueprintNativeEvent, Category="Nation Viewmodel")
+protected:
+	UFUNCTION(BlueprintCallable, Category="Nation Viewmodel")
 	void Initialize(FNationId InNationId);
 
-protected:
 	//~ Identity ---------------------------------------------------------------------------------
 
 	/** False once the nation's entity has been destroyed. The name and flag stay behind. */
@@ -60,12 +59,15 @@ public:
 	FText GetNationName() const { return NationName; }
 	FSlateBrush GetFlag() const { return Flag; }
 
+protected:
+	UFUNCTION(BlueprintCallable, Category="Nation Viewmodel")
+	void Refresh();
+
 private:
 	//~ Begin UObject interface
 	virtual void BeginDestroy() override;
 	//~ End UObject interface
 
-	void Refresh();
 	void Unbind();
 
 	UFUNCTION()

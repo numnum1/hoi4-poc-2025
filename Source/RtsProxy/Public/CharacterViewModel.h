@@ -38,9 +38,6 @@ class RTSPROXY_API UCharacterViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintNativeEvent, Category="Character Viewmodel")
-	void Initialize(FCharacterId InCharacterId);
-
 	/** The schedule entry for one hour of the day, 0-23. Out-of-range hours return SET_NONE. */
 	UFUNCTION(BlueprintPure, Category="Character Viewmodel|Schedule")
 	EScheduleEntryType GetScheduleAtHour(int32 InHour) const;
@@ -293,12 +290,18 @@ public:
 	const TArray<int32>& GetPositionOrganizationIdValues() const { return PositionOrganizationIdValues; }
 	int32 GetPositionCount() const { return PositionCount; }
 
+protected:
+	UFUNCTION(BlueprintCallable, Category="Character Viewmodel")
+	void Initialize(FCharacterId InCharacterId);
+
+	UFUNCTION(BlueprintCallable, Category="Character Viewmodel")
+	void Refresh();
+
 private:
 	//~ Begin UObject interface
 	virtual void BeginDestroy() override;
 	//~ End UObject interface
 
-	void Refresh();
 	void RefreshLocation();
 	void RefreshSchedule();
 	void RefreshPositions();

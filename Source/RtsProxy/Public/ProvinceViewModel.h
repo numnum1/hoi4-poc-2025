@@ -25,11 +25,10 @@ class RTSPROXY_API UProvinceViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
-public:
-	UFUNCTION(BlueprintNativeEvent, Category="Province Viewmodel")
+protected:
+	UFUNCTION(BlueprintCallable, Category="Province Viewmodel")
 	void Initialize(FProvinceId InProvinceId);
 
-protected:
 	//~ Identity ---------------------------------------------------------------------------------
 
 	/** False once the province's entity has been destroyed. Display keeps its last known values. */
@@ -92,12 +91,15 @@ public:
 	FText GetOwningNationName() const { return OwningNationName; }
 	int32 GetTimezoneOffset() const { return TimezoneOffset; }
 
+protected:
+	UFUNCTION(BlueprintCallable, Category="Province Viewmodel")
+	void Refresh();
+
 private:
 	//~ Begin UObject interface
 	virtual void BeginDestroy() override;
 	//~ End UObject interface
 
-	void Refresh();
 	void Unbind();
 
 	UFUNCTION()

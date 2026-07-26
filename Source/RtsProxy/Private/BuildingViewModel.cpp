@@ -6,7 +6,7 @@
 #include "ProvinceProxy.h"
 #include "RtsProxySubsystem.h"
 
-void UBuildingViewModel::Initialize_Implementation(const FBuildingId InBuildingId)
+void UBuildingViewModel::Initialize(const FBuildingId InBuildingId)
 {
 	UBuildingProxy* NewProxy = nullptr;
 	if (URtsProxySubsystem* ProxySubsystem = URtsProxySubsystem::Get(this))

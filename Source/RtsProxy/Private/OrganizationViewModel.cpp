@@ -4,7 +4,7 @@
 #include "OrganizationProxy.h"
 #include "RtsProxySubsystem.h"
 
-void UOrganizationViewModel::Initialize_Implementation(const FOrganizationId InOrganizationId)
+void UOrganizationViewModel::Initialize(const FOrganizationId InOrganizationId)
 {
 	UOrganizationProxy* NewProxy = nullptr;
 	if (URtsProxySubsystem* ProxySubsystem = URtsProxySubsystem::Get(this))
