@@ -142,12 +142,12 @@ TArray<FCharacterId> UCharacters::CollectCharactersInProvince(const FProvinceId 
 	return Entities ? Entities->CollectCharactersInProvince(InProvinceId) : TArray<FCharacterId>();
 }
 
-void UCharacters::AddPosition(const FCharacterId InCharacterId, const FOrganizationId InAtOrganizationId)
+void UCharacters::AddPosition(const FCharacterId InCharacterId, const FOrganizationId InAtOrganizationId, const FRoleId InRoleId)
 {
 	UCharacterEntitySubsystem* Entities = GetEntities();
 	if (!Entities) return;
 
-	Entities->AddPosition(InCharacterId, InAtOrganizationId);
+	Entities->AddPosition(InCharacterId, InAtOrganizationId, InRoleId);
 	OnPositionChanged.Broadcast(InCharacterId);
 }
 

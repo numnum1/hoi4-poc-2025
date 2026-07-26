@@ -21,7 +21,7 @@ private:
 	 */
 	UPROPERTY(EditDefaultsOnly)
 	UScenario* ScenarioToLoad;
-	
+
 protected:
 	virtual void BeginPlay() override;
 	

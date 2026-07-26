@@ -136,3 +136,25 @@ struct RTSCORE_API FScheduleId
 	bool operator!=(const FScheduleId& Other) const { return !(*this == Other); }
 	friend uint32 GetTypeHash(const FScheduleId& Id) { return ::GetTypeHash(Id.Value); }
 };
+
+/**
+ * Names an entry in URoles' library, not a per-character position. Like FScheduleId it points into
+ * authored template data rather than at an entity: many characters across many organizations can
+ * hold the same FRoleId, and what it grants (permissions, leadership) lives in the library entry.
+ */
+USTRUCT(BlueprintType)
+struct RTSCORE_API FRoleId
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Value = INDEX_NONE;
+
+	FRoleId() = default;
+	explicit FRoleId(const int32 InValue) : Value(InValue) {}
+
+	bool IsValid() const { return Value != INDEX_NONE; }
+	bool operator==(const FRoleId& Other) const { return Value == Other.Value; }
+	bool operator!=(const FRoleId& Other) const { return !(*this == Other); }
+	friend uint32 GetTypeHash(const FRoleId& Id) { return ::GetTypeHash(Id.Value); }
+};

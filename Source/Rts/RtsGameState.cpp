@@ -10,6 +10,7 @@
 #include "Organizations.h"
 #include "Provinces.h"
 #include "Races.h"
+#include "Roles.h"
 #include "Schedules.h"
 
 ARtsGameState::ARtsGameState()
@@ -20,7 +21,8 @@ ARtsGameState::ARtsGameState()
 	RacesContainer = CreateDefaultSubobject<URaces>(TEXT("RacesContainer"));
 	BuildingsContainer = CreateDefaultSubobject<UBuildings>(TEXT("BuildingsContainer"));
 	OrganizationsContainer = CreateDefaultSubobject<UOrganizations>(TEXT("OrganizationsContainer"));
-	
+	RolesContainer = CreateDefaultSubobject<URoles>(TEXT("RolesContainer"));
+
 	SchedulesContainer = CreateDefaultSubobject<USchedules>(TEXT("SchedulesContainer"));
 	Time = CreateDefaultSubobject<UTime>(TEXT("Time"));
 }

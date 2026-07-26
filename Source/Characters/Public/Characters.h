@@ -24,6 +24,10 @@ struct CHARACTERS_API FPosition
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FOrganizationId OrganizationId;
+
+    /** The role held at this organization. Names an entry in the Organizations module's URoles library. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FRoleId RoleId;
 };
 
 USTRUCT(BlueprintType)
@@ -121,7 +125,7 @@ public:
     void Destroy(FCharacterId InCharacterId);
 
     UFUNCTION(BlueprintCallable)
-    void AddPosition(FCharacterId InCharacterId, FOrganizationId InAtOrganizationId);
+    void AddPosition(FCharacterId InCharacterId, FOrganizationId InAtOrganizationId, FRoleId InRoleId = FRoleId());
 
     UFUNCTION(BlueprintCallable)
     void MoveCharacter(FCharacterId InCharacterId, FProvinceId NewCurrentProvinceId);

@@ -13,6 +13,8 @@
 #include "OrganizationInfo.h"
 #include "ProvinceAsset.h"
 #include "ProvinceInfo.h"
+#include "RoleAsset.h"
+#include "RoleInfo.h"
 #include "ScheduleAsset.h"
 #include "ScheduleInfo.h"
 
@@ -263,6 +265,29 @@ namespace ScenarioLoader
 			FOrganizationInfo Info;
 			Info.OrganizationName = Org->GetOrganizationName();
 			Info.Logo = Org->GetLogo();
+			Out.Add(MoveTemp(Info));
+		}
+
+		return Out;
+	}
+
+	/**
+	 * Roles offered across every organization. RtsGameModeBase feeds each entry to URoles::Setup
+	 * before organizations are founded, so a founder position can already resolve a leadership role.
+	 */
+	__inline TArray<FRoleInfo> ExtractRoles(const TArray<URoleAsset*>& InRoles)
+	{
+		TArray<FRoleInfo> Out;
+		Out.Reserve(InRoles.Num());
+
+		for (const URoleAsset* Role : InRoles)
+		{
+			if (!Role) continue;
+
+			FRoleInfo Info;
+			Info.RoleName = Role->GetRoleName();
+			Info.Permissions = Role->GetPermissions();
+			Info.bIsLeadership = Role->IsLeadership();
 			Out.Add(MoveTemp(Info));
 		}
 

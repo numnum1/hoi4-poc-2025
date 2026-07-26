@@ -133,24 +133,38 @@ void UCharacterViewModel::RefreshSchedule()
 
 void UCharacterViewModel::RefreshPositions()
 {
-	const TArray<UOrganizationProxy*> Organizations = Proxy->GetOrganizations();
+	// Indexed rather than via GetOrganizations(), so the role array stays aligned with the
+	// organization array even where GetOrganization(Index) can't resolve a proxy.
+	const int32 Count = Proxy->GetOrganizationCount();
 
 	TArray<FOrganizationId> NewOrganizationIds;
 	TArray<int32> NewOrganizationIdValues;
-	NewOrganizationIds.Reserve(Organizations.Num());
-	NewOrganizationIdValues.Reserve(Organizations.Num());
-	for (const UOrganizationProxy* Organization : Organizations)
+	TArray<FRoleId> NewRoleIds;
+	TArray<int32> NewRoleIdValues;
+	NewOrganizationIds.Reserve(Count);
+	NewOrganizationIdValues.Reserve(Count);
+	NewRoleIds.Reserve(Count);
+	NewRoleIdValues.Reserve(Count);
+
+	for (int32 Index = 0; Index < Count; ++Index)
 	{
+		const UOrganizationProxy* Organization = Proxy->GetOrganization(Index);
 		if (Organization == nullptr)
 		{
 			continue;
 		}
 		NewOrganizationIds.Add(Organization->GetId());
 		NewOrganizationIdValues.Add(Organization->GetId().Value);
+
+		const FRoleId Role = Proxy->GetPositionRole(Index);
+		NewRoleIds.Add(Role);
+		NewRoleIdValues.Add(Role.Value);
 	}
 
 	UE_MVVM_SET_PROPERTY_VALUE(PositionOrganizationIds, NewOrganizationIds);
 	UE_MVVM_SET_PROPERTY_VALUE(PositionOrganizationIdValues, NewOrganizationIdValues);
+	UE_MVVM_SET_PROPERTY_VALUE(PositionRoleIds, NewRoleIds);
+	UE_MVVM_SET_PROPERTY_VALUE(PositionRoleIdValues, NewRoleIdValues);
 	UE_MVVM_SET_PROPERTY_VALUE(PositionCount, NewOrganizationIds.Num());
 }
 

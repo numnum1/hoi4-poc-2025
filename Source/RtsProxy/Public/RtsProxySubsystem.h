@@ -17,6 +17,7 @@ class UProvinceProxy;
 class UProvinces;
 class UScheduleProxy;
 class USchedules;
+class URoles;
 
 /**
  * Hands out the entity proxies and owns them.
@@ -94,6 +95,7 @@ public:
 	UOrganizations* GetOrganizationsContainer();
 	UBuildings* GetBuildingsContainer();
 	USchedules* GetSchedulesContainer();
+	URoles* GetRolesContainer();
 
 	//~ Begin USubsystem interface
 	virtual void Deinitialize() override;
@@ -143,4 +145,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<USchedules> SchedulesContainer;
+
+	UPROPERTY()
+	TObjectPtr<URoles> RolesContainer;
 };

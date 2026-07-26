@@ -76,7 +76,8 @@ public:
 	// --- write ---
 	/** Resolves the destination's timezone offset itself via UProvinceEntitySubsystem. */
 	void MoveCharacter(FCharacterId InCharacterId, FProvinceId InNewProvinceId);
-	void AddPosition(FCharacterId InCharacterId, FOrganizationId InAtOrganizationId);
+	/** No-ops if the character already holds this exact (organization, role) pair. */
+	void AddPosition(FCharacterId InCharacterId, FOrganizationId InAtOrganizationId, FRoleId InRoleId);
 
 	/**
 	 * Fired once per character id the hourly processor just touched. Not a UPROPERTY —

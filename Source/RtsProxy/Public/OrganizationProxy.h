@@ -68,7 +68,7 @@ public:
 	UFUNCTION(BlueprintPure, Category="Organization")
 	TArray<UBuildingProxy*> GetOwnedBuildings() const;
 
-	//~ Actions ----------------------------------------------------------------------------------
+	//~ Mutations --------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category="Organization")
 	void PublishAlignment(const TArray<float>& InAlignment);

@@ -88,6 +88,10 @@ public:
 	UFUNCTION(BlueprintPure, Category="Character|Organizations")
 	int32 GetOrganizationCount() const;
 
+	/** The role held at one of this character's positions, or an invalid id if out of range. */
+	UFUNCTION(BlueprintPure, Category="Character|Organizations")
+	FRoleId GetPositionRole(int32 InIndex) const;
+
 	UFUNCTION(BlueprintPure, Category="Character|Organizations")
 	bool IsMemberOf(const UOrganizationProxy* InOrganization) const;
 
@@ -95,7 +99,7 @@ public:
 	UFUNCTION(BlueprintPure, Category="Character")
 	TArray<UBuildingProxy*> GetOwnedBuildings() const;
 
-	//~ Actions ----------------------------------------------------------------------------------
+	//~ Mutations --------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category="Character")
 	void MoveTo(const UProvinceProxy* InProvince);

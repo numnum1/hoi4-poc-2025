@@ -218,13 +218,19 @@ protected:
 	EScheduleEntryType ScheduleHour23 = EScheduleEntryType::SET_NONE;
 
 	//~ Positions --------------------------------------------------------------------------------
-	// FPosition carries nothing but its organization id, so the array is unwrapped to the ids.
+	// FPosition is unwrapped into parallel arrays: an organization id and the role held there.
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
 	TArray<FOrganizationId> PositionOrganizationIds;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
 	TArray<int32> PositionOrganizationIdValues;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
+	TArray<FRoleId> PositionRoleIds;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
+	TArray<int32> PositionRoleIdValues;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
 	int32 PositionCount = 0;
@@ -288,6 +294,8 @@ public:
 
 	const TArray<FOrganizationId>& GetPositionOrganizationIds() const { return PositionOrganizationIds; }
 	const TArray<int32>& GetPositionOrganizationIdValues() const { return PositionOrganizationIdValues; }
+	const TArray<FRoleId>& GetPositionRoleIds() const { return PositionRoleIds; }
+	const TArray<int32>& GetPositionRoleIdValues() const { return PositionRoleIdValues; }
 	int32 GetPositionCount() const { return PositionCount; }
 
 protected:

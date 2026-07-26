@@ -67,7 +67,7 @@ public:
 	UFUNCTION(BlueprintPure, Category="Province")
 	TArray<UBuildingProxy*> GetBuildings() const;
 
-	//~ Actions ----------------------------------------------------------------------------------
+	//~ Mutations --------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category="Province")
 	void SetOwner(const UNationProxy* InNation);

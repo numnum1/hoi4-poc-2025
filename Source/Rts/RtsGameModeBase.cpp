@@ -10,6 +10,7 @@
 #include "Provinces.h"
 #include "Races.h"
 #include "ScenarioLoading.h"
+#include "Roles.h"
 #include "RtsGameState.h"
 #include "Scenario.h"
 #include "Schedules.h"
@@ -74,6 +75,10 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 	{
 		CharactersContainer->Create(SpawnData);
 	}
+
+	// Roles before organizations: UActionFoundOrganization resolves a leadership role for the
+	// founder's position, so the library must already be filled by the time an org can be created.
+	RtsGameState->GetRoles()->Setup(ScenarioLoader::ExtractRoles(InScenario->GetRoles()));
 
 	UOrganizations* OrganizationsContainer = RtsGameState->GetOrganizationsContainer();
 	for (const FOrganizationInfo& OrganizationInfo : ScenarioLoader::ExtractOrganizations(InScenario->GetOrganizations()))

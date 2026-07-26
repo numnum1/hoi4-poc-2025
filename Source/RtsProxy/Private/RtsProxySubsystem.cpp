@@ -10,6 +10,7 @@
 #include "Organizations.h"
 #include "ProvinceProxy.h"
 #include "Provinces.h"
+#include "Roles.h"
 #include "ScheduleProxy.h"
 #include "Schedules.h"
 #include "Engine/Engine.h"
@@ -71,6 +72,7 @@ UNations* URtsProxySubsystem::GetNationsContainer() { return ResolveContainer(Na
 UOrganizations* URtsProxySubsystem::GetOrganizationsContainer() { return ResolveContainer(OrganizationsContainer); }
 UBuildings* URtsProxySubsystem::GetBuildingsContainer() { return ResolveContainer(BuildingsContainer); }
 USchedules* URtsProxySubsystem::GetSchedulesContainer() { return ResolveContainer(SchedulesContainer); }
+URoles* URtsProxySubsystem::GetRolesContainer() { return ResolveContainer(RolesContainer); }
 
 UCharacterProxy* URtsProxySubsystem::GetCharacter(const FCharacterId InCharacterId)
 {
@@ -275,6 +277,7 @@ void URtsProxySubsystem::Deinitialize()
 	OrganizationsContainer = nullptr;
 	BuildingsContainer = nullptr;
 	SchedulesContainer = nullptr;
+	RolesContainer = nullptr;
 
 	Super::Deinitialize();
 }

@@ -159,6 +159,17 @@ int32 UCharacterProxy::GetOrganizationCount() const
 	return Characters ? Characters->GetPositions(CharacterId).Num() : 0;
 }
 
+FRoleId UCharacterProxy::GetPositionRole(const int32 InIndex) const
+{
+	if (Characters == nullptr)
+	{
+		return FRoleId();
+	}
+
+	const TArray<FPosition> Positions = Characters->GetPositions(CharacterId);
+	return Positions.IsValidIndex(InIndex) ? Positions[InIndex].RoleId : FRoleId();
+}
+
 bool UCharacterProxy::IsMemberOf(const UOrganizationProxy* InOrganization) const
 {
 	if (Characters == nullptr || InOrganization == nullptr)

@@ -7,6 +7,7 @@
 class UProvinceAsset;
 class UCharacterAsset;
 class UOrganizationAsset;
+class URoleAsset;
 
 class FScenarioModule : public IModuleInterface
 {
@@ -30,8 +31,12 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Organizations", meta=(AllowPrivateAccess=true))
     TArray<UOrganizationAsset*> Organizations;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Organizations", meta=(AllowPrivateAccess=true))
+    TArray<URoleAsset*> Roles;
 public:
     FORCEINLINE const TArray<UProvinceAsset*>& GetProvinces() const { return Provinces; }
     FORCEINLINE const TArray<UCharacterAsset*>& GetCharacters() const { return Characters; }
     FORCEINLINE const TArray<UOrganizationAsset*>& GetOrganizations() const { return Organizations; }
+    FORCEINLINE const TArray<URoleAsset*>& GetRoles() const { return Roles; }
 };

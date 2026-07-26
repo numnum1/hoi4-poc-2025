@@ -56,7 +56,7 @@ public:
 	UFUNCTION(BlueprintPure, Category="Building|Owner")
 	UOrganizationProxy* GetOwnerOrganization() const;
 
-	//~ Actions ----------------------------------------------------------------------------------
+	//~ Mutations --------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category="Building")
 	void DestroyBuilding();

@@ -339,7 +339,7 @@ void UCharacterEntitySubsystem::MoveCharacter(const FCharacterId InCharacterId, 
 	Location.TimezoneOffset = NewTimezoneOffset;
 }
 
-void UCharacterEntitySubsystem::AddPosition(const FCharacterId InCharacterId, const FOrganizationId InAtOrganizationId)
+void UCharacterEntitySubsystem::AddPosition(const FCharacterId InCharacterId, const FOrganizationId InAtOrganizationId, const FRoleId InRoleId)
 {
 	const FMassEntityHandle Entity = GetEntity(InCharacterId);
 	if (!ensureMsgf(Entity.IsValid(), TEXT("AddPosition: character %d is not alive"), InCharacterId.Value))
@@ -347,12 +347,22 @@ void UCharacterEntitySubsystem::AddPosition(const FCharacterId InCharacterId, co
 		return;
 	}
 
+	TArray<FPosition>& Positions =
+		FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FCharacterPositionsFragment>().Values;
+
+	const bool bAlreadyHeld = Positions.ContainsByPredicate([&](const FPosition& Existing)
+	{
+		return Existing.OrganizationId == InAtOrganizationId && Existing.RoleId == InRoleId;
+	});
+	if (bAlreadyHeld)
+	{
+		return;
+	}
+
 	FPosition NewPosition;
 	NewPosition.OrganizationId = InAtOrganizationId;
-
-	FMassEntityView(GetEntityManager(), Entity)
-		.GetFragmentData<FCharacterPositionsFragment>()
-		.Values.Add(NewPosition);
+	NewPosition.RoleId = InRoleId;
+	Positions.Add(NewPosition);
 }
 
 // -----------------------------------------------------------------------------

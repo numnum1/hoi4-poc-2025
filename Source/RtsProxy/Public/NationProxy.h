@@ -53,7 +53,7 @@ public:
 	UFUNCTION(BlueprintPure, Category="Nation")
 	TArray<UOrganizationProxy*> GetSettledOrganizations() const;
 
-	//~ Actions ----------------------------------------------------------------------------------
+	//~ Mutations --------------------------------------------------------------------------------
 
 	/** Destroys the entity. The name and flag stay behind, and so does this proxy. */
 	UFUNCTION(BlueprintCallable, Category="Nation")
