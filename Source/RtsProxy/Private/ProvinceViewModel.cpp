@@ -4,7 +4,7 @@
 #include "ProvinceProxy.h"
 #include "RtsProxySubsystem.h"
 
-void UProvinceViewModel::Initialize(const FProvinceId InProvinceId)
+void UProvinceViewModel::Initialize_Implementation(const FProvinceId InProvinceId)
 {
 	UProvinceProxy* NewProxy = nullptr;
 	if (URtsProxySubsystem* ProxySubsystem = URtsProxySubsystem::Get(this))

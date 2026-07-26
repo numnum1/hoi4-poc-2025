@@ -3,7 +3,7 @@
 #include "NationProxy.h"
 #include "RtsProxySubsystem.h"
 
-void UNationViewModel::Initialize(const FNationId InNationId)
+void UNationViewModel::Initialize_Implementation(const FNationId InNationId)
 {
 	UNationProxy* NewProxy = nullptr;
 	if (URtsProxySubsystem* ProxySubsystem = URtsProxySubsystem::Get(this))

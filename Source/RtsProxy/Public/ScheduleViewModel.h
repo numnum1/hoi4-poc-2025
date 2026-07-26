@@ -27,7 +27,7 @@ class RTSPROXY_API UScheduleViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category="Schedule Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Schedule Viewmodel")
 	void Initialize(FScheduleId InScheduleId);
 
 	/** The schedule entry for one hour of the day, 0-23. Out-of-range hours return SET_NONE. */

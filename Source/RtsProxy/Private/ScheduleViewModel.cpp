@@ -3,7 +3,7 @@
 #include "RtsProxySubsystem.h"
 #include "ScheduleProxy.h"
 
-void UScheduleViewModel::Initialize(const FScheduleId InScheduleId)
+void UScheduleViewModel::Initialize_Implementation(const FScheduleId InScheduleId)
 {
 	UScheduleProxy* NewProxy = nullptr;
 	if (URtsProxySubsystem* ProxySubsystem = URtsProxySubsystem::Get(this))

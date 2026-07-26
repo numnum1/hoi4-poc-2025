@@ -16,7 +16,6 @@ class UCharacterProxy;
  * valid destination binding) with the id to display; the view model asks URtsProxySubsystem for
  * the matching UCharacterProxy, then keeps itself in sync by listening to that proxy's single
  * OnChanged event, and every FieldNotify property below re-broadcasts automatically so bound
- * widgets refresh without any extra wiring.
  *
  * The split of work between the two: the proxy reads through to the facades and never caches,
  * the view model caches exactly the flat values UMG can bind and pays for that with the
@@ -39,7 +38,7 @@ class RTSPROXY_API UCharacterViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category="Character Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Character Viewmodel")
 	void Initialize(FCharacterId InCharacterId);
 
 	/** The schedule entry for one hour of the day, 0-23. Out-of-range hours return SET_NONE. */

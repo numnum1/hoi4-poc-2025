@@ -27,7 +27,7 @@ class RTSPROXY_API UNationViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category="Nation Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Nation Viewmodel")
 	void Initialize(FNationId InNationId);
 
 protected:

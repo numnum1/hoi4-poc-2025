@@ -26,7 +26,7 @@ class RTSPROXY_API UProvinceViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category="Province Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Province Viewmodel")
 	void Initialize(FProvinceId InProvinceId);
 
 protected:

@@ -24,7 +24,7 @@ class RTSPROXY_API UOrganizationViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category="Organization Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Organization Viewmodel")
 	void Initialize(FOrganizationId InOrganizationId);
 
 	/** One branch of the published alignment, or 0 if the index is out of range. */

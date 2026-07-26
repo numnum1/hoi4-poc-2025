@@ -26,7 +26,7 @@ class RTSPROXY_API UBuildingViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category="Building Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Building Viewmodel")
 	void Initialize(FBuildingId InBuildingId);
 
 protected:

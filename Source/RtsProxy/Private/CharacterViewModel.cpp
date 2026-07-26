@@ -7,7 +7,7 @@
 #include "RtsProxySubsystem.h"
 #include "ScheduleProxy.h"
 
-void UCharacterViewModel::Initialize(const FCharacterId InCharacterId)
+void UCharacterViewModel::Initialize_Implementation(const FCharacterId InCharacterId)
 {
 	UCharacterProxy* NewProxy = nullptr;
 	if (URtsProxySubsystem* ProxySubsystem = URtsProxySubsystem::Get(this))
