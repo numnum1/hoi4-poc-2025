@@ -10,6 +10,7 @@ public class RtsPlayer : ModuleRules
             new string[]
             {
                 "Core",
+                "RtsCore",
             }
         );
 
@@ -19,7 +20,9 @@ public class RtsPlayer : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                // BeginPlay binds to UCharacters::OnCharacterDestroyed
+                "Characters",
             }
         );
     }

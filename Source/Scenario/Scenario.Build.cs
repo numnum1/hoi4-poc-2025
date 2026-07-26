@@ -11,7 +11,9 @@ public class Scenario : ModuleRules
             {
                 "Core",
                 // ECharacterSimTier lives with the character types it describes
-                "Characters"
+                "Characters",
+                // UScheduleAsset authors an FSchedule in a public header
+                "Schedules"
             }
         );
 

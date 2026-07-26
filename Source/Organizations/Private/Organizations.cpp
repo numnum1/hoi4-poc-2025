@@ -31,41 +31,53 @@ UOrganizationEntitySubsystem* UOrganizations::GetEntities() const
 	return World ? World->GetSubsystem<UOrganizationEntitySubsystem>() : nullptr;
 }
 
-FOrganizationInfo UOrganizations::GetOrganizationInfo(const int32 InIndex) const
-{
-	return Infos.IsValidIndex(InIndex) ? Infos[InIndex] : FOrganizationInfo();
-}
-
-FOrganizationAlignment UOrganizations::GetAlignment(const int32 InOrganizationIndex) const
+bool UOrganizations::IsAlive(const FOrganizationId InOrganizationId) const
 {
 	const UOrganizationEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->GetAlignment(InOrganizationIndex) : FOrganizationAlignment();
+	return Entities && Entities->IsAlive(InOrganizationId);
 }
 
-TArray<int32> UOrganizations::GetSettledNations(const int32 InOrganizationIndex) const
+FOrganizationInfo UOrganizations::GetOrganizationInfo(const FOrganizationId InOrganizationId) const
+{
+	return Infos.IsValidIndex(InOrganizationId.Value) ? Infos[InOrganizationId.Value] : FOrganizationInfo();
+}
+
+FOrganizationAlignment UOrganizations::GetAlignment(const FOrganizationId InOrganizationId) const
 {
 	const UOrganizationEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->GetSettledNations(InOrganizationIndex) : TArray<int32>();
+	return Entities ? Entities->GetAlignment(InOrganizationId) : FOrganizationAlignment();
 }
 
-int32 UOrganizations::Add(const FOrganizationInfo& NewOrg)
+TArray<FNationId> UOrganizations::GetSettledNations(const FOrganizationId InOrganizationId) const
+{
+	const UOrganizationEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->GetSettledNations(InOrganizationId) : TArray<FNationId>();
+}
+
+TArray<FOrganizationId> UOrganizations::CollectOrganizationsSettledIn(const FNationId InNationId) const
+{
+	const UOrganizationEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->CollectOrganizationsSettledIn(InNationId) : TArray<FOrganizationId>();
+}
+
+FOrganizationId UOrganizations::Add(const FOrganizationInfo& NewOrg)
 {
 	UOrganizationEntitySubsystem* Entities = GetEntities();
 	if (Entities == nullptr)
 	{
-		return INDEX_NONE;
+		return FOrganizationId();
 	}
 
-	// The entity claims the index; the display row must line up with it.
-	const int32 NewIndex = Entities->CreateOrganization();
-	check(NewIndex == Infos.Num());
+	// The entity claims the id; the display row must line up with it.
+	const FOrganizationId NewId = Entities->CreateOrganization();
+	check(NewId.Value == Infos.Num());
 	Infos.Add(NewOrg);
 
 	OnOrganizationAdded.Broadcast();
-	return NewIndex;
+	return NewId;
 }
 
-void UOrganizations::PublishAlignment(const int32 InOrganizationIndex, const TArray<float>& InAlignment)
+void UOrganizations::PublishAlignment(const FOrganizationId InOrganizationId, const TArray<float>& InAlignment)
 {
 	UOrganizationEntitySubsystem* Entities = GetEntities();
 	if (Entities == nullptr)
@@ -73,11 +85,11 @@ void UOrganizations::PublishAlignment(const int32 InOrganizationIndex, const TAr
 		return;
 	}
 
-	Entities->PublishAlignment(InOrganizationIndex, InAlignment);
-	OnAlignmentPublished.Broadcast(InOrganizationIndex);
+	Entities->PublishAlignment(InOrganizationId, InAlignment);
+	OnAlignmentPublished.Broadcast(InOrganizationId);
 }
 
-void UOrganizations::SettleNation(const int32 InOrganizationIndex, const int32 InNationIndex)
+void UOrganizations::SettleNation(const FOrganizationId InOrganizationId, const FNationId InNationId)
 {
 	UOrganizationEntitySubsystem* Entities = GetEntities();
 	if (Entities == nullptr)
@@ -85,8 +97,20 @@ void UOrganizations::SettleNation(const int32 InOrganizationIndex, const int32 I
 		return;
 	}
 
-	if (Entities->SettleNation(InOrganizationIndex, InNationIndex))
+	if (Entities->SettleNation(InOrganizationId, InNationId))
 	{
-		OnNationSettled.Broadcast(InOrganizationIndex);
+		OnNationSettled.Broadcast(InOrganizationId);
 	}
+}
+
+void UOrganizations::Dissolve(const FOrganizationId InOrganizationId)
+{
+	UOrganizationEntitySubsystem* Entities = GetEntities();
+	if (Entities == nullptr)
+	{
+		return;
+	}
+
+	Entities->DestroyOrganization(InOrganizationId);
+	OnOrganizationDissolved.Broadcast(InOrganizationId);
 }

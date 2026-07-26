@@ -1,7 +1,6 @@
 ﻿#include "Time.h"
 
 #include "GameFramework/Actor.h"
-#include "Net/UnrealNetwork.h"
 
 #define LOCTEXT_NAMESPACE "FTimeModule"
 
@@ -24,9 +23,7 @@ UTime::UTime()
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 	PrimaryComponentTick.TickInterval = 0.1f;
-	
-	SetIsReplicatedByDefault(true);
-	
+
 	CurrentTime = FDateTime(2026, 5, 27, 11, 20, 0, 0);
 	Speed = 1;
 	LastHourBoundary = TruncateToHour(CurrentTime);
@@ -35,13 +32,6 @@ UTime::UTime()
 FDateTime UTime::TruncateToHour(const FDateTime& In)
 {
 	return FDateTime(In.GetYear(), In.GetMonth(), In.GetDay(), In.GetHour());
-}
-
-void UTime::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
-	DOREPLIFETIME(UTime, CurrentTime);
 }
 
 void UTime::TickComponent(const float DeltaTime, const ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)

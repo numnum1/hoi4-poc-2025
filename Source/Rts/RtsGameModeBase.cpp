@@ -6,6 +6,7 @@
 #include "CharacterEntitySubsystem.h"
 #include "Characters.h"
 #include "Nations.h"
+#include "Organizations.h"
 #include "Provinces.h"
 #include "Races.h"
 #include "ScenarioLoading.h"
@@ -50,11 +51,15 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 
 	const auto[Nations, Provinces] = ScenarioLoader::ExtractNationsAndProvinces(InScenario->GetProvinces());
 	
-	RtsGameState->GetNationsContainer()->SetInfos(Nations);
+	RtsGameState->GetNationsContainer()->Setup(Nations);
 	RtsGameState->GetProvincesContainer()->Setup(Provinces);
 	
+	// Schedules first: characters resolve their FScheduleId against the library's asset order.
+	auto [ScheduleInfos, ScheduleAssets] = ScenarioLoader::ExtractSchedules(InScenario->GetCharacters());
+	RtsGameState->GetSchedules()->Setup(MoveTemp(ScheduleInfos));
+
 	const TArray<FCharacterSpawnData> CharacterSpawnData = ScenarioLoader::ExtractCharacters(
-		InScenario->GetCharacters(), InScenario->GetProvinces(), Provinces, RaceIndexes, Races);
+		InScenario->GetCharacters(), InScenario->GetProvinces(), Provinces, RaceIndexes, Races, ScheduleAssets);
 
 	UCharacterEntitySubsystem* CharacterEntities = GetWorld()->GetSubsystem<UCharacterEntitySubsystem>();
 	if (CharacterEntities == nullptr)
@@ -62,13 +67,18 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 		UE_LOG(LogTemp, Error, TEXT("No UCharacterEntitySubsystem — characters will not be simulated"));
 		return;
 	}
-	CharacterEntities->CreateCharacters(CharacterSpawnData);
 	CharacterEntities->BindToTime(RtsGameState->GetTime());
 
-	RtsGameState->GetCharactersContainer()->SetupDisplay(CharacterSpawnData);
+	UCharacters* CharactersContainer = RtsGameState->GetCharactersContainer();
+	for (const FCharacterSpawnData& SpawnData : CharacterSpawnData)
+	{
+		CharactersContainer->Create(SpawnData);
+	}
 
-	// TODO: Somehow initialize schedules
-	
-	RtsGameState->GetBuildingsContainer()->InitWithProvinceAmount(Provinces.Num());
+	UOrganizations* OrganizationsContainer = RtsGameState->GetOrganizationsContainer();
+	for (const FOrganizationInfo& OrganizationInfo : ScenarioLoader::ExtractOrganizations(InScenario->GetOrganizations()))
+	{
+		OrganizationsContainer->Add(OrganizationInfo);
+	}
 }
 

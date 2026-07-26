@@ -10,8 +10,11 @@ public class Provinces : ModuleRules
             new string[]
             {
                 "Core",
+                "RtsCore",
                 "MassCore",
                 "MassEntity",
+                // UProvinceViewModel derives from UMVVMViewModelBase
+                "ModelViewViewModel"
             }
         );
 

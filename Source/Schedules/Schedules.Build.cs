@@ -10,6 +10,8 @@ public class Schedules : ModuleRules
             new string[]
             {
                 "Core",
+                // USchedules' public API is addressed by FScheduleId
+                "RtsCore",
             }
         );
 

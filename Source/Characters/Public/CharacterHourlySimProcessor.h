@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RtsIds.h"
 #include "MassEntityQuery.h"
 #include "MassProcessor.h"
 #include "CharacterHourlySimProcessor.generated.h"
@@ -26,6 +27,9 @@ public:
 		HoursToSim = InHours;
 	}
 
+	/** Character ids touched by the most recent Execute. UCharacterEntitySubsystem fans this out as UI hooks. */
+	const TArray<FCharacterId>& GetLastSimulatedIds() const { return LastSimulatedIds; }
+
 protected:
 	virtual void ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager) override;
 	virtual void Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context) override;
@@ -35,4 +39,6 @@ private:
 
 	uint8 StartHour = 0;
 	int32 HoursToSim = 0;
+
+	TArray<FCharacterId> LastSimulatedIds;
 };

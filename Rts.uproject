@@ -13,6 +13,11 @@
 			]
 		},
 		{
+			"Name": "RtsCore",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "Buildings",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"

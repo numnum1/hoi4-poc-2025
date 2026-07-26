@@ -2,11 +2,13 @@
 
 #include "CharacterFragments.h"
 #include "CharacterHourlySimProcessor.h"
+#include "ProvinceEntitySubsystem.h"
 #include "Time.h"
 #include "MassEntityBuilder.h"
 #include "MassEntityManager.h"
 #include "MassEntitySubsystem.h"
 #include "MassEntityView.h"
+#include "MassExecutionContext.h"
 #include "MassExecutor.h"
 #include "MassProcessingContext.h"
 
@@ -23,6 +25,11 @@ void UCharacterEntitySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	EntitySubsystem = Collection.InitializeDependency<UMassEntitySubsystem>();
+
+	LocationQuery = FMassEntityQuery(GetEntityManager().AsShared());
+	LocationQuery.AddTagRequirement<FCharacterTag>(EMassFragmentPresence::All);
+	LocationQuery.AddRequirement<FCharacterIndexFragment>(EMassFragmentAccess::ReadOnly);
+	LocationQuery.AddRequirement<FCharacterLocationFragment>(EMassFragmentAccess::ReadOnly);
 }
 
 void UCharacterEntitySubsystem::Deinitialize()
@@ -34,6 +41,7 @@ void UCharacterEntitySubsystem::Deinitialize()
 	}
 
 	EntityByIndex.Reset();
+	AliveIds.Reset();
 	SimProcessor = nullptr;
 	EntitySubsystem = nullptr;
 
@@ -46,77 +54,76 @@ FMassEntityManager& UCharacterEntitySubsystem::GetEntityManager() const
 	return EntitySubsystem->GetMutableEntityManager();
 }
 
-void UCharacterEntitySubsystem::CreateCharacters(const TArray<FCharacterSpawnData>& InSpawnData)
+FCharacterId UCharacterEntitySubsystem::CreateCharacter(const FCharacterSpawnData& Data)
 {
-	FMassEntityManager& EntityManager = GetEntityManager();
+	const FCharacterId NewId(EntityByIndex.Num());
 
-	if (EntityByIndex.Num() > 0)
+	// Fragments derive from FMassFragment, so they are not aggregates — fill them by field.
+	FCharacterIndexFragment IndexFragment;
+	IndexFragment.Id = NewId;
+
+	FCharacterOriginFragment OriginFragment;
+	OriginFragment.BirthProvinceId = Data.BirthProvinceId;
+	OriginFragment.BaseRaceId = Data.BaseRaceId;
+
+	FCharacterLocationFragment LocationFragment;
+	LocationFragment.CurrentProvinceId = Data.CurrentProvinceId;
+	LocationFragment.TimezoneOffset = Data.TimezoneOffset;
+
+	FCharacterAbilitiesFragment AbilitiesFragment;
+	AbilitiesFragment.Abilities = Data.RaceModifiers;
+
+	FCharacterScheduleSharedFragment ScheduleFragment;
+	ScheduleFragment.Schedule = Data.Schedule;
+	ScheduleFragment.ScheduleId = Data.ScheduleId;
+
+	FCharacterRaceSharedFragment RaceFragment;
+	RaceFragment.RaceId = Data.BaseRaceId;
+	RaceFragment.RaceModifiers = Data.RaceModifiers;
+
+	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
+
+	Builder.Add<FCharacterTag>()
+	       .Add<FCharacterIndexFragment>(IndexFragment)
+	       .Add<FCharacterOriginFragment>(OriginFragment)
+	       .Add<FCharacterLocationFragment>(LocationFragment)
+	       .Add<FCharacterAbilitiesFragment>(AbilitiesFragment)
+	       .Add<FCharacterVitalsFragment>()
+	       .Add<FCharacterSkillsFragment>()
+	       .Add<FCharacterPositionsFragment>()
+	       .Add<FCharacterScheduleSharedFragment>(ScheduleFragment)
+	       .Add<FCharacterRaceSharedFragment>(RaceFragment);
+
+	switch (Data.SimTier)
 	{
-		EntityManager.BatchDestroyEntities(EntityByIndex);
-		EntityByIndex.Reset();
+	case ECharacterSimTier::CST_Normal:
+		Builder.Add<FCharacterSimNormalTag>();
+		break;
+	case ECharacterSimTier::CST_Max:
+		Builder.Add<FCharacterSimMaxTag>();
+		break;
+	case ECharacterSimTier::CST_None:
+	default:
+		break;
 	}
 
-	EntityByIndex.Reserve(InSpawnData.Num());
+	EntityByIndex.Add(Builder.Commit());
+	AliveIds.Add(NewId);
 
-	for (int32 CharacterIndex = 0; CharacterIndex < InSpawnData.Num(); ++CharacterIndex)
+	return NewId;
+}
+
+void UCharacterEntitySubsystem::DestroyCharacter(const FCharacterId InCharacterId)
+{
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
+	if (!Entity.IsValid())
 	{
-		const FCharacterSpawnData& Data = InSpawnData[CharacterIndex];
-
-		// Fragments derive from FMassFragment, so they are not aggregates — fill them by field.
-		FCharacterIndexFragment IndexFragment;
-		IndexFragment.Index = CharacterIndex;
-
-		FCharacterOriginFragment OriginFragment;
-		OriginFragment.BirthProvinceIndex = Data.BirthProvinceIndex;
-		OriginFragment.BaseRaceIndex = Data.BaseRaceIndex;
-
-		FCharacterLocationFragment LocationFragment;
-		LocationFragment.CurrentProvinceIndex = Data.CurrentProvinceIndex;
-		LocationFragment.TimezoneOffset = Data.TimezoneOffset;
-
-		FCharacterAbilitiesFragment AbilitiesFragment;
-		AbilitiesFragment.Abilities = Data.RaceModifiers;
-
-		FCharacterScheduleSharedFragment ScheduleFragment;
-		ScheduleFragment.Schedule = Data.Schedule;
-
-		FCharacterRaceSharedFragment RaceFragment;
-		RaceFragment.RaceIndex = Data.BaseRaceIndex;
-		RaceFragment.RaceModifiers = Data.RaceModifiers;
-
-		// FEntityBuilder over BatchCreateEntities: the archetype varies by sim tier and the
-		// shared fragment values vary per character, so batching would have to group first.
-		// At this scale that trade is not worth the indirection.
-		UE::Mass::FEntityBuilder Builder = EntityManager.MakeEntityBuilder();
-
-		Builder.Add<FCharacterTag>()
-		       .Add<FCharacterIndexFragment>(IndexFragment)
-		       .Add<FCharacterOriginFragment>(OriginFragment)
-		       .Add<FCharacterLocationFragment>(LocationFragment)
-		       .Add<FCharacterAbilitiesFragment>(AbilitiesFragment)
-		       .Add<FCharacterVitalsFragment>()
-		       .Add<FCharacterSkillsFragment>()
-		       .Add<FCharacterPositionsFragment>()
-		       .Add<FCharacterScheduleSharedFragment>(ScheduleFragment)
-		       .Add<FCharacterRaceSharedFragment>(RaceFragment);
-
-		switch (Data.SimTier)
-		{
-		case ECharacterSimTier::CST_Normal:
-			Builder.Add<FCharacterSimNormalTag>();
-			break;
-		case ECharacterSimTier::CST_Max:
-			Builder.Add<FCharacterSimMaxTag>();
-			break;
-		case ECharacterSimTier::CST_None:
-		default:
-			break;
-		}
-
-		EntityByIndex.Add(Builder.Commit());
+		return;
 	}
 
-	UE_LOG(LogRtsCharacters, Log, TEXT("Created %d character entities"), EntityByIndex.Num());
+	GetEntityManager().DestroyEntity(Entity);
+	EntityByIndex[InCharacterId.Value] = FMassEntityHandle();
+	AliveIds.RemoveSingle(InCharacterId);
 }
 
 void UCharacterEntitySubsystem::BindToTime(UTime* InTime)
@@ -141,7 +148,7 @@ void UCharacterEntitySubsystem::BindToTime(UTime* InTime)
 
 void UCharacterEntitySubsystem::HandleHourElapsed(const int32 InHoursElapsed)
 {
-	if (InHoursElapsed <= 0 || EntityByIndex.Num() == 0 || !Time)
+	if (InHoursElapsed <= 0 || AliveIds.Num() == 0 || !Time)
 	{
 		return;
 	}
@@ -158,96 +165,190 @@ void UCharacterEntitySubsystem::HandleHourElapsed(const int32 InHoursElapsed)
 
 	UE::Mass::FProcessingContext ProcessingContext(GetEntityManager(), /*DeltaSeconds=*/0.f, /*bFlushCommandBuffer=*/true);
 	UE::Mass::Executor::Run(*SimProcessor, ProcessingContext);
+
+	for (const FCharacterId SimulatedId : SimProcessor->GetLastSimulatedIds())
+	{
+		OnCharacterSimulated.Broadcast(SimulatedId);
+	}
 }
 
 // -----------------------------------------------------------------------------
 // Read
 // -----------------------------------------------------------------------------
 
-int32 UCharacterEntitySubsystem::GetCurrentProvince(const int32 InCharacterIndex) const
+namespace
 {
-	const FMassEntityHandle Entity = GetEntity(InCharacterIndex);
-	if (!Entity.IsValid())
+	// A getter seeing an id that just died is normal UI behavior, not a bug — log quietly and
+	// return the default. Contrast with the Write section below, which ensureMsgf's instead.
+	void LogInvalidRead(const FCharacterId InCharacterId, const TCHAR* InAccessor)
 	{
-		return INDEX_NONE;
+		UE_LOG(LogRtsCharacters, Verbose, TEXT("%s: character %d is not alive"), InAccessor, InCharacterId.Value);
 	}
-	return FMassEntityView(GetEntityManager(), Entity)
-		.GetFragmentData<FCharacterLocationFragment>().CurrentProvinceIndex;
 }
 
-int32 UCharacterEntitySubsystem::GetTimezoneOffset(const int32 InCharacterIndex) const
+FProvinceId UCharacterEntitySubsystem::GetCurrentProvince(const FCharacterId InCharacterId) const
 {
-	const FMassEntityHandle Entity = GetEntity(InCharacterIndex);
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
 	if (!Entity.IsValid())
 	{
+		LogInvalidRead(InCharacterId, TEXT("GetCurrentProvince"));
+		return FProvinceId();
+	}
+	return FMassEntityView(GetEntityManager(), Entity)
+		.GetFragmentData<FCharacterLocationFragment>().CurrentProvinceId;
+}
+
+int32 UCharacterEntitySubsystem::GetTimezoneOffset(const FCharacterId InCharacterId) const
+{
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
+	if (!Entity.IsValid())
+	{
+		LogInvalidRead(InCharacterId, TEXT("GetTimezoneOffset"));
 		return 0;
 	}
 	return FMassEntityView(GetEntityManager(), Entity)
 		.GetFragmentData<FCharacterLocationFragment>().TimezoneOffset;
 }
 
-FAbilities UCharacterEntitySubsystem::GetAbilities(const int32 InCharacterIndex) const
+FAbilities UCharacterEntitySubsystem::GetAbilities(const FCharacterId InCharacterId) const
 {
-	const FMassEntityHandle Entity = GetEntity(InCharacterIndex);
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
 	if (!Entity.IsValid())
 	{
+		LogInvalidRead(InCharacterId, TEXT("GetAbilities"));
 		return FAbilities();
 	}
 	return FMassEntityView(GetEntityManager(), Entity)
 		.GetFragmentData<FCharacterAbilitiesFragment>().Abilities;
 }
 
-TArray<FPosition> UCharacterEntitySubsystem::GetPositions(const int32 InCharacterIndex) const
+TArray<FPosition> UCharacterEntitySubsystem::GetPositions(const FCharacterId InCharacterId) const
 {
-	const FMassEntityHandle Entity = GetEntity(InCharacterIndex);
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
 	if (!Entity.IsValid())
 	{
+		LogInvalidRead(InCharacterId, TEXT("GetPositions"));
 		return {};
 	}
 	return FMassEntityView(GetEntityManager(), Entity)
 		.GetFragmentData<FCharacterPositionsFragment>().Values;
 }
 
-FSchedule UCharacterEntitySubsystem::GetSchedule(const int32 InCharacterIndex) const
+FSchedule UCharacterEntitySubsystem::GetSchedule(const FCharacterId InCharacterId) const
 {
-	const FMassEntityHandle Entity = GetEntity(InCharacterIndex);
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
 	if (!Entity.IsValid())
 	{
+		LogInvalidRead(InCharacterId, TEXT("GetSchedule"));
 		return FSchedule();
 	}
 	return FMassEntityView(GetEntityManager(), Entity)
 		.GetConstSharedFragmentData<FCharacterScheduleSharedFragment>().Schedule;
 }
 
+FScheduleId UCharacterEntitySubsystem::GetScheduleId(const FCharacterId InCharacterId) const
+{
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
+	if (!Entity.IsValid())
+	{
+		LogInvalidRead(InCharacterId, TEXT("GetScheduleId"));
+		return FScheduleId();
+	}
+	return FMassEntityView(GetEntityManager(), Entity)
+		.GetConstSharedFragmentData<FCharacterScheduleSharedFragment>().ScheduleId;
+}
+
+FCharacterVitals UCharacterEntitySubsystem::GetVitals(const FCharacterId InCharacterId) const
+{
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
+	if (!Entity.IsValid())
+	{
+		LogInvalidRead(InCharacterId, TEXT("GetVitals"));
+		return FCharacterVitals();
+	}
+	const FCharacterVitalsFragment& Vitals =
+		FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FCharacterVitalsFragment>();
+
+	FCharacterVitals Result;
+	Result.Energy = Vitals.Energy;
+	Result.Happiness = Vitals.Happiness;
+	return Result;
+}
+
+FCharacterSkills UCharacterEntitySubsystem::GetSkills(const FCharacterId InCharacterId) const
+{
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
+	if (!Entity.IsValid())
+	{
+		LogInvalidRead(InCharacterId, TEXT("GetSkills"));
+		return FCharacterSkills();
+	}
+	const FCharacterSkillsFragment& Skills =
+		FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FCharacterSkillsFragment>();
+
+	FCharacterSkills Result;
+	Result.Science = Skills.Science;
+	Result.Strength = Skills.Strength;
+	Result.Medicine = Skills.Medicine;
+	return Result;
+}
+
+TArray<FCharacterId> UCharacterEntitySubsystem::CollectCharactersInProvince(const FProvinceId InProvinceId) const
+{
+	TArray<FCharacterId> Result;
+
+	FMassExecutionContext Context(GetEntityManager());
+	LocationQuery.ForEachEntityChunk(Context, [&Result, InProvinceId](FMassExecutionContext& Ctx)
+	{
+		const TConstArrayView<FCharacterIndexFragment> Ids = Ctx.GetFragmentView<FCharacterIndexFragment>();
+		const TConstArrayView<FCharacterLocationFragment> Locations = Ctx.GetFragmentView<FCharacterLocationFragment>();
+
+		for (int32 EntityIt = 0; EntityIt < Ctx.GetNumEntities(); ++EntityIt)
+		{
+			if (Locations[EntityIt].CurrentProvinceId == InProvinceId)
+			{
+				Result.Add(Ids[EntityIt].Id);
+			}
+		}
+	});
+
+	return Result;
+}
+
 // -----------------------------------------------------------------------------
 // Write
 // -----------------------------------------------------------------------------
 
-void UCharacterEntitySubsystem::MoveCharacter(const int32 InCharacterIndex, const int32 InNewProvinceIndex,
-                                              const int32 InNewTimezoneOffset)
+void UCharacterEntitySubsystem::MoveCharacter(const FCharacterId InCharacterId, const FProvinceId InNewProvinceId)
 {
-	const FMassEntityHandle Entity = GetEntity(InCharacterIndex);
-	if (!Entity.IsValid())
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
+	if (!ensureMsgf(Entity.IsValid(), TEXT("MoveCharacter: character %d is not alive"), InCharacterId.Value))
 	{
 		return;
 	}
 
+	int32 NewTimezoneOffset = 0;
+	if (const UProvinceEntitySubsystem* Provinces = GetWorld() ? GetWorld()->GetSubsystem<UProvinceEntitySubsystem>() : nullptr)
+	{
+		NewTimezoneOffset = Provinces->GetTimezoneOffset(InNewProvinceId);
+	}
+
 	FCharacterLocationFragment& Location =
 		FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FCharacterLocationFragment>();
-	Location.CurrentProvinceIndex = InNewProvinceIndex;
-	Location.TimezoneOffset = InNewTimezoneOffset;
+	Location.CurrentProvinceId = InNewProvinceId;
+	Location.TimezoneOffset = NewTimezoneOffset;
 }
 
-void UCharacterEntitySubsystem::AddPosition(const int32 InCharacterIndex, const int32 InAtOrganizationIndex)
+void UCharacterEntitySubsystem::AddPosition(const FCharacterId InCharacterId, const FOrganizationId InAtOrganizationId)
 {
-	const FMassEntityHandle Entity = GetEntity(InCharacterIndex);
-	if (!Entity.IsValid())
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
+	if (!ensureMsgf(Entity.IsValid(), TEXT("AddPosition: character %d is not alive"), InCharacterId.Value))
 	{
 		return;
 	}
 
 	FPosition NewPosition;
-	NewPosition.OrganizationIndex = InAtOrganizationIndex;
+	NewPosition.OrganizationId = InAtOrganizationId;
 
 	FMassEntityView(GetEntityManager(), Entity)
 		.GetFragmentData<FCharacterPositionsFragment>()
@@ -258,12 +359,12 @@ void UCharacterEntitySubsystem::AddPosition(const int32 InCharacterIndex, const 
 // Debug
 // -----------------------------------------------------------------------------
 
-void UCharacterEntitySubsystem::LogCharacter(const int32 InCharacterIndex) const
+void UCharacterEntitySubsystem::LogCharacter(const FCharacterId InCharacterId) const
 {
-	const FMassEntityHandle Entity = GetEntity(InCharacterIndex);
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
 	if (!Entity.IsValid())
 	{
-		UE_LOG(LogRtsCharacters, Warning, TEXT("[%d] no entity"), InCharacterIndex);
+		UE_LOG(LogRtsCharacters, Warning, TEXT("[%d] no entity"), InCharacterId.Value);
 		return;
 	}
 
@@ -275,7 +376,7 @@ void UCharacterEntitySubsystem::LogCharacter(const int32 InCharacterIndex) const
 
 	UE_LOG(LogRtsCharacters, Log,
 		TEXT("[%d] Province=%d Tz=%d | Energy=%d Happiness=%d | Sci=%d Str=%d Med=%d | Positions=%d"),
-		InCharacterIndex, Location.CurrentProvinceIndex, Location.TimezoneOffset,
+		InCharacterId.Value, Location.CurrentProvinceId.Value, Location.TimezoneOffset,
 		Vitals.Energy, Vitals.Happiness,
 		Skills.Science, Skills.Strength, Skills.Medicine,
 		Positions.Values.Num());
@@ -297,13 +398,45 @@ static FAutoConsoleCommandWithWorldAndArgs GDumpCharactersCommand(
 
 			if (Args.Num() > 0)
 			{
-				Subsystem->LogCharacter(FCString::Atoi(*Args[0]));
+				Subsystem->LogCharacter(FCharacterId(FCString::Atoi(*Args[0])));
 				return;
 			}
 
-			UE_LOG(LogRtsCharacters, Log, TEXT("=== %d characters ==="), Subsystem->Num());
-			for (int32 Index = 0; Index < Subsystem->Num(); ++Index)
+			UE_LOG(LogRtsCharacters, Log, TEXT("=== Alive=%d Slots=%d ==="),
+				Subsystem->GetAliveIds().Num(), Subsystem->NumSlots());
+			for (int32 Index = 0; Index < Subsystem->NumSlots(); ++Index)
 			{
-				Subsystem->LogCharacter(Index);
+				Subsystem->LogCharacter(FCharacterId(Index));
 			}
+		}));
+
+static FAutoConsoleCommandWithWorldAndArgs GKillCharacterCommand(
+	TEXT("Rts.KillCharacter"),
+	TEXT("Destroys a character's entity by id, leaving its slot marked dead. Argument: the character id."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(
+		[](const TArray<FString>& Args, UWorld* World)
+		{
+			UCharacterEntitySubsystem* Subsystem =
+				World ? World->GetSubsystem<UCharacterEntitySubsystem>() : nullptr;
+			if (!Subsystem)
+			{
+				UE_LOG(LogRtsCharacters, Warning, TEXT("No UCharacterEntitySubsystem in this world"));
+				return;
+			}
+
+			if (Args.Num() == 0)
+			{
+				UE_LOG(LogRtsCharacters, Warning, TEXT("Usage: Rts.KillCharacter <id>"));
+				return;
+			}
+
+			const FCharacterId Id(FCString::Atoi(*Args[0]));
+			if (!Subsystem->IsAlive(Id))
+			{
+				UE_LOG(LogRtsCharacters, Warning, TEXT("[%d] already not alive"), Id.Value);
+				return;
+			}
+
+			Subsystem->DestroyCharacter(Id);
+			UE_LOG(LogRtsCharacters, Log, TEXT("[%d] destroyed"), Id.Value);
 		}));

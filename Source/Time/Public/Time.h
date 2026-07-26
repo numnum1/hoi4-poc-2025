@@ -30,18 +30,16 @@ public:
     UPROPERTY(BlueprintAssignable)
     FTimeHourEvent OnHourElapsed;
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_CurrentTime)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     FDateTime CurrentTime;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), Replicated, ReplicatedUsing=OnRep_Speed, BlueprintSetter=SetSpeed)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true), BlueprintSetter=SetSpeed)
     int32 Speed;
-    /** Start of the last game hour we broadcast for. Server-only, deliberately not replicated. */
+    /** Start of the last game hour we broadcast for. */
     FDateTime LastHourBoundary;
 public:
-    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-    
     FORCEINLINE const FDateTime& GetCurrentTime() const { return CurrentTime; }
-    
-    UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
+
+    UFUNCTION(BlueprintSetter)
     FORCEINLINE void SetSpeed(const int32 NewSpeed)
     {
         Speed = NewSpeed;
@@ -50,17 +48,6 @@ public:
 protected:
     virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 private:
-    UFUNCTION()
-    FORCEINLINE void OnRep_CurrentTime()
-    {
-        OnCurrentTimeChanged.Broadcast();
-    }
-    UFUNCTION()
-    FORCEINLINE void OnRep_Speed()
-    {
-        OnSpeedChanged.Broadcast();
-    }
-    
     void UpdateTime(float DeltaTime);
 
     /** Drops minutes/seconds so hour boundaries can be compared directly. */

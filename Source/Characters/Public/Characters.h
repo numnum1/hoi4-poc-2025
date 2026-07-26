@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Abilities.h"
 #include "CharacterInfo.h"
+#include "RtsIds.h"
 #include "Components/ActorComponent.h"
 #include "Modules/ModuleInterface.h"
 #include "Characters.generated.h"
@@ -22,7 +23,7 @@ struct CHARACTERS_API FPosition
     GENERATED_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int32 OrganizationIndex = 0;
+    FOrganizationId OrganizationId;
 };
 
 USTRUCT(BlueprintType)
@@ -34,7 +35,7 @@ struct CHARACTERS_API FPositions
     TArray<FPosition> Values = {};
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCharactersEvent, int32, InCharacterIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCharactersEvent, FCharacterId, InCharacterId);
 
 /**
  * The UI-facing face of the character data.
@@ -57,45 +58,76 @@ public:
     FCharactersEvent OnScheduleChanged;
     UPROPERTY(BlueprintAssignable)
     FCharactersEvent OnPositionChanged;
+    /** Fired once per character id after the hourly sim processor updates its vitals/skills. */
+    UPROPERTY(BlueprintAssignable)
+    FCharactersEvent OnSimulated;
+    UPROPERTY(BlueprintAssignable)
+    FCharactersEvent OnCharacterCreated;
+    /** Fired after a character's entity is gone. Its display row (name, portrait) stays around. */
+    UPROPERTY(BlueprintAssignable)
+    FCharactersEvent OnCharacterDestroyed;
+
+    virtual void InitializeComponent() override;
+    virtual void UninitializeComponent() override;
 private:
+    /** One row per id ever created, alive or not — the dead keep their name and portrait. */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TArray<FCharacterDisplayInfo> Display;
 public:
     FORCEINLINE const TArray<FCharacterDisplayInfo>& GetDisplayInfos() const { return Display; }
 
+    /** Ids ever created, alive or not. Slot count, not a live headcount — see IsAlive. */
     UFUNCTION(BlueprintPure)
     int32 Num() const { return Display.Num(); }
 
     UFUNCTION(BlueprintPure)
-    FCharacterDisplayInfo GetDisplayInfo(int32 InCharacterIndex) const;
+    bool IsAlive(FCharacterId InCharacterId) const;
+
+    UFUNCTION(BlueprintPure)
+    FCharacterDisplayInfo GetDisplayInfo(FCharacterId InCharacterId) const;
 
     // --- forwarded to the entity subsystem ---
     UFUNCTION(BlueprintPure)
-    int32 GetCurrentProvince(int32 InCharacterIndex) const;
+    FProvinceId GetCurrentProvince(FCharacterId InCharacterId) const;
 
     UFUNCTION(BlueprintPure)
-    FAbilities GetAbilities(int32 InCharacterIndex) const;
+    FAbilities GetAbilities(FCharacterId InCharacterId) const;
 
     UFUNCTION(BlueprintPure)
-    TArray<FPosition> GetPositions(int32 InCharacterIndex) const;
+    TArray<FPosition> GetPositions(FCharacterId InCharacterId) const;
 
     UFUNCTION(BlueprintPure)
-    FSchedule GetSchedule(int32 InCharacterIndex) const;
+    FSchedule GetSchedule(FCharacterId InCharacterId) const;
 
-    /** Fills the display rows. Entity creation is UCharacterEntitySubsystem::CreateCharacters. */
+    /** The USchedules library entry this character follows — pass it to USchedules to get its name. */
+    UFUNCTION(BlueprintPure)
+    FScheduleId GetScheduleId(FCharacterId InCharacterId) const;
+
+    UFUNCTION(BlueprintPure)
+    FCharacterVitals GetVitals(FCharacterId InCharacterId) const;
+
+    UFUNCTION(BlueprintPure)
+    FCharacterSkills GetSkills(FCharacterId InCharacterId) const;
+
+    UFUNCTION(BlueprintPure)
+    TArray<FCharacterId> CollectCharactersInProvince(FProvinceId InProvinceId) const;
+
+    /** Creates the entity and its display row together and returns the id it claims. */
     UFUNCTION(BlueprintCallable)
-    void SetupDisplay(const TArray<FCharacterSpawnData>& InSpawnData);
+    FCharacterId Create(const FCharacterSpawnData& InSpawnData);
+
+    /** Destroys the entity. The display row (name, portrait) stays for genealogy/history. */
+    UFUNCTION(BlueprintCallable)
+    void Destroy(FCharacterId InCharacterId);
 
     UFUNCTION(BlueprintCallable)
-    void AddPosition(int32 InCharacterIndex, int32 InAtOrganizationIndex);
+    void AddPosition(FCharacterId InCharacterId, FOrganizationId InAtOrganizationId);
 
-    /**
-     * NewTimezoneOffset is cached on the entity so the hourly processor needs no province
-     * lookup; resolve it with ARtsGameState::GetTimezoneOffsetOfProvince.
-     */
     UFUNCTION(BlueprintCallable)
-    void MoveCharacter(int32 InCharacterIndex, int32 NewCurrentProvinceIndex, int32 NewTimezoneOffset);
+    void MoveCharacter(FCharacterId InCharacterId, FProvinceId NewCurrentProvinceId);
 
 private:
     UCharacterEntitySubsystem* GetEntities() const;
+
+    void HandleCharacterSimulated(FCharacterId InCharacterId);
 };

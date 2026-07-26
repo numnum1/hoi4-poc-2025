@@ -2,9 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "OrganizationInfo.h"
+#include "RtsIds.h"
 #include "Components/ActorComponent.h"
 #include "Modules/ModuleManager.h"
-#include "UObject/CoreNet.h"
 #include "Organizations.generated.h"
 
 class UOrganizationEntitySubsystem;
@@ -17,7 +17,7 @@ public:
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOrganizationsEvent);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOrganizationEvent, int32, InOrganizationIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOrganizationEvent, FOrganizationId, InOrganizationId);
 
 /**
  * The UI-facing face of the organization data.
@@ -41,32 +41,46 @@ public:
     FOrganizationEvent OnNationSettled;
     UPROPERTY(BlueprintAssignable)
     FOrganizationEvent OnAlignmentPublished;
+    /** Fired after an organization's entity is gone. Its display row (name, logo) stays around. */
+    UPROPERTY(BlueprintAssignable)
+    FOrganizationEvent OnOrganizationDissolved;
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TArray<FOrganizationInfo> Infos;
 public:
+    /** Ids ever created, alive or not. Slot count, not a live headcount — see IsAlive. */
     UFUNCTION(BlueprintPure)
     int32 Num() const { return Infos.Num(); }
 
     UFUNCTION(BlueprintPure)
-    FOrganizationInfo GetOrganizationInfo(int32 InIndex) const;
+    bool IsAlive(FOrganizationId InOrganizationId) const;
+
+    UFUNCTION(BlueprintPure)
+    FOrganizationInfo GetOrganizationInfo(FOrganizationId InOrganizationId) const;
 
     // --- forwarded to the entity subsystem ---
     UFUNCTION(BlueprintPure)
-    FOrganizationAlignment GetAlignment(int32 InOrganizationIndex) const;
+    FOrganizationAlignment GetAlignment(FOrganizationId InOrganizationId) const;
 
     UFUNCTION(BlueprintPure)
-    TArray<int32> GetSettledNations(int32 InOrganizationIndex) const;
+    TArray<FNationId> GetSettledNations(FOrganizationId InOrganizationId) const;
 
-    /** Founds an organization and returns its index. */
+    UFUNCTION(BlueprintPure)
+    TArray<FOrganizationId> CollectOrganizationsSettledIn(FNationId InNationId) const;
+
+    /** Founds an organization and returns its id. */
     UFUNCTION(BlueprintCallable)
-    int32 Add(const FOrganizationInfo& NewOrg);
+    FOrganizationId Add(const FOrganizationInfo& NewOrg);
 
     UFUNCTION(BlueprintCallable)
-    void PublishAlignment(int32 InOrganizationIndex, const TArray<float>& InAlignment);
+    void PublishAlignment(FOrganizationId InOrganizationId, const TArray<float>& InAlignment);
 
     UFUNCTION(BlueprintCallable)
-    void SettleNation(int32 InOrganizationIndex, int32 InNationIndex);
+    void SettleNation(FOrganizationId InOrganizationId, FNationId InNationId);
+
+    /** Destroys the entity. The display row (name, logo) stays for history. */
+    UFUNCTION(BlueprintCallable)
+    void Dissolve(FOrganizationId InOrganizationId);
 
 private:
     UOrganizationEntitySubsystem* GetEntities() const;

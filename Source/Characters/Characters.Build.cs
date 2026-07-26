@@ -10,13 +10,16 @@ public class Characters : ModuleRules
             new string[]
             {
                 "Core",
+                "RtsCore",
                 "Races",
                 "MassCore",
                 "MassEntity",
                 // Public because FCharacterScheduleSharedFragment exposes FSchedule in a public header
                 "Schedules",
                 // UCharacterEntitySubsystem drives its processor off UTime::OnHourElapsed
-                "Time"
+                "Time",
+                // UCharacterViewModel derives from UMVVMViewModelBase
+                "ModelViewViewModel"
             }
         );
 
@@ -26,7 +29,9 @@ public class Characters : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                // MoveCharacter resolves the timezone offset of the destination province
+                "Provinces"
             }
         );
     }

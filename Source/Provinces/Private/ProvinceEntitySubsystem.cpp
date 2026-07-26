@@ -5,6 +5,7 @@
 #include "MassEntityManager.h"
 #include "MassEntitySubsystem.h"
 #include "MassEntityView.h"
+#include "MassExecutionContext.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRtsProvinces, Log, All);
 
@@ -18,11 +19,17 @@ void UProvinceEntitySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	EntitySubsystem = Collection.InitializeDependency<UMassEntitySubsystem>();
+
+	OwnershipQuery = FMassEntityQuery(GetEntityManager().AsShared());
+	OwnershipQuery.AddTagRequirement<FProvinceTag>(EMassFragmentPresence::All);
+	OwnershipQuery.AddRequirement<FProvinceIndexFragment>(EMassFragmentAccess::ReadOnly);
+	OwnershipQuery.AddRequirement<FProvinceOwnershipFragment>(EMassFragmentAccess::ReadOnly);
 }
 
 void UProvinceEntitySubsystem::Deinitialize()
 {
 	EntityByIndex.Reset();
+	AliveIds.Reset();
 	EntitySubsystem = nullptr;
 
 	Super::Deinitialize();
@@ -34,63 +41,101 @@ FMassEntityManager& UProvinceEntitySubsystem::GetEntityManager() const
 	return EntitySubsystem->GetMutableEntityManager();
 }
 
-void UProvinceEntitySubsystem::CreateProvinces(const TArray<FProvinceSpawnData>& InSpawnData)
+FProvinceId UProvinceEntitySubsystem::CreateProvince(const FProvinceSpawnData& InSpawnData)
 {
-	FMassEntityManager& EntityManager = GetEntityManager();
+	const FProvinceId NewId(EntityByIndex.Num());
 
-	if (EntityByIndex.Num() > 0)
+	// Fragments derive from FMassFragment, so they are not aggregates — fill them by field.
+	FProvinceIndexFragment IndexFragment;
+	IndexFragment.Id = NewId;
+
+	FProvinceOwnershipFragment OwnershipFragment;
+	OwnershipFragment.OwningNationId = InSpawnData.OwningNationId;
+
+	FProvinceTimeFragment TimeFragment;
+	TimeFragment.TimezoneOffset = InSpawnData.TimezoneOffset;
+
+	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
+	Builder.Add<FProvinceTag>()
+	       .Add<FProvinceIndexFragment>(IndexFragment)
+	       .Add<FProvinceOwnershipFragment>(OwnershipFragment)
+	       .Add<FProvinceTimeFragment>(TimeFragment);
+
+	EntityByIndex.Add(Builder.Commit());
+	AliveIds.Add(NewId);
+	return NewId;
+}
+
+void UProvinceEntitySubsystem::DestroyProvince(const FProvinceId InProvinceId)
+{
+	const FMassEntityHandle Entity = GetEntity(InProvinceId);
+	if (!Entity.IsValid())
 	{
-		EntityManager.BatchDestroyEntities(EntityByIndex);
-		EntityByIndex.Reset();
+		return;
 	}
 
-	EntityByIndex.Reserve(InSpawnData.Num());
-
-	for (int32 ProvinceIndex = 0; ProvinceIndex < InSpawnData.Num(); ++ProvinceIndex)
-	{
-		// Fragments derive from FMassFragment, so they are not aggregates — fill them by field.
-		FProvinceIndexFragment IndexFragment;
-		IndexFragment.Index = ProvinceIndex;
-
-		FProvinceOwnershipFragment OwnershipFragment;
-		OwnershipFragment.OwningNationIndex = InSpawnData[ProvinceIndex].OwningNationIndex;
-
-		UE::Mass::FEntityBuilder Builder = EntityManager.MakeEntityBuilder();
-		Builder.Add<FProvinceTag>()
-		       .Add<FProvinceIndexFragment>(IndexFragment)
-		       .Add<FProvinceOwnershipFragment>(OwnershipFragment);
-
-		EntityByIndex.Add(Builder.Commit());
-	}
-
-	UE_LOG(LogRtsProvinces, Log, TEXT("Created %d province entities"), EntityByIndex.Num());
+	GetEntityManager().DestroyEntity(Entity);
+	EntityByIndex[InProvinceId.Value] = FMassEntityHandle();
+	AliveIds.RemoveSingle(InProvinceId);
 }
 
 // -----------------------------------------------------------------------------
 // Read
 // -----------------------------------------------------------------------------
 
-int32 UProvinceEntitySubsystem::GetOwningNation(const int32 InProvinceIndex) const
+namespace
 {
-	const FMassEntityHandle Entity = GetEntity(InProvinceIndex);
-	if (!Entity.IsValid())
+	// A getter seeing an id that just died is normal UI behavior, not a bug — log quietly and
+	// return the default. Contrast with the Write section below, which ensureMsgf's instead.
+	void LogInvalidRead(const FProvinceId InProvinceId, const TCHAR* InAccessor)
 	{
-		return INDEX_NONE;
+		UE_LOG(LogRtsProvinces, Verbose, TEXT("%s: province %d is not alive"), InAccessor, InProvinceId.Value);
 	}
-	return FMassEntityView(GetEntityManager(), Entity)
-		.GetFragmentData<FProvinceOwnershipFragment>().OwningNationIndex;
 }
 
-TArray<int32> UProvinceEntitySubsystem::CollectProvincesOfNation(const int32 InNationIndex) const
+FNationId UProvinceEntitySubsystem::GetOwningNation(const FProvinceId InProvinceId) const
 {
-	TArray<int32> Result;
-	for (int32 ProvinceIndex = 0; ProvinceIndex < EntityByIndex.Num(); ++ProvinceIndex)
+	const FMassEntityHandle Entity = GetEntity(InProvinceId);
+	if (!Entity.IsValid())
 	{
-		if (GetOwningNation(ProvinceIndex) == InNationIndex)
-		{
-			Result.Add(ProvinceIndex);
-		}
+		LogInvalidRead(InProvinceId, TEXT("GetOwningNation"));
+		return FNationId();
 	}
+	return FMassEntityView(GetEntityManager(), Entity)
+		.GetFragmentData<FProvinceOwnershipFragment>().OwningNationId;
+}
+
+int32 UProvinceEntitySubsystem::GetTimezoneOffset(const FProvinceId InProvinceId) const
+{
+	const FMassEntityHandle Entity = GetEntity(InProvinceId);
+	if (!Entity.IsValid())
+	{
+		LogInvalidRead(InProvinceId, TEXT("GetTimezoneOffset"));
+		return 0;
+	}
+	return FMassEntityView(GetEntityManager(), Entity)
+		.GetFragmentData<FProvinceTimeFragment>().TimezoneOffset;
+}
+
+TArray<FProvinceId> UProvinceEntitySubsystem::CollectProvincesOfNation(const FNationId InNationId) const
+{
+	TArray<FProvinceId> Result;
+
+	FMassExecutionContext Context(GetEntityManager());
+	OwnershipQuery.ForEachEntityChunk(Context, [&Result, InNationId](FMassExecutionContext& Ctx)
+	{
+		const TConstArrayView<FProvinceIndexFragment> Ids = Ctx.GetFragmentView<FProvinceIndexFragment>();
+		const TConstArrayView<FProvinceOwnershipFragment> Owners = Ctx.GetFragmentView<FProvinceOwnershipFragment>();
+
+		for (int32 EntityIt = 0; EntityIt < Ctx.GetNumEntities(); ++EntityIt)
+		{
+			if (Owners[EntityIt].OwningNationId == InNationId)
+			{
+				Result.Add(Ids[EntityIt].Id);
+			}
+		}
+	});
+
 	return Result;
 }
 
@@ -98,33 +143,33 @@ TArray<int32> UProvinceEntitySubsystem::CollectProvincesOfNation(const int32 InN
 // Write
 // -----------------------------------------------------------------------------
 
-void UProvinceEntitySubsystem::SetOwningNation(const int32 InProvinceIndex, const int32 InNationIndex)
+void UProvinceEntitySubsystem::SetOwningNation(const FProvinceId InProvinceId, const FNationId InNationId)
 {
-	const FMassEntityHandle Entity = GetEntity(InProvinceIndex);
-	if (!Entity.IsValid())
+	const FMassEntityHandle Entity = GetEntity(InProvinceId);
+	if (!ensureMsgf(Entity.IsValid(), TEXT("SetOwningNation: province %d is not alive"), InProvinceId.Value))
 	{
 		return;
 	}
 
 	FMassEntityView(GetEntityManager(), Entity)
-		.GetFragmentData<FProvinceOwnershipFragment>().OwningNationIndex = InNationIndex;
+		.GetFragmentData<FProvinceOwnershipFragment>().OwningNationId = InNationId;
 }
 
 // -----------------------------------------------------------------------------
 // Debug
 // -----------------------------------------------------------------------------
 
-void UProvinceEntitySubsystem::LogProvince(const int32 InProvinceIndex) const
+void UProvinceEntitySubsystem::LogProvince(const FProvinceId InProvinceId) const
 {
-	const FMassEntityHandle Entity = GetEntity(InProvinceIndex);
+	const FMassEntityHandle Entity = GetEntity(InProvinceId);
 	if (!Entity.IsValid())
 	{
-		UE_LOG(LogRtsProvinces, Warning, TEXT("[%d] no entity"), InProvinceIndex);
+		UE_LOG(LogRtsProvinces, Warning, TEXT("[%d] no entity"), InProvinceId.Value);
 		return;
 	}
 
-	UE_LOG(LogRtsProvinces, Log, TEXT("[%d] OwningNation=%d"),
-		InProvinceIndex, GetOwningNation(InProvinceIndex));
+	UE_LOG(LogRtsProvinces, Log, TEXT("[%d] OwningNation=%d Tz=%d"),
+		InProvinceId.Value, GetOwningNation(InProvinceId).Value, GetTimezoneOffset(InProvinceId));
 }
 
 static FAutoConsoleCommandWithWorldAndArgs GDumpProvincesCommand(
@@ -143,13 +188,14 @@ static FAutoConsoleCommandWithWorldAndArgs GDumpProvincesCommand(
 
 			if (Args.Num() > 0)
 			{
-				Subsystem->LogProvince(FCString::Atoi(*Args[0]));
+				Subsystem->LogProvince(FProvinceId(FCString::Atoi(*Args[0])));
 				return;
 			}
 
-			UE_LOG(LogRtsProvinces, Log, TEXT("=== %d provinces ==="), Subsystem->Num());
-			for (int32 Index = 0; Index < Subsystem->Num(); ++Index)
+			UE_LOG(LogRtsProvinces, Log, TEXT("=== Alive=%d Slots=%d ==="),
+				Subsystem->GetAliveIds().Num(), Subsystem->NumSlots());
+			for (int32 Index = 0; Index < Subsystem->NumSlots(); ++Index)
 			{
-				Subsystem->LogProvince(Index);
+				Subsystem->LogProvince(FProvinceId(Index));
 			}
 		}));

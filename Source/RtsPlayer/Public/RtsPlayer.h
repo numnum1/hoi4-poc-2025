@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "RtsIds.h"
 #include "Modules/ModuleManager.h"
 #include "RtsPlayer.generated.h"
 
@@ -24,22 +25,23 @@ public:
     FRtsPlayerEvent OnControlledCharacterIdChanged;
     
 private:
-    UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, meta = (AllowPrivateAccess = true), Replicated, ReplicatedUsing=OnRep_ControlledCharacterId, BlueprintSetter=SetControlledCharacterId)
-    int32 ControlledCharacterIndex;
+    UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, meta = (AllowPrivateAccess = true), BlueprintSetter=SetControlledCharacterId)
+    FCharacterId ControlledCharacterId;
 public:
-    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-    
-    FORCEINLINE const int32& GetControlledCharacterId() const { return ControlledCharacterIndex; }
-    UFUNCTION(BlueprintSetter, BlueprintAuthorityOnly)
-    FORCEINLINE void SetControlledCharacterId(const int32 NewControlledCharacterId)
+    FORCEINLINE const FCharacterId& GetControlledCharacterId() const { return ControlledCharacterId; }
+    UFUNCTION(BlueprintSetter)
+    FORCEINLINE void SetControlledCharacterId(const FCharacterId NewControlledCharacterId)
     {
-        ControlledCharacterIndex = NewControlledCharacterId;
+        ControlledCharacterId = NewControlledCharacterId;
         OnControlledCharacterIdChanged.Broadcast();
     }
+
+protected:
+    virtual void BeginPlay() override;
+    virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
+
 private:
+    /** Drops the controlled character reference if it is the one that just died. */
     UFUNCTION()
-    FORCEINLINE void OnRep_ControlledCharacterId()
-    {
-        OnControlledCharacterIdChanged.Broadcast();
-    }
+    void HandleControlledCharacterDestroyed(FCharacterId InCharacterId);
 };

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "ProvinceInfo.h"
+#include "RtsIds.h"
 #include "Modules/ModuleManager.h"
 #include "Provinces.generated.h"
 
@@ -13,6 +14,8 @@ public:
     virtual void StartupModule() override;
     virtual void ShutdownModule() override;
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FProvincesEvent, FProvinceId, InProvinceId);
 
 /**
  * The UI-facing face of the province data.
@@ -28,35 +31,56 @@ class PROVINCES_API UProvinces : public UActorComponent
     GENERATED_BODY()
 public:
     UProvinces();
+
+    UPROPERTY(BlueprintAssignable)
+    FProvincesEvent OnOwningNationChanged;
+    /** Fired after a province's entity is gone. Its display row stays around. */
+    UPROPERTY(BlueprintAssignable)
+    FProvincesEvent OnProvinceDestroyed;
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TArray<FProvinceDisplayInfo> Display;
     // Optimization
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
-    TMap<FName, int32> MapIds;
+    TMap<FName, FProvinceId> MapIds;
 public:
+    /** Ids ever created, alive or not. Slot count, not a live headcount — see IsAlive. */
     UFUNCTION(BlueprintPure)
     int32 Num() const { return Display.Num(); }
 
     UFUNCTION(BlueprintPure)
-    FProvinceDisplayInfo GetDisplayInfo(int32 InProvinceIndex) const;
+    bool IsAlive(FProvinceId InProvinceId) const;
 
     UFUNCTION(BlueprintPure)
-    int32 FindByMapId(FName InMapId) const;
+    FProvinceDisplayInfo GetDisplayInfo(FProvinceId InProvinceId) const;
+
+    UFUNCTION(BlueprintPure)
+    FProvinceId FindByMapId(FName InMapId) const;
 
     // --- forwarded to the entity subsystem ---
     UFUNCTION(BlueprintPure)
-    int32 GetOwningNation(int32 InProvinceIndex) const;
+    FNationId GetOwningNation(FProvinceId InProvinceId) const;
 
     UFUNCTION(BlueprintPure)
-    TArray<int32> CollectProvincesOfNation(int32 InNationIndex) const;
+    int32 GetTimezoneOffset(FProvinceId InProvinceId) const;
 
-    /** Fills the display rows and spawns the province entities. */
+    UFUNCTION(BlueprintPure)
+    TArray<FProvinceId> CollectProvincesOfNation(FNationId InNationId) const;
+
+    /** Creates the entity and its display row together and returns the id it claims. */
+    UFUNCTION(BlueprintCallable)
+    FProvinceId Create(const FProvinceSpawnData& InSpawnData);
+
+    /** Convenience for scenario load: creates one province per entry, in order. */
     UFUNCTION(BlueprintCallable)
     void Setup(const TArray<FProvinceSpawnData>& NewProvinces);
 
     UFUNCTION(BlueprintCallable)
-    void SetOwningNation(int32 InProvinceIndex, int32 InNationIndex);
+    void SetOwningNation(FProvinceId InProvinceId, FNationId InNationId);
+
+    /** Destroys the entity. The display row stays for history. */
+    UFUNCTION(BlueprintCallable)
+    void Destroy(FProvinceId InProvinceId);
 
 private:
     UProvinceEntitySubsystem* GetEntities() const;

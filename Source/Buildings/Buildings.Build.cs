@@ -10,6 +10,11 @@ public class Buildings : ModuleRules
             new string[]
             {
                 "Core",
+                "RtsCore",
+                "MassCore",
+                "MassEntity",
+                // UBuildingViewModel derives from UMVVMViewModelBase
+                "ModelViewViewModel"
             }
         );
 

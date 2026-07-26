@@ -3,7 +3,7 @@
 
 #include "RtsGameState.h"
 
-#include "BuildingType.h"
+#include "Buildings.h"
 #include "Time.h"
 #include "Characters.h"
 #include "Nations.h"
@@ -25,64 +25,14 @@ ARtsGameState::ARtsGameState()
 	Time = CreateDefaultSubobject<UTime>(TEXT("Time"));
 }
 
-int32 ARtsGameState::GetTimezoneOffsetOfProvince(const int32 InProvinceIndex) const
-{
-	return ProvincesContainer->GetDisplayInfo(InProvinceIndex).TimezoneOffset;
-}
-
-TArray<UBuildingType*> ARtsGameState::CollectBuildingsInProvince(const int32 InProvinceIndex) const
-{
-	const int32 Num = BuildingsContainer->GetBuildingCounts()[InProvinceIndex];
-	TArray<UBuildingType*> Buildings;
-	Buildings.SetNum(Num);
-	for (int32 I = 0; I < Num; I++)
-	{
-		Buildings[I] = BuildingsContainer->GetBuildingPool()[InProvinceIndex * MAX_BUILDINGS_PER_PROVINCE + I];
-	}
-	return Buildings;
-}
-
-int32 ARtsGameState::CountBuildingByType(const int32 InProvinceIndex, UBuildingType* InBuildingType) const
-{
-	int32 Res = 0;
-	for (int32 I = 0; I < BuildingsContainer->GetBuildingCounts()[InProvinceIndex]; I++)
-	{
-		const auto Type = BuildingsContainer->GetBuildingPool()[InProvinceIndex * MAX_BUILDINGS_PER_PROVINCE + I];
-		if (Type == InBuildingType)
-		{
-			Res++;
-		}
-	}
-	return Res;
-}
-
-int32 ARtsGameState::FindBuildingsBySlot(const int32 InProvinceIndex, const FName& InSlotName) const
-{
-	int32 Res = 0;
-	for (int32 I = 0; I < BuildingsContainer->GetBuildingCounts()[InProvinceIndex]; I++)
-	{
-		const auto Type = BuildingsContainer->GetBuildingPool()[InProvinceIndex * MAX_BUILDINGS_PER_PROVINCE + I];
-		if (Type->GetBuildingSlotName() == InSlotName)
-		{
-			Res++;
-		}
-	}
-	return Res;
-}
-
-void ARtsGameState::AddBuilding(UBuildingType* InBuilding, const int32 InProvinceIndex, const FBuildingOwner& InBuildingOwner)
-{
-	BuildingsContainer->Add(InBuilding, InProvinceIndex, InBuildingOwner);
-}
-
-TArray<FOrganizationInfo> ARtsGameState::CollectOrganizationsForCharacter(const int32 InCharacterIndex) const
+TArray<FOrganizationInfo> ARtsGameState::CollectOrganizationsForCharacter(const FCharacterId InCharacterId) const
 {
 	TArray<FOrganizationInfo> Res;
-	const TArray<FPosition> Positions = CharactersContainer->GetPositions(InCharacterIndex);
+	const TArray<FPosition> Positions = CharactersContainer->GetPositions(InCharacterId);
 	Res.SetNum(Positions.Num());
 	for (int32 I = 0; I < Positions.Num(); I++)
 	{
-		Res[I] = OrganizationsContainer->GetOrganizationInfo(Positions[I].OrganizationIndex);
+		Res[I] = OrganizationsContainer->GetOrganizationInfo(Positions[I].OrganizationId);
 	}
 	return Res;
 }

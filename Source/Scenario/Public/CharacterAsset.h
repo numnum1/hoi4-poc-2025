@@ -9,6 +9,7 @@
 
 class UProvinceAsset;
 class URaceAsset;
+class UScheduleAsset;
 
 /**
  * 
@@ -40,6 +41,10 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	UProvinceAsset* CurrentProvince;
 
+	/** The daily routine this character follows. Without one it does nothing all day. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
+	UScheduleAsset* Schedule;
+
 public:
 	FORCEINLINE ECharacterSimTier GetSimTier() const
 	{
@@ -69,5 +74,10 @@ public:
 	FORCEINLINE UProvinceAsset* GetCurrentProvince() const
 	{
 		return CurrentProvince;
+	}
+
+	FORCEINLINE UScheduleAsset* GetSchedule() const
+	{
+		return Schedule;
 	}
 };

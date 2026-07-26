@@ -10,6 +10,11 @@ public class Nations : ModuleRules
             new string[]
             {
                 "Core",
+                "RtsCore",
+                "MassCore",
+                "MassEntity",
+                // UNationViewModel derives from UMVVMViewModelBase
+                "ModelViewViewModel"
             }
         );
 

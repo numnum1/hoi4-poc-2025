@@ -23,6 +23,27 @@ UCharacters::UCharacters()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
+	bWantsInitializeComponent = true;
+}
+
+void UCharacters::InitializeComponent()
+{
+	Super::InitializeComponent();
+
+	if (UCharacterEntitySubsystem* Entities = GetEntities())
+	{
+		Entities->OnCharacterSimulated.AddUObject(this, &UCharacters::HandleCharacterSimulated);
+	}
+}
+
+void UCharacters::UninitializeComponent()
+{
+	if (UCharacterEntitySubsystem* Entities = GetEntities())
+	{
+		Entities->OnCharacterSimulated.RemoveAll(this);
+	}
+
+	Super::UninitializeComponent();
 }
 
 UCharacterEntitySubsystem* UCharacters::GetEntities() const
@@ -31,59 +52,110 @@ UCharacterEntitySubsystem* UCharacters::GetEntities() const
 	return World ? World->GetSubsystem<UCharacterEntitySubsystem>() : nullptr;
 }
 
-void UCharacters::SetupDisplay(const TArray<FCharacterSpawnData>& InSpawnData)
+void UCharacters::HandleCharacterSimulated(const FCharacterId InCharacterId)
 {
-	Display.Reset(InSpawnData.Num());
-	for (const FCharacterSpawnData& Data : InSpawnData)
+	OnSimulated.Broadcast(InCharacterId);
+}
+
+bool UCharacters::IsAlive(const FCharacterId InCharacterId) const
+{
+	const UCharacterEntitySubsystem* Entities = GetEntities();
+	return Entities && Entities->IsAlive(InCharacterId);
+}
+
+FCharacterId UCharacters::Create(const FCharacterSpawnData& InSpawnData)
+{
+	UCharacterEntitySubsystem* Entities = GetEntities();
+	if (!Entities)
 	{
-		Display.Add(Data.Display);
+		return FCharacterId();
 	}
+
+	// The entity claims the id; the display row must line up with it.
+	const FCharacterId NewId = Entities->CreateCharacter(InSpawnData);
+	check(NewId.Value == Display.Num());
+	Display.Add(InSpawnData.Display);
+
+	OnCharacterCreated.Broadcast(NewId);
+	return NewId;
 }
 
-FCharacterDisplayInfo UCharacters::GetDisplayInfo(const int32 InCharacterIndex) const
-{
-	return Display.IsValidIndex(InCharacterIndex) ? Display[InCharacterIndex] : FCharacterDisplayInfo();
-}
-
-int32 UCharacters::GetCurrentProvince(const int32 InCharacterIndex) const
-{
-	const UCharacterEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->GetCurrentProvince(InCharacterIndex) : INDEX_NONE;
-}
-
-FAbilities UCharacters::GetAbilities(const int32 InCharacterIndex) const
-{
-	const UCharacterEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->GetAbilities(InCharacterIndex) : FAbilities();
-}
-
-TArray<FPosition> UCharacters::GetPositions(const int32 InCharacterIndex) const
-{
-	const UCharacterEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->GetPositions(InCharacterIndex) : TArray<FPosition>();
-}
-
-FSchedule UCharacters::GetSchedule(const int32 InCharacterIndex) const
-{
-	const UCharacterEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->GetSchedule(InCharacterIndex) : FSchedule();
-}
-
-void UCharacters::AddPosition(const int32 InCharacterIndex, const int32 InAtOrganizationIndex)
+void UCharacters::Destroy(const FCharacterId InCharacterId)
 {
 	UCharacterEntitySubsystem* Entities = GetEntities();
 	if (!Entities) return;
 
-	Entities->AddPosition(InCharacterIndex, InAtOrganizationIndex);
-	OnPositionChanged.Broadcast(InCharacterIndex);
+	Entities->DestroyCharacter(InCharacterId);
+	OnCharacterDestroyed.Broadcast(InCharacterId);
 }
 
-void UCharacters::MoveCharacter(const int32 InCharacterIndex, const int32 NewCurrentProvinceIndex,
-                                const int32 NewTimezoneOffset)
+FCharacterDisplayInfo UCharacters::GetDisplayInfo(const FCharacterId InCharacterId) const
+{
+	return Display.IsValidIndex(InCharacterId.Value) ? Display[InCharacterId.Value] : FCharacterDisplayInfo();
+}
+
+FProvinceId UCharacters::GetCurrentProvince(const FCharacterId InCharacterId) const
+{
+	const UCharacterEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->GetCurrentProvince(InCharacterId) : FProvinceId();
+}
+
+FAbilities UCharacters::GetAbilities(const FCharacterId InCharacterId) const
+{
+	const UCharacterEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->GetAbilities(InCharacterId) : FAbilities();
+}
+
+TArray<FPosition> UCharacters::GetPositions(const FCharacterId InCharacterId) const
+{
+	const UCharacterEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->GetPositions(InCharacterId) : TArray<FPosition>();
+}
+
+FSchedule UCharacters::GetSchedule(const FCharacterId InCharacterId) const
+{
+	const UCharacterEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->GetSchedule(InCharacterId) : FSchedule();
+}
+
+FScheduleId UCharacters::GetScheduleId(const FCharacterId InCharacterId) const
+{
+	const UCharacterEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->GetScheduleId(InCharacterId) : FScheduleId();
+}
+
+FCharacterVitals UCharacters::GetVitals(const FCharacterId InCharacterId) const
+{
+	const UCharacterEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->GetVitals(InCharacterId) : FCharacterVitals();
+}
+
+FCharacterSkills UCharacters::GetSkills(const FCharacterId InCharacterId) const
+{
+	const UCharacterEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->GetSkills(InCharacterId) : FCharacterSkills();
+}
+
+TArray<FCharacterId> UCharacters::CollectCharactersInProvince(const FProvinceId InProvinceId) const
+{
+	const UCharacterEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->CollectCharactersInProvince(InProvinceId) : TArray<FCharacterId>();
+}
+
+void UCharacters::AddPosition(const FCharacterId InCharacterId, const FOrganizationId InAtOrganizationId)
 {
 	UCharacterEntitySubsystem* Entities = GetEntities();
 	if (!Entities) return;
 
-	Entities->MoveCharacter(InCharacterIndex, NewCurrentProvinceIndex, NewTimezoneOffset);
-	OnCurrentProvinceChanged.Broadcast(InCharacterIndex);
+	Entities->AddPosition(InCharacterId, InAtOrganizationId);
+	OnPositionChanged.Broadcast(InCharacterId);
+}
+
+void UCharacters::MoveCharacter(const FCharacterId InCharacterId, const FProvinceId NewCurrentProvinceId)
+{
+	UCharacterEntitySubsystem* Entities = GetEntities();
+	if (!Entities) return;
+
+	Entities->MoveCharacter(InCharacterId, NewCurrentProvinceId);
+	OnCurrentProvinceChanged.Broadcast(InCharacterId);
 }

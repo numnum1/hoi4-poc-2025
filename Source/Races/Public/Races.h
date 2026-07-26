@@ -35,25 +35,25 @@ private:
     TArray<FRace> Races;
 
 public:
-    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    UFUNCTION(BlueprintCallable)
     FORCEINLINE void SetCategories(const TArray<FRaceCategory>& NewCategories)
     {
         Categories = NewCategories;
     }
 
-    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    UFUNCTION(BlueprintCallable)
     FORCEINLINE void SetLifeTypes(const TArray<FLifeType>& NewLifeTypes)
     {
         LifeTypes = NewLifeTypes;
     }
 
-    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    UFUNCTION(BlueprintCallable)
     FORCEINLINE void SetSpecies(const TArray<FSpecies>& NewSpecies)
     {
         Species = NewSpecies;
     }
 
-    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    UFUNCTION(BlueprintCallable)
     FORCEINLINE void SetRaces(const TArray<FRace>& NewRaces)
     {
         Races = NewRaces;

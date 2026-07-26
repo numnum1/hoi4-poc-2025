@@ -5,6 +5,7 @@
 #include "MassEntityManager.h"
 #include "MassEntitySubsystem.h"
 #include "MassEntityView.h"
+#include "MassExecutionContext.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRtsOrganizations, Log, All);
 
@@ -18,11 +19,17 @@ void UOrganizationEntitySubsystem::Initialize(FSubsystemCollectionBase& Collecti
 {
 	Super::Initialize(Collection);
 	EntitySubsystem = Collection.InitializeDependency<UMassEntitySubsystem>();
+
+	SettledNationsQuery = FMassEntityQuery(GetEntityManager().AsShared());
+	SettledNationsQuery.AddTagRequirement<FOrganizationTag>(EMassFragmentPresence::All);
+	SettledNationsQuery.AddRequirement<FOrganizationIndexFragment>(EMassFragmentAccess::ReadOnly);
+	SettledNationsQuery.AddRequirement<FOrganizationSettledNationsFragment>(EMassFragmentAccess::ReadOnly);
 }
 
 void UOrganizationEntitySubsystem::Deinitialize()
 {
 	EntityByIndex.Reset();
+	AliveIds.Reset();
 	EntitySubsystem = nullptr;
 
 	Super::Deinitialize();
@@ -34,13 +41,13 @@ FMassEntityManager& UOrganizationEntitySubsystem::GetEntityManager() const
 	return EntitySubsystem->GetMutableEntityManager();
 }
 
-int32 UOrganizationEntitySubsystem::CreateOrganization()
+FOrganizationId UOrganizationEntitySubsystem::CreateOrganization()
 {
-	const int32 NewIndex = EntityByIndex.Num();
+	const FOrganizationId NewId(EntityByIndex.Num());
 
 	// Fragments derive from FMassFragment, so they are not aggregates — fill them by field.
 	FOrganizationIndexFragment IndexFragment;
-	IndexFragment.Index = NewIndex;
+	IndexFragment.Id = NewId;
 
 	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
 	Builder.Add<FOrganizationTag>()
@@ -49,7 +56,21 @@ int32 UOrganizationEntitySubsystem::CreateOrganization()
 	       .Add<FOrganizationSettledNationsFragment>();
 
 	EntityByIndex.Add(Builder.Commit());
-	return NewIndex;
+	AliveIds.Add(NewId);
+	return NewId;
+}
+
+void UOrganizationEntitySubsystem::DestroyOrganization(const FOrganizationId InOrganizationId)
+{
+	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
+	if (!Entity.IsValid())
+	{
+		return;
+	}
+
+	GetEntityManager().DestroyEntity(Entity);
+	EntityByIndex[InOrganizationId.Value] = FMassEntityHandle();
+	AliveIds.RemoveSingle(InOrganizationId);
 }
 
 void UOrganizationEntitySubsystem::Reset()
@@ -58,6 +79,7 @@ void UOrganizationEntitySubsystem::Reset()
 	{
 		GetEntityManager().BatchDestroyEntities(EntityByIndex);
 		EntityByIndex.Reset();
+		AliveIds.Reset();
 	}
 }
 
@@ -65,50 +87,86 @@ void UOrganizationEntitySubsystem::Reset()
 // Read
 // -----------------------------------------------------------------------------
 
-bool UOrganizationEntitySubsystem::IsAlignmentPublished(const int32 InOrganizationIndex) const
+namespace
 {
-	const FMassEntityHandle Entity = GetEntity(InOrganizationIndex);
+	// A getter seeing an id that just died is normal UI behavior, not a bug — log quietly and
+	// return the default. Contrast with the Write section below, which ensureMsgf's instead.
+	void LogInvalidRead(const FOrganizationId InOrganizationId, const TCHAR* InAccessor)
+	{
+		UE_LOG(LogRtsOrganizations, Verbose, TEXT("%s: organization %d is not alive"), InAccessor, InOrganizationId.Value);
+	}
+}
+
+bool UOrganizationEntitySubsystem::IsAlignmentPublished(const FOrganizationId InOrganizationId) const
+{
+	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
 	if (!Entity.IsValid())
 	{
+		LogInvalidRead(InOrganizationId, TEXT("IsAlignmentPublished"));
 		return false;
 	}
 	return FMassEntityView(GetEntityManager(), Entity).HasTag<FOrganizationPublishedTag>();
 }
 
-FOrganizationAlignment UOrganizationEntitySubsystem::GetAlignment(const int32 InOrganizationIndex) const
+FOrganizationAlignment UOrganizationEntitySubsystem::GetAlignment(const FOrganizationId InOrganizationId) const
 {
-	const FMassEntityHandle Entity = GetEntity(InOrganizationIndex);
+	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
 	if (!Entity.IsValid())
 	{
+		LogInvalidRead(InOrganizationId, TEXT("GetAlignment"));
 		return FOrganizationAlignment();
 	}
 
 	FOrganizationAlignment Result;
-	Result.bPublished = IsAlignmentPublished(InOrganizationIndex);
+	Result.bPublished = IsAlignmentPublished(InOrganizationId);
 	Result.Branches = FMassEntityView(GetEntityManager(), Entity)
 		.GetFragmentData<FOrganizationAlignmentFragment>().Branches;
 	return Result;
 }
 
-TArray<int32> UOrganizationEntitySubsystem::GetSettledNations(const int32 InOrganizationIndex) const
+TArray<FNationId> UOrganizationEntitySubsystem::GetSettledNations(const FOrganizationId InOrganizationId) const
 {
-	const FMassEntityHandle Entity = GetEntity(InOrganizationIndex);
+	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
 	if (!Entity.IsValid())
 	{
+		LogInvalidRead(InOrganizationId, TEXT("GetSettledNations"));
 		return {};
 	}
 	return FMassEntityView(GetEntityManager(), Entity)
 		.GetFragmentData<FOrganizationSettledNationsFragment>().Values;
 }
 
+TArray<FOrganizationId> UOrganizationEntitySubsystem::CollectOrganizationsSettledIn(const FNationId InNationId) const
+{
+	TArray<FOrganizationId> Result;
+
+	FMassExecutionContext Context(GetEntityManager());
+	SettledNationsQuery.ForEachEntityChunk(Context, [&Result, InNationId](FMassExecutionContext& Ctx)
+	{
+		const TConstArrayView<FOrganizationIndexFragment> Ids = Ctx.GetFragmentView<FOrganizationIndexFragment>();
+		const TConstArrayView<FOrganizationSettledNationsFragment> Settled =
+			Ctx.GetFragmentView<FOrganizationSettledNationsFragment>();
+
+		for (int32 EntityIt = 0; EntityIt < Ctx.GetNumEntities(); ++EntityIt)
+		{
+			if (Settled[EntityIt].Values.Contains(InNationId))
+			{
+				Result.Add(Ids[EntityIt].Id);
+			}
+		}
+	});
+
+	return Result;
+}
+
 // -----------------------------------------------------------------------------
 // Write
 // -----------------------------------------------------------------------------
 
-void UOrganizationEntitySubsystem::PublishAlignment(const int32 InOrganizationIndex, const TArray<float>& InAlignment)
+void UOrganizationEntitySubsystem::PublishAlignment(const FOrganizationId InOrganizationId, const TArray<float>& InAlignment)
 {
-	const FMassEntityHandle Entity = GetEntity(InOrganizationIndex);
-	if (!Entity.IsValid())
+	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
+	if (!ensureMsgf(Entity.IsValid(), TEXT("PublishAlignment: organization %d is not alive"), InOrganizationId.Value))
 	{
 		return;
 	}
@@ -120,23 +178,23 @@ void UOrganizationEntitySubsystem::PublishAlignment(const int32 InOrganizationIn
 	GetEntityManager().AddTagToEntity(Entity, FOrganizationPublishedTag::StaticStruct());
 }
 
-bool UOrganizationEntitySubsystem::SettleNation(const int32 InOrganizationIndex, const int32 InNationIndex)
+bool UOrganizationEntitySubsystem::SettleNation(const FOrganizationId InOrganizationId, const FNationId InNationId)
 {
-	const FMassEntityHandle Entity = GetEntity(InOrganizationIndex);
-	if (!Entity.IsValid())
+	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
+	if (!ensureMsgf(Entity.IsValid(), TEXT("SettleNation: organization %d is not alive"), InOrganizationId.Value))
 	{
 		return false;
 	}
 
-	TArray<int32>& Settled = FMassEntityView(GetEntityManager(), Entity)
+	TArray<FNationId>& Settled = FMassEntityView(GetEntityManager(), Entity)
 		.GetFragmentData<FOrganizationSettledNationsFragment>().Values;
 
-	if (Settled.Contains(InNationIndex))
+	if (Settled.Contains(InNationId))
 	{
 		return false;
 	}
 
-	Settled.Add(InNationIndex);
+	Settled.Add(InNationId);
 	return true;
 }
 
@@ -144,12 +202,12 @@ bool UOrganizationEntitySubsystem::SettleNation(const int32 InOrganizationIndex,
 // Debug
 // -----------------------------------------------------------------------------
 
-void UOrganizationEntitySubsystem::LogOrganization(const int32 InOrganizationIndex) const
+void UOrganizationEntitySubsystem::LogOrganization(const FOrganizationId InOrganizationId) const
 {
-	const FMassEntityHandle Entity = GetEntity(InOrganizationIndex);
+	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
 	if (!Entity.IsValid())
 	{
-		UE_LOG(LogRtsOrganizations, Warning, TEXT("[%d] no entity"), InOrganizationIndex);
+		UE_LOG(LogRtsOrganizations, Warning, TEXT("[%d] no entity"), InOrganizationId.Value);
 		return;
 	}
 
@@ -158,7 +216,7 @@ void UOrganizationEntitySubsystem::LogOrganization(const int32 InOrganizationInd
 	const FOrganizationSettledNationsFragment& Settled = View.GetFragmentData<FOrganizationSettledNationsFragment>();
 
 	UE_LOG(LogRtsOrganizations, Log, TEXT("[%d] Published=%d Branches=%d SettledNations=%d"),
-		InOrganizationIndex, IsAlignmentPublished(InOrganizationIndex) ? 1 : 0,
+		InOrganizationId.Value, IsAlignmentPublished(InOrganizationId) ? 1 : 0,
 		Alignment.Branches.Num(), Settled.Values.Num());
 }
 
@@ -178,13 +236,14 @@ static FAutoConsoleCommandWithWorldAndArgs GDumpOrganizationsCommand(
 
 			if (Args.Num() > 0)
 			{
-				Subsystem->LogOrganization(FCString::Atoi(*Args[0]));
+				Subsystem->LogOrganization(FOrganizationId(FCString::Atoi(*Args[0])));
 				return;
 			}
 
-			UE_LOG(LogRtsOrganizations, Log, TEXT("=== %d organizations ==="), Subsystem->Num());
-			for (int32 Index = 0; Index < Subsystem->Num(); ++Index)
+			UE_LOG(LogRtsOrganizations, Log, TEXT("=== Alive=%d Slots=%d ==="),
+				Subsystem->GetAliveIds().Num(), Subsystem->NumSlots());
+			for (int32 Index = 0; Index < Subsystem->NumSlots(); ++Index)
 			{
-				Subsystem->LogOrganization(Index);
+				Subsystem->LogOrganization(FOrganizationId(Index));
 			}
 		}));

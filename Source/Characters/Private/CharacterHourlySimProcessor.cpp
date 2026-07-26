@@ -21,6 +21,7 @@ void UCharacterHourlySimProcessor::ConfigureQueries(const TSharedRef<FMassEntity
 	SimQuery.AddTagRequirement<FCharacterSimMaxTag>(EMassFragmentPresence::Any);
 
 	SimQuery.AddConstSharedRequirement<FCharacterScheduleSharedFragment>(EMassFragmentPresence::All);
+	SimQuery.AddRequirement<FCharacterIndexFragment>(EMassFragmentAccess::ReadOnly);
 	SimQuery.AddRequirement<FCharacterLocationFragment>(EMassFragmentAccess::ReadOnly);
 	SimQuery.AddRequirement<FCharacterVitalsFragment>(EMassFragmentAccess::ReadWrite);
 	SimQuery.AddRequirement<FCharacterSkillsFragment>(EMassFragmentAccess::ReadWrite);
@@ -28,6 +29,8 @@ void UCharacterHourlySimProcessor::ConfigureQueries(const TSharedRef<FMassEntity
 
 void UCharacterHourlySimProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
 {
+	LastSimulatedIds.Reset();
+
 	if (HoursToSim <= 0)
 	{
 		return;
@@ -36,11 +39,12 @@ void UCharacterHourlySimProcessor::Execute(FMassEntityManager& EntityManager, FM
 	const uint8 LocalStartHour = StartHour;
 	const int32 LocalHours = HoursToSim;
 
-	SimQuery.ForEachEntityChunk(Context, [LocalStartHour, LocalHours](FMassExecutionContext& Ctx)
+	SimQuery.ForEachEntityChunk(Context, [this, LocalStartHour, LocalHours](FMassExecutionContext& Ctx)
 	{
 		// Shared per chunk, so fetch it once rather than per entity.
 		const FSchedule& Schedule = Ctx.GetConstSharedFragment<FCharacterScheduleSharedFragment>().Schedule;
 
+		const TConstArrayView<FCharacterIndexFragment> Indices = Ctx.GetFragmentView<FCharacterIndexFragment>();
 		const TConstArrayView<FCharacterLocationFragment> Locations = Ctx.GetFragmentView<FCharacterLocationFragment>();
 		const TArrayView<FCharacterVitalsFragment> Vitals = Ctx.GetMutableFragmentView<FCharacterVitalsFragment>();
 		const TArrayView<FCharacterSkillsFragment> Skills = Ctx.GetMutableFragmentView<FCharacterSkillsFragment>();
@@ -48,6 +52,8 @@ void UCharacterHourlySimProcessor::Execute(FMassEntityManager& EntityManager, FM
 		const int32 NumEntities = Ctx.GetNumEntities();
 		for (int32 EntityIt = 0; EntityIt < NumEntities; ++EntityIt)
 		{
+			LastSimulatedIds.Add(Indices[EntityIt].Id);
+
 			const int32 TimezoneOffset = Locations[EntityIt].TimezoneOffset;
 			FCharacterVitalsFragment& V = Vitals[EntityIt];
 			FCharacterSkillsFragment& S = Skills[EntityIt];

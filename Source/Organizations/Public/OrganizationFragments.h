@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RtsIds.h"
 #include "Mass/EntityElementTypes.h"
 #include "Mass/ExternalSubsystemTraits.h"   // TMassFragmentTraits
 #include "OrganizationFragments.generated.h"
@@ -10,9 +11,9 @@
 // -----------------------------------------------------------------------------
 
 /**
- * Back-reference from an entity to the legacy int32 organization index.
- * FPosition::OrganizationIndex and every view model still address organizations by index,
- * so each entity carries the index it was created for.
+ * Back-reference from an entity to its stable FOrganizationId.
+ * FPosition::OrganizationId and every view model still address organizations by this id,
+ * so each entity carries the id it was created for.
  */
 USTRUCT()
 struct ORGANIZATIONS_API FOrganizationIndexFragment : public FMassFragment
@@ -20,7 +21,7 @@ struct ORGANIZATIONS_API FOrganizationIndexFragment : public FMassFragment
 	GENERATED_BODY()
 
 	UPROPERTY()
-	int32 Index = INDEX_NONE;
+	FOrganizationId Id;
 };
 
 // -----------------------------------------------------------------------------
@@ -46,7 +47,7 @@ struct ORGANIZATIONS_API FOrganizationSettledNationsFragment : public FMassFragm
 	GENERATED_BODY()
 
 	UPROPERTY()
-	TArray<int32> Values;
+	TArray<FNationId> Values;
 };
 
 // Both hold open-ended arrays, so neither is a flat POD. Mass wants that said out loud.

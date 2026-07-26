@@ -1,12 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RtsIds.h"
 #include "Mass/EntityElementTypes.h"
 #include "ProvinceFragments.generated.h"
 
 /**
- * Back-reference from an entity to the legacy int32 province index.
- * Characters, buildings and the map widget all address provinces by index.
+ * Back-reference from an entity to its stable FProvinceId.
+ * Characters, buildings and the map widget all address provinces by this id.
  */
 USTRUCT()
 struct PROVINCES_API FProvinceIndexFragment : public FMassFragment
@@ -14,7 +15,7 @@ struct PROVINCES_API FProvinceIndexFragment : public FMassFragment
 	GENERATED_BODY()
 
 	UPROPERTY()
-	int32 Index = INDEX_NONE;
+	FProvinceId Id;
 };
 
 /**
@@ -28,7 +29,21 @@ struct PROVINCES_API FProvinceOwnershipFragment : public FMassFragment
 	GENERATED_BODY()
 
 	UPROPERTY()
-	int32 OwningNationIndex = 0;
+	FNationId OwningNationId;
+};
+
+/**
+ * Authored at scenario load and never mutated, but simulation data rather than UI data — the
+ * hourly character sim reads it, so it lives here, not in FProvinceDisplayInfo. Each character
+ * entity still caches its own copy at spawn/move so the sim processor needs no province lookup.
+ */
+USTRUCT()
+struct PROVINCES_API FProvinceTimeFragment : public FMassFragment
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	int32 TimezoneOffset = 0;
 };
 
 USTRUCT()

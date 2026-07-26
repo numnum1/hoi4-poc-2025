@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Abilities.h"
 #include "Characters.h"
+#include "RtsIds.h"
 #include "Schedule.h"
 #include "Mass/EntityElementTypes.h"
 #include "Mass/ExternalSubsystemTraits.h"   // TMassFragmentTraits
@@ -13,10 +14,10 @@
 // -----------------------------------------------------------------------------
 
 /**
- * Back-reference from an entity to the legacy int32 character index.
- * Everything outside Mass (FBuildingOwner, ARtsPlayer::ControlledCharacterIndex,
- * UOrganizations, the view models) still addresses characters by index, so every
- * character entity carries the index it was created for.
+ * Back-reference from an entity to its stable FCharacterId.
+ * Everything outside Mass (FBuildingOwner, ARtsPlayer::ControlledCharacterId,
+ * UOrganizations, the view models) still addresses characters by this id, so every
+ * character entity carries the id it was created for.
  */
 USTRUCT()
 struct CHARACTERS_API FCharacterIndexFragment : public FMassFragment
@@ -24,7 +25,7 @@ struct CHARACTERS_API FCharacterIndexFragment : public FMassFragment
 	GENERATED_BODY()
 
 	UPROPERTY()
-	int32 Index = INDEX_NONE;
+	FCharacterId Id;
 };
 
 // -----------------------------------------------------------------------------
@@ -37,9 +38,9 @@ struct CHARACTERS_API FCharacterOriginFragment : public FMassFragment
 	GENERATED_BODY()
 
 	UPROPERTY()
-	int32 BirthProvinceIndex = 0;
+	FProvinceId BirthProvinceId;
 	UPROPERTY()
-	int32 BaseRaceIndex = 0;
+	FRaceId BaseRaceId;
 };
 
 // -----------------------------------------------------------------------------
@@ -52,7 +53,7 @@ struct CHARACTERS_API FCharacterLocationFragment : public FMassFragment
 	GENERATED_BODY()
 
 	UPROPERTY()
-	int32 CurrentProvinceIndex = 0;
+	FProvinceId CurrentProvinceId;
 	/** Cached from the current province so the sim processor needs no province lookup. */
 	UPROPERTY()
 	int32 TimezoneOffset = 0;
@@ -115,6 +116,12 @@ struct TMassFragmentTraits<FCharacterPositionsFragment> final
 // Shared: many characters reference the same schedule / race data
 // -----------------------------------------------------------------------------
 
+/**
+ * The schedule a character runs, by value. Const shared: Mass hashes the whole fragment, so
+ * every character following the same library entry lands on the same instance automatically.
+ * ScheduleId rides along for display only — same asset means same id means same schedule, so
+ * it never splits the dedup any finer than the schedule already does.
+ */
 USTRUCT()
 struct CHARACTERS_API FCharacterScheduleSharedFragment : public FMassConstSharedFragment
 {
@@ -122,6 +129,9 @@ struct CHARACTERS_API FCharacterScheduleSharedFragment : public FMassConstShared
 
 	UPROPERTY()
 	FSchedule Schedule;
+
+	UPROPERTY()
+	FScheduleId ScheduleId;
 };
 
 USTRUCT()
@@ -130,7 +140,7 @@ struct CHARACTERS_API FCharacterRaceSharedFragment : public FMassConstSharedFrag
 	GENERATED_BODY()
 
 	UPROPERTY()
-	int32 RaceIndex = 0;
+	FRaceId RaceId;
 	UPROPERTY()
 	FAbilities RaceModifiers;
 };

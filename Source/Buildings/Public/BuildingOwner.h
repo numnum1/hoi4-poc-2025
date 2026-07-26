@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RtsIds.h"
 #include "UObject/Object.h"
 #include "BuildingOwner.generated.h"
 
@@ -14,7 +15,9 @@ enum class EBuildingOwnerType : uint8
 };
 
 /**
- * 
+ * Which character or organization owns a building. Exactly one of CharacterId/OrganizationId
+ * is meaningful, selected by OwnerType — use MakeCharacterOwner/MakeOrganizationOwner rather
+ * than setting fields by hand so an inconsistent combination can't be constructed.
  */
 USTRUCT(BlueprintType)
 struct BUILDINGS_API FBuildingOwner
@@ -22,8 +25,29 @@ struct BUILDINGS_API FBuildingOwner
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 OwnerIndex = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EBuildingOwnerType OwnerType = EBuildingOwnerType::BOT_Character;
+
+	/** Valid iff OwnerType == BOT_Character. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FCharacterId CharacterId;
+
+	/** Valid iff OwnerType == BOT_Organization. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FOrganizationId OrganizationId;
+
+	static FBuildingOwner MakeCharacterOwner(const FCharacterId InCharacterId)
+	{
+		FBuildingOwner Owner;
+		Owner.OwnerType = EBuildingOwnerType::BOT_Character;
+		Owner.CharacterId = InCharacterId;
+		return Owner;
+	}
+
+	static FBuildingOwner MakeOrganizationOwner(const FOrganizationId InOrganizationId)
+	{
+		FBuildingOwner Owner;
+		Owner.OwnerType = EBuildingOwnerType::BOT_Organization;
+		Owner.OrganizationId = InOrganizationId;
+		return Owner;
+	}
 };

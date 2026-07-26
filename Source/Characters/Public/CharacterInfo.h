@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Abilities.h"
 #include "CharacterSimTier.h"
+#include "RtsIds.h"
 #include "Schedule.h"
 #include "CharacterInfo.generated.h"
 
@@ -25,6 +26,35 @@ struct CHARACTERS_API FCharacterDisplayInfo
 	FSlateBrush Portrait = FSlateNoResource();
 };
 
+/** Blueprint-facing mirror of FCharacterVitalsFragment. Mutated hourly by the sim processor. */
+USTRUCT(BlueprintType)
+struct CHARACTERS_API FCharacterVitals
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Energy = 100;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Happiness = 50;
+};
+
+/** Blueprint-facing mirror of FCharacterSkillsFragment. Mutated hourly by the sim processor. */
+USTRUCT(BlueprintType)
+struct CHARACTERS_API FCharacterSkills
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Science = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Strength = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Medicine = 0;
+};
+
 /**
  * Everything needed to create one character entity plus its display row.
  * Produced by ScenarioLoader::ExtractCharacters, consumed by
@@ -39,19 +69,23 @@ struct CHARACTERS_API FCharacterSpawnData
 	FCharacterDisplayInfo Display;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 BirthProvinceIndex = 0;
+	FProvinceId BirthProvinceId;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 BaseRaceIndex = 0;
+	FRaceId BaseRaceId;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 CurrentProvinceIndex = 0;
+	FProvinceId CurrentProvinceId;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 TimezoneOffset = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FSchedule Schedule;
+
+	/** Which USchedules library entry Schedule was copied from, so the UI can name it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FScheduleId ScheduleId;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FAbilities RaceModifiers;

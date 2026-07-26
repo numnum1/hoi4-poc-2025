@@ -21,3 +21,23 @@ USchedules::USchedules()
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	PrimaryComponentTick.bCanEverTick = false;
 }
+
+void USchedules::Setup(TArray<FScheduleInfo> InSchedules)
+{
+	Schedules = MoveTemp(InSchedules);
+}
+
+FSchedule USchedules::GetSchedule(const FScheduleId InScheduleId) const
+{
+	return Schedules.IsValidIndex(InScheduleId.Value) ? Schedules[InScheduleId.Value].Schedule : FSchedule();
+}
+
+FText USchedules::GetScheduleName(const FScheduleId InScheduleId) const
+{
+	return Schedules.IsValidIndex(InScheduleId.Value) ? Schedules[InScheduleId.Value].ScheduleName : FText::GetEmpty();
+}
+
+FScheduleInfo USchedules::GetScheduleInfo(const FScheduleId InScheduleId) const
+{
+	return Schedules.IsValidIndex(InScheduleId.Value) ? Schedules[InScheduleId.Value] : FScheduleInfo();
+}

@@ -10,8 +10,11 @@ public class Organizations : ModuleRules
             new string[]
             {
                 "Core",
+                "RtsCore",
                 "MassCore",
                 "MassEntity",
+                // UOrganizationViewModel derives from UMVVMViewModelBase
+                "ModelViewViewModel"
             }
         );
 

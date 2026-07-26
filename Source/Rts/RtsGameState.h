@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Buildings.h"
 #include "OrganizationInfo.h"
+#include "RtsIds.h"
 #include "GameFramework/GameStateBase.h"
 #include "RtsGameState.generated.h"
 
@@ -52,25 +52,16 @@ public:
 	FORCEINLINE UProvinces* GetProvincesContainer() { return ProvincesContainer; }
 	FORCEINLINE URaces* GetRacesContainer() { return RacesContainer; }
 	FORCEINLINE UBuildings* GetBuildingsContainer() const { return BuildingsContainer; }
+	FORCEINLINE UOrganizations* GetOrganizationsContainer() const { return OrganizationsContainer; }
 	
 	// Simulation
 	FORCEINLINE USchedules* GetSchedules() const { return SchedulesContainer; }
 	FORCEINLINE UTime* GetTime() const { return Time; }
 	
 	// Utils
-	// Time
+	// Characters + Organizations: a genuine two-domain composition, so it stays here rather
+	// than on either single-domain facade. Everything single-domain (timezone lookups, building
+	// queries) moved to UProvinces/UBuildings directly — call those components, not the GameState.
 	UFUNCTION(BlueprintCallable)
-	int32 GetTimezoneOffsetOfProvince(int32 InProvinceIndex) const;
-	// Buildings
-	UFUNCTION(BlueprintCallable)
-	TArray<UBuildingType*> CollectBuildingsInProvince(int32 InProvinceIndex) const;
-	UFUNCTION(BlueprintCallable)
-	int32 CountBuildingByType(int32 InProvinceIndex, UBuildingType* InBuildingType) const;
-	UFUNCTION(BlueprintCallable)
-	int32 FindBuildingsBySlot(int32 InProvinceIndex, const FName& InSlotName) const;
-	UFUNCTION(BlueprintCallable)
-	void AddBuilding(UBuildingType* InBuilding, int32 InProvinceIndex, const FBuildingOwner& InBuildingOwner);
-	// Characters
-	UFUNCTION(BlueprintCallable)
-	TArray<FOrganizationInfo> CollectOrganizationsForCharacter(int32 InCharacterIndex) const;
+	TArray<FOrganizationInfo> CollectOrganizationsForCharacter(FCharacterId InCharacterId) const;
 };
