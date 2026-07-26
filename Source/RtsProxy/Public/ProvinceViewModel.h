@@ -7,26 +7,27 @@
 #include "ProvinceViewModel.generated.h"
 
 class UEcology;
-class UProvinces;
+class UProvinceProxy;
 class USoundBase;
 
 /**
  * A read-only C++ MVVM view model for a single province, addressed by the same FProvinceId
- * every other province API uses. See UCharacterViewModel (Characters module) for the pattern
- * this follows: Initialize(Container, Id), flat FieldNotify properties fed from the container's
- * getters, one shared HandleChanged(Id) bound to every change event.
+ * every other province API uses. See UCharacterViewModel for the pattern this follows:
+ * Initialize(Id) takes a single parameter so it stays usable as an MVVM function binding target,
+ * fetches the matching UProvinceProxy from URtsProxySubsystem, and refreshes flat FieldNotify
+ * properties whenever that proxy reports a change.
  *
  * FProvinceDisplayInfo is taken apart into one property per member — UMG binds single values,
  * not structs.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
-class PROVINCES_API UProvinceViewModel : public UMVVMViewModelBase
+class RTSPROXY_API UProvinceViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Province Viewmodel")
-	void Initialize(UProvinces* InProvinces, FProvinceId InProvinceId);
+	void Initialize(FProvinceId InProvinceId);
 
 protected:
 	//~ Identity ---------------------------------------------------------------------------------
@@ -67,6 +68,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel", meta=(AllowPrivateAccess))
 	int32 OwningNationIdValue = INDEX_NONE;
 
+	/** Read through the nation proxy — Provinces itself is not allowed to know UNations. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel", meta=(AllowPrivateAccess))
+	FText OwningNationName;
+
 	/** Hours offset from game time, read from FProvinceTimeFragment. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel", meta=(AllowPrivateAccess))
 	int32 TimezoneOffset = 0;
@@ -84,6 +89,7 @@ public:
 
 	FNationId GetOwningNationId() const { return OwningNationId; }
 	int32 GetOwningNationIdValue() const { return OwningNationIdValue; }
+	FText GetOwningNationName() const { return OwningNationName; }
 	int32 GetTimezoneOffset() const { return TimezoneOffset; }
 
 private:
@@ -95,8 +101,8 @@ private:
 	void Unbind();
 
 	UFUNCTION()
-	void HandleProvinceEvent(FProvinceId InProvinceId);
+	void HandleProxyChanged();
 
 	UPROPERTY()
-	TObjectPtr<UProvinces> ProvincesContainer;
+	TObjectPtr<UProvinceProxy> Proxy;
 };

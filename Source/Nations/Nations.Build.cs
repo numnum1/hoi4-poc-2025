@@ -12,9 +12,7 @@ public class Nations : ModuleRules
                 "Core",
                 "RtsCore",
                 "MassCore",
-                "MassEntity",
-                // UNationViewModel derives from UMVVMViewModelBase
-                "ModelViewViewModel"
+                "MassEntity"
             }
         );
 

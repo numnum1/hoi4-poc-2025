@@ -1,60 +1,61 @@
 #include "CharacterViewModel.h"
 
-#include "Characters.h"
+#include "CharacterProxy.h"
+#include "NationProxy.h"
+#include "OrganizationProxy.h"
+#include "ProvinceProxy.h"
+#include "RtsProxySubsystem.h"
+#include "ScheduleProxy.h"
 
-void UCharacterViewModel::Initialize(UCharacters* InCharacters, const FCharacterId InCharacterId)
+void UCharacterViewModel::Initialize(const FCharacterId InCharacterId)
 {
-	if (CharactersContainer == InCharacters && CharacterId == InCharacterId)
+	UCharacterProxy* NewProxy = nullptr;
+	if (URtsProxySubsystem* ProxySubsystem = URtsProxySubsystem::Get(this))
+	{
+		NewProxy = ProxySubsystem->GetCharacter(InCharacterId);
+	}
+
+	if (Proxy == NewProxy && CharacterId == InCharacterId)
 	{
 		return;
 	}
 
 	Unbind();
 
-	CharactersContainer = InCharacters;
+	Proxy = NewProxy;
 
 	CharacterId = InCharacterId;
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(CharacterId);
 	UE_MVVM_SET_PROPERTY_VALUE(CharacterIdValue, CharacterId.Value);
 
-	if (CharactersContainer)
+	if (Proxy)
 	{
-		CharactersContainer->OnCurrentProvinceChanged.AddDynamic(this, &UCharacterViewModel::HandleCharacterEvent);
-		CharactersContainer->OnScheduleChanged.AddDynamic(this, &UCharacterViewModel::HandleCharacterEvent);
-		CharactersContainer->OnPositionChanged.AddDynamic(this, &UCharacterViewModel::HandleCharacterEvent);
-		CharactersContainer->OnSimulated.AddDynamic(this, &UCharacterViewModel::HandleCharacterEvent);
-		CharactersContainer->OnCharacterDestroyed.AddDynamic(this, &UCharacterViewModel::HandleCharacterEvent);
+		// One subscription instead of five: the proxy already folded the facade's events into
+		// OnChanged and filtered them by this character's id.
+		Proxy->OnChanged.AddDynamic(this, &UCharacterViewModel::HandleProxyChanged);
 	}
 
 	Refresh();
 }
 
-void UCharacterViewModel::HandleCharacterEvent(const FCharacterId InCharacterId)
+void UCharacterViewModel::HandleProxyChanged()
 {
-	if (InCharacterId == CharacterId)
-	{
-		Refresh();
-	}
+	Refresh();
 }
 
 void UCharacterViewModel::Refresh()
 {
-	if (CharactersContainer == nullptr || !CharacterId.IsValid())
+	if (Proxy == nullptr)
 	{
 		return;
 	}
 
-	UE_MVVM_SET_PROPERTY_VALUE(bIsValid, CharactersContainer->IsAlive(CharacterId));
+	UE_MVVM_SET_PROPERTY_VALUE(bIsValid, Proxy->IsAlive());
 
-	const FCharacterDisplayInfo DisplayInfo = CharactersContainer->GetDisplayInfo(CharacterId);
-	UE_MVVM_SET_PROPERTY_VALUE(CharacterName, DisplayInfo.CharacterName);
-	UE_MVVM_SET_PROPERTY_VALUE(Portrait, DisplayInfo.Portrait);
+	UE_MVVM_SET_PROPERTY_VALUE(CharacterName, Proxy->GetDisplayName());
+	UE_MVVM_SET_PROPERTY_VALUE(Portrait, Proxy->GetPortrait());
 
-	const FProvinceId NewProvinceId = CharactersContainer->GetCurrentProvince(CharacterId);
-	UE_MVVM_SET_PROPERTY_VALUE(CurrentProvinceId, NewProvinceId);
-	UE_MVVM_SET_PROPERTY_VALUE(CurrentProvinceIdValue, NewProvinceId.Value);
-
-	const FAbilities NewAbilities = CharactersContainer->GetAbilities(CharacterId);
+	const FAbilities NewAbilities = Proxy->GetAbilities();
 	UE_MVVM_SET_PROPERTY_VALUE(AbilityStrength, static_cast<int32>(NewAbilities.Strength));
 	UE_MVVM_SET_PROPERTY_VALUE(AbilityDexterity, static_cast<int32>(NewAbilities.Dexterity));
 	UE_MVVM_SET_PROPERTY_VALUE(AbilityConstitution, static_cast<int32>(NewAbilities.Constitution));
@@ -62,26 +63,43 @@ void UCharacterViewModel::Refresh()
 	UE_MVVM_SET_PROPERTY_VALUE(AbilityWisdom, static_cast<int32>(NewAbilities.Wisdom));
 	UE_MVVM_SET_PROPERTY_VALUE(AbilityCharisma, static_cast<int32>(NewAbilities.Charisma));
 
-	const FCharacterVitals NewVitals = CharactersContainer->GetVitals(CharacterId);
+	const FCharacterVitals NewVitals = Proxy->GetVitals();
 	UE_MVVM_SET_PROPERTY_VALUE(Energy, NewVitals.Energy);
 	UE_MVVM_SET_PROPERTY_VALUE(Happiness, NewVitals.Happiness);
 
-	const FCharacterSkills NewSkills = CharactersContainer->GetSkills(CharacterId);
+	const FCharacterSkills NewSkills = Proxy->GetSkills();
 	UE_MVVM_SET_PROPERTY_VALUE(SkillScience, NewSkills.Science);
 	UE_MVVM_SET_PROPERTY_VALUE(SkillStrength, NewSkills.Strength);
 	UE_MVVM_SET_PROPERTY_VALUE(SkillMedicine, NewSkills.Medicine);
 
+	RefreshLocation();
 	RefreshSchedule();
 	RefreshPositions();
 }
 
+void UCharacterViewModel::RefreshLocation()
+{
+	// Province and nation come from proxies of other modules — the whole reason the view models
+	// live here rather than in Characters, which is not allowed to know either of them.
+	const UProvinceProxy* Province = Proxy->GetProvince();
+	UE_MVVM_SET_PROPERTY_VALUE(CurrentProvinceId, Province ? Province->GetId() : FProvinceId());
+	UE_MVVM_SET_PROPERTY_VALUE(CurrentProvinceIdValue, Province ? Province->GetId().Value : INDEX_NONE);
+	UE_MVVM_SET_PROPERTY_VALUE(CurrentProvinceName, Province ? Province->GetDisplayName() : FText::GetEmpty());
+
+	const UNationProxy* Nation = Province ? Province->GetOwner() : nullptr;
+	UE_MVVM_SET_PROPERTY_VALUE(CurrentNationId, Nation ? Nation->GetId() : FNationId());
+	UE_MVVM_SET_PROPERTY_VALUE(CurrentNationIdValue, Nation ? Nation->GetId().Value : INDEX_NONE);
+	UE_MVVM_SET_PROPERTY_VALUE(CurrentNationName, Nation ? Nation->GetDisplayName() : FText::GetEmpty());
+}
+
 void UCharacterViewModel::RefreshSchedule()
 {
-	const FScheduleId NewScheduleId = CharactersContainer->GetScheduleId(CharacterId);
-	UE_MVVM_SET_PROPERTY_VALUE(ScheduleId, NewScheduleId);
-	UE_MVVM_SET_PROPERTY_VALUE(ScheduleIdValue, NewScheduleId.Value);
+	const UScheduleProxy* Template = Proxy->GetScheduleTemplate();
+	UE_MVVM_SET_PROPERTY_VALUE(ScheduleId, Template ? Template->GetId() : FScheduleId());
+	UE_MVVM_SET_PROPERTY_VALUE(ScheduleIdValue, Template ? Template->GetId().Value : INDEX_NONE);
+	UE_MVVM_SET_PROPERTY_VALUE(ScheduleName, Template ? Template->GetDisplayName() : FText::GetEmpty());
 
-	const FSchedule NewSchedule = CharactersContainer->GetSchedule(CharacterId);
+	const FSchedule NewSchedule = Proxy->GetSchedule();
 	UE_MVVM_SET_PROPERTY_VALUE(ScheduleHour00, NewSchedule.Zero);
 	UE_MVVM_SET_PROPERTY_VALUE(ScheduleHour01, NewSchedule.One);
 	UE_MVVM_SET_PROPERTY_VALUE(ScheduleHour02, NewSchedule.Two);
@@ -110,21 +128,25 @@ void UCharacterViewModel::RefreshSchedule()
 
 void UCharacterViewModel::RefreshPositions()
 {
-	const TArray<FPosition> Positions = CharactersContainer->GetPositions(CharacterId);
+	const TArray<UOrganizationProxy*> Organizations = Proxy->GetOrganizations();
 
 	TArray<FOrganizationId> NewOrganizationIds;
 	TArray<int32> NewOrganizationIdValues;
-	NewOrganizationIds.Reserve(Positions.Num());
-	NewOrganizationIdValues.Reserve(Positions.Num());
-	for (const FPosition& Position : Positions)
+	NewOrganizationIds.Reserve(Organizations.Num());
+	NewOrganizationIdValues.Reserve(Organizations.Num());
+	for (const UOrganizationProxy* Organization : Organizations)
 	{
-		NewOrganizationIds.Add(Position.OrganizationId);
-		NewOrganizationIdValues.Add(Position.OrganizationId.Value);
+		if (Organization == nullptr)
+		{
+			continue;
+		}
+		NewOrganizationIds.Add(Organization->GetId());
+		NewOrganizationIdValues.Add(Organization->GetId().Value);
 	}
 
 	UE_MVVM_SET_PROPERTY_VALUE(PositionOrganizationIds, NewOrganizationIds);
 	UE_MVVM_SET_PROPERTY_VALUE(PositionOrganizationIdValues, NewOrganizationIdValues);
-	UE_MVVM_SET_PROPERTY_VALUE(PositionCount, Positions.Num());
+	UE_MVVM_SET_PROPERTY_VALUE(PositionCount, NewOrganizationIds.Num());
 }
 
 EScheduleEntryType UCharacterViewModel::GetScheduleAtHour(const int32 InHour) const
@@ -166,13 +188,9 @@ FOrganizationId UCharacterViewModel::GetPositionOrganizationId(const int32 InInd
 
 void UCharacterViewModel::Unbind()
 {
-	if (CharactersContainer)
+	if (Proxy)
 	{
-		CharactersContainer->OnCurrentProvinceChanged.RemoveAll(this);
-		CharactersContainer->OnScheduleChanged.RemoveAll(this);
-		CharactersContainer->OnPositionChanged.RemoveAll(this);
-		CharactersContainer->OnSimulated.RemoveAll(this);
-		CharactersContainer->OnCharacterDestroyed.RemoveAll(this);
+		Proxy->OnChanged.RemoveAll(this);
 	}
 }
 

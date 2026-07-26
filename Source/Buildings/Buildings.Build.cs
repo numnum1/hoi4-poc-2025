@@ -12,9 +12,7 @@ public class Buildings : ModuleRules
                 "Core",
                 "RtsCore",
                 "MassCore",
-                "MassEntity",
-                // UBuildingViewModel derives from UMVVMViewModelBase
-                "ModelViewViewModel"
+                "MassEntity"
             }
         );
 

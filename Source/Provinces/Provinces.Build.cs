@@ -12,9 +12,7 @@ public class Provinces : ModuleRules
                 "Core",
                 "RtsCore",
                 "MassCore",
-                "MassEntity",
-                // UProvinceViewModel derives from UMVVMViewModelBase
-                "ModelViewViewModel"
+                "MassEntity"
             }
         );
 

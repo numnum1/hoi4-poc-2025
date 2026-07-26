@@ -6,27 +6,28 @@
 #include "MVVMViewModelBase.h"
 #include "BuildingViewModel.generated.h"
 
-class UBuildings;
+class UBuildingProxy;
 class UBuildingType;
 
 /**
  * A read-only C++ MVVM view model for a single building, addressed by the same FBuildingId
- * every other building API uses. See UCharacterViewModel (Characters module) for the pattern
- * this follows: Initialize(Container, Id), flat FieldNotify properties fed from the container's
- * getters, one shared HandleChanged(Id) bound to every change event.
+ * every other building API uses. See UCharacterViewModel for the pattern this follows:
+ * Initialize(Id) takes a single parameter so it stays usable as an MVVM function binding target,
+ * fetches the matching UBuildingProxy from URtsProxySubsystem, and refreshes flat FieldNotify
+ * properties whenever that proxy reports a change.
  *
  * FBuildingOwner is taken apart into one property per member — UMG binds single values, not
  * structs. Only one of OwnerCharacterId/OwnerOrganizationId is meaningful; bIsOwnedByCharacter
  * and bIsOwnedByOrganization exist so a widget can switch on it without an enum comparison node.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
-class BUILDINGS_API UBuildingViewModel : public UMVVMViewModelBase
+class RTSPROXY_API UBuildingViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Building Viewmodel")
-	void Initialize(UBuildings* InBuildings, FBuildingId InBuildingId);
+	void Initialize(FBuildingId InBuildingId);
 
 protected:
 	//~ Identity ---------------------------------------------------------------------------------
@@ -104,8 +105,8 @@ private:
 	void Unbind();
 
 	UFUNCTION()
-	void HandleBuildingEvent(FBuildingId InBuildingId);
+	void HandleProxyChanged();
 
 	UPROPERTY()
-	TObjectPtr<UBuildings> BuildingsContainer;
+	TObjectPtr<UBuildingProxy> Proxy;
 };

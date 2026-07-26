@@ -6,24 +6,29 @@
 #include "MVVMViewModelBase.h"
 #include "NationViewModel.generated.h"
 
-class UNations;
+class UNationProxy;
 
 /**
  * A read-only C++ MVVM view model for a single nation, addressed by the same FNationId every
- * other nation API uses. See UCharacterViewModel (Characters module) for the pattern this
- * follows: Initialize(Container, Id), flat FieldNotify properties fed from the container's
- * getters, one shared HandleChanged(Id) bound to every change event.
+ * other nation API uses. See UCharacterViewModel for the pattern this follows: Initialize(Id)
+ * takes a single parameter so it stays usable as an MVVM function binding target, fetches the
+ * matching UNationProxy from URtsProxySubsystem, and refreshes flat FieldNotify properties
+ * whenever that proxy reports a change.
  *
  * FNationInfo is taken apart into one property per member — UMG binds single values, not structs.
+ *
+ * Deliberately does not publish a province count: nothing tells a nation when a province changes
+ * hands, so a cached count would quietly drift. Walk UNationProxy::GetProvinces for that, which
+ * reads through and cannot be wrong.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
-class NATIONS_API UNationViewModel : public UMVVMViewModelBase
+class RTSPROXY_API UNationViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Nation Viewmodel")
-	void Initialize(UNations* InNations, FNationId InNationId);
+	void Initialize(FNationId InNationId);
 
 protected:
 	//~ Identity ---------------------------------------------------------------------------------
@@ -64,8 +69,8 @@ private:
 	void Unbind();
 
 	UFUNCTION()
-	void HandleNationEvent(FNationId InNationId);
+	void HandleProxyChanged();
 
 	UPROPERTY()
-	TObjectPtr<UNations> NationsContainer;
+	TObjectPtr<UNationProxy> Proxy;
 };

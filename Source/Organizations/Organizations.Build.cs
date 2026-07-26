@@ -12,9 +12,7 @@ public class Organizations : ModuleRules
                 "Core",
                 "RtsCore",
                 "MassCore",
-                "MassEntity",
-                // UOrganizationViewModel derives from UMVVMViewModelBase
-                "ModelViewViewModel"
+                "MassEntity"
             }
         );
 

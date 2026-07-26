@@ -6,25 +6,26 @@
 #include "MVVMViewModelBase.h"
 #include "OrganizationViewModel.generated.h"
 
-class UOrganizations;
+class UOrganizationProxy;
 
 /**
  * A read-only C++ MVVM view model for a single organization, addressed by the same
- * FOrganizationId every other organization API uses. See UCharacterViewModel (Characters
- * module) for the pattern this follows: Initialize(Container, Id), flat FieldNotify properties
- * fed from the container's getters, one shared HandleChanged(Id) bound to every change event.
+ * FOrganizationId every other organization API uses. See UCharacterViewModel for the pattern
+ * this follows: Initialize(Id) takes a single parameter so it stays usable as an MVVM function
+ * binding target, fetches the matching UOrganizationProxy from URtsProxySubsystem, and refreshes
+ * flat FieldNotify properties whenever that proxy reports a change.
  *
  * FOrganizationInfo and FOrganizationAlignment are taken apart into one property per member —
  * UMG binds single values, not structs.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
-class ORGANIZATIONS_API UOrganizationViewModel : public UMVVMViewModelBase
+class RTSPROXY_API UOrganizationViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Organization Viewmodel")
-	void Initialize(UOrganizations* InOrganizations, FOrganizationId InOrganizationId);
+	void Initialize(FOrganizationId InOrganizationId);
 
 	/** One branch of the published alignment, or 0 if the index is out of range. */
 	UFUNCTION(BlueprintPure, Category="Organization Viewmodel|Alignment")
@@ -103,8 +104,8 @@ private:
 	void Unbind();
 
 	UFUNCTION()
-	void HandleOrganizationEvent(FOrganizationId InOrganizationId);
+	void HandleProxyChanged();
 
 	UPROPERTY()
-	TObjectPtr<UOrganizations> OrganizationsContainer;
+	TObjectPtr<UOrganizationProxy> Proxy;
 };

@@ -17,9 +17,7 @@ public class Characters : ModuleRules
                 // Public because FCharacterScheduleSharedFragment exposes FSchedule in a public header
                 "Schedules",
                 // UCharacterEntitySubsystem drives its processor off UTime::OnHourElapsed
-                "Time",
-                // UCharacterViewModel derives from UMVVMViewModelBase
-                "ModelViewViewModel"
+                "Time"
             }
         );
 

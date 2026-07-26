@@ -7,34 +7,40 @@
 #include "MVVMViewModelBase.h"
 #include "CharacterViewModel.generated.h"
 
-class UCharacters;
+class UCharacterProxy;
 
 /**
  * A read-only C++ MVVM view model for a single character, addressed by the same FCharacterId
- * every other character API uses. Call Initialize once (e.g. from a widget's construct event)
- * with the GameState's UCharacters and the id to display; from then on the view model keeps
- * itself in sync by listening to UCharacters' change events, and every FieldNotify property
- * below re-broadcasts automatically so bound widgets refresh without any extra wiring.
+ * every other character API uses. Call Initialize once (e.g. from a widget's construct event,
+ * or as an MVVM function binding target — it takes a single FCharacterId parameter so it is a
+ * valid destination binding) with the id to display; the view model asks URtsProxySubsystem for
+ * the matching UCharacterProxy, then keeps itself in sync by listening to that proxy's single
+ * OnChanged event, and every FieldNotify property below re-broadcasts automatically so bound
+ * widgets refresh without any extra wiring.
+ *
+ * The split of work between the two: the proxy reads through to the facades and never caches,
+ * the view model caches exactly the flat values UMG can bind and pays for that with the
+ * broadcasts. Anything the proxy can reach, this can display — including values from other
+ * domains, which is why NationName sits next to CharacterName here.
  *
  * Every value is exposed FLAT: one property per struct member, never the struct itself, because
  * UMG can only bind a widget property to a single value. FCharacterDisplayInfo, FAbilities,
- * FCharacterVitals, FCharacterSkills and FSchedule are therefore taken apart here — the
- * container still hands them over whole, the view model publishes the individual fields.
- * Ids follow the same rule: the typed FCharacterId/FProvinceId stays (pass it to another
- * Initialize) and its int32 gets a ...Value twin for anything that has to display it.
+ * FCharacterVitals, FCharacterSkills and FSchedule are therefore taken apart here — the proxy
+ * still hands them over whole, the view model publishes the individual fields. Ids follow the
+ * same rule: the typed FCharacterId/FProvinceId stays (pass it to another Initialize) and its
+ * int32 gets a ...Value twin for anything that has to display it.
  *
- * This is the pattern to copy for Organizations, Provinces, Nations and Buildings: one view
- * model class per domain, Initialize(Container, Id), flat FieldNotify properties fed from the
- * container's getters, and one shared HandleChanged(Id) bound to every change event.
+ * This is the pattern the other five view models follow: one class per domain, Initialize(Id),
+ * flat FieldNotify properties fed from the proxy, and one HandleProxyChanged bound to OnChanged.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
-class CHARACTERS_API UCharacterViewModel : public UMVVMViewModelBase
+class RTSPROXY_API UCharacterViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
 public:
 	UFUNCTION(BlueprintCallable, Category="Character Viewmodel")
-	void Initialize(UCharacters* InCharacters, FCharacterId InCharacterId);
+	void Initialize(FCharacterId InCharacterId);
 
 	/** The schedule entry for one hour of the day, 0-23. Out-of-range hours return SET_NONE. */
 	UFUNCTION(BlueprintPure, Category="Character Viewmodel|Schedule")
@@ -73,6 +79,20 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Location", meta=(AllowPrivateAccess))
 	int32 CurrentProvinceIdValue = INDEX_NONE;
+
+	/** Read through the province proxy — the character's own module never sees UProvinces. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Location", meta=(AllowPrivateAccess))
+	FText CurrentProvinceName;
+
+	/** The nation owning the province the character stands in. Two hops, resolved by the proxy. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Location", meta=(AllowPrivateAccess))
+	FNationId CurrentNationId;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Location", meta=(AllowPrivateAccess))
+	int32 CurrentNationIdValue = INDEX_NONE;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Location", meta=(AllowPrivateAccess))
+	FText CurrentNationName;
 
 	//~ FAbilities -------------------------------------------------------------------------------
 	// Widened from uint8 to int32 so they drop straight into the integer conversion nodes UMG has.
@@ -124,6 +144,10 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Schedule", meta=(AllowPrivateAccess))
 	int32 ScheduleIdValue = INDEX_NONE;
+
+	/** The library entry's name, read through the schedule proxy. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Schedule", meta=(AllowPrivateAccess))
+	FText ScheduleName;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Schedule", meta=(AllowPrivateAccess))
 	EScheduleEntryType ScheduleHour00 = EScheduleEntryType::SET_NONE;
@@ -219,6 +243,10 @@ public:
 
 	FProvinceId GetCurrentProvinceId() const { return CurrentProvinceId; }
 	int32 GetCurrentProvinceIdValue() const { return CurrentProvinceIdValue; }
+	FText GetCurrentProvinceName() const { return CurrentProvinceName; }
+	FNationId GetCurrentNationId() const { return CurrentNationId; }
+	int32 GetCurrentNationIdValue() const { return CurrentNationIdValue; }
+	FText GetCurrentNationName() const { return CurrentNationName; }
 
 	int32 GetAbilityStrength() const { return AbilityStrength; }
 	int32 GetAbilityDexterity() const { return AbilityDexterity; }
@@ -236,6 +264,7 @@ public:
 
 	FScheduleId GetScheduleId() const { return ScheduleId; }
 	int32 GetScheduleIdValue() const { return ScheduleIdValue; }
+	FText GetScheduleName() const { return ScheduleName; }
 	EScheduleEntryType GetScheduleHour00() const { return ScheduleHour00; }
 	EScheduleEntryType GetScheduleHour01() const { return ScheduleHour01; }
 	EScheduleEntryType GetScheduleHour02() const { return ScheduleHour02; }
@@ -271,13 +300,14 @@ private:
 	//~ End UObject interface
 
 	void Refresh();
+	void RefreshLocation();
 	void RefreshSchedule();
 	void RefreshPositions();
 	void Unbind();
 
 	UFUNCTION()
-	void HandleCharacterEvent(FCharacterId InCharacterId);
+	void HandleProxyChanged();
 
 	UPROPERTY()
-	TObjectPtr<UCharacters> CharactersContainer;
+	TObjectPtr<UCharacterProxy> Proxy;
 };
