@@ -60,7 +60,7 @@ public:
 	FSlateBrush GetFlag() const { return Flag; }
 
 protected:
-	UFUNCTION(BlueprintCallable, Category="Nation Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Nation Viewmodel")
 	void Refresh();
 
 private:

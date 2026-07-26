@@ -92,7 +92,7 @@ public:
 	int32 GetTimezoneOffset() const { return TimezoneOffset; }
 
 protected:
-	UFUNCTION(BlueprintCallable, Category="Province Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Province Viewmodel")
 	void Refresh();
 
 private:

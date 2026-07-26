@@ -36,6 +36,11 @@ void UCharacterViewModel::Initialize(const FCharacterId InCharacterId)
 	}
 
 	Refresh();
+
+	if (Proxy && bIsValid)
+	{
+		OnProxyReady();
+	}
 }
 
 void UCharacterViewModel::HandleProxyChanged()
@@ -43,7 +48,7 @@ void UCharacterViewModel::HandleProxyChanged()
 	Refresh();
 }
 
-void UCharacterViewModel::Refresh()
+void UCharacterViewModel::Refresh_Implementation()
 {
 	if (Proxy == nullptr)
 	{

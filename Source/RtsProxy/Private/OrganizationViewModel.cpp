@@ -38,7 +38,7 @@ void UOrganizationViewModel::HandleProxyChanged()
 	Refresh();
 }
 
-void UOrganizationViewModel::Refresh()
+void UOrganizationViewModel::Refresh_Implementation()
 {
 	if (Proxy == nullptr)
 	{

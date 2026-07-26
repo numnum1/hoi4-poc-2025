@@ -178,11 +178,11 @@ public:
 	EScheduleEntryType GetScheduleHour22() const { return ScheduleHour22; }
 	EScheduleEntryType GetScheduleHour23() const { return ScheduleHour23; }
 
-protected:
+public:
 	UFUNCTION(BlueprintCallable, Category="Schedule Viewmodel")
 	void Initialize(FCharacterId InCharacterId);
-
-	UFUNCTION(BlueprintCallable, Category="Schedule Viewmodel")
+protected:
+	UFUNCTION(BlueprintNativeEvent, Category="Schedule Viewmodel")
 	void Refresh();
 
 private:

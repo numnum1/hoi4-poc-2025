@@ -96,7 +96,7 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Organization Viewmodel")
 	void Initialize(FOrganizationId InOrganizationId);
 
-	UFUNCTION(BlueprintCallable, Category="Organization Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Organization Viewmodel")
 	void Refresh();
 
 private:

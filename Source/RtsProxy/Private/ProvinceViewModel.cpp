@@ -38,7 +38,7 @@ void UProvinceViewModel::HandleProxyChanged()
 	Refresh();
 }
 
-void UProvinceViewModel::Refresh()
+void UProvinceViewModel::Refresh_Implementation()
 {
 	if (Proxy == nullptr)
 	{

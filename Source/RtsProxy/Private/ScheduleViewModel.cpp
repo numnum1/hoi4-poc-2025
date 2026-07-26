@@ -39,7 +39,7 @@ void UScheduleViewModel::HandleProxyChanged()
 	Refresh();
 }
 
-void UScheduleViewModel::Refresh()
+void UScheduleViewModel::Refresh_Implementation()
 {
 	if (Proxy == nullptr)
 	{

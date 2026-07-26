@@ -37,7 +37,7 @@ void UNationViewModel::HandleProxyChanged()
 	Refresh();
 }
 
-void UNationViewModel::Refresh()
+void UNationViewModel::Refresh_Implementation()
 {
 	if (Proxy == nullptr)
 	{

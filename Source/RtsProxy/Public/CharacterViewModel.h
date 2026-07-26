@@ -294,8 +294,16 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Character Viewmodel")
 	void Initialize(FCharacterId InCharacterId);
 
-	UFUNCTION(BlueprintCallable, Category="Character Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Character Viewmodel")
 	void Refresh();
+
+	/** Fired once the proxy has been resolved and refers to a live entity, so subclasses don't have to poll IsValid. */
+	UFUNCTION(BlueprintImplementableEvent, Category="Character Viewmodel")
+	void OnProxyReady();
+
+	/** Exposed for Blueprint subclasses that need to reach the proxy directly beyond the flat FieldNotify properties. */
+	UPROPERTY(BlueprintReadOnly, Category="Character Viewmodel")
+	TObjectPtr<UCharacterProxy> Proxy;
 
 private:
 	//~ Begin UObject interface
@@ -309,7 +317,4 @@ private:
 
 	UFUNCTION()
 	void HandleProxyChanged();
-
-	UPROPERTY()
-	TObjectPtr<UCharacterProxy> Proxy;
 };

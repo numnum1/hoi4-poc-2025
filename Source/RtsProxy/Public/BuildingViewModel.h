@@ -96,7 +96,7 @@ public:
 	int32 GetOwnerOrganizationIdValue() const { return OwnerOrganizationIdValue; }
 
 protected:
-	UFUNCTION(BlueprintCallable, Category="Building Viewmodel")
+	UFUNCTION(BlueprintNativeEvent, Category="Building Viewmodel")
 	void Refresh();
 
 private:

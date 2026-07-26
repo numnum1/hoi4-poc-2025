@@ -40,7 +40,7 @@ void UBuildingViewModel::HandleProxyChanged()
 	Refresh();
 }
 
-void UBuildingViewModel::Refresh()
+void UBuildingViewModel::Refresh_Implementation()
 {
 	if (Proxy == nullptr)
 	{
