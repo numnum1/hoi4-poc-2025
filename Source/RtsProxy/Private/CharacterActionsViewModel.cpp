@@ -61,7 +61,7 @@ void UCharacterActionsViewModel::SetScopePosition(const int32 InPositionIndex)
 void UCharacterActionsViewModel::Refresh_Implementation()
 {
 	TArray<TSubclassOf<UActionViewModel>> OfferedClasses;
-	RtsActions::CollectClassesForScope(Context.Scope, OfferedClasses);
+	URtsActions::CollectClassesForScope(Context.Scope, OfferedClasses);
 
 	TArray<TObjectPtr<UActionViewModel>> NewActions;
 	NewActions.Reserve(OfferedClasses.Num());

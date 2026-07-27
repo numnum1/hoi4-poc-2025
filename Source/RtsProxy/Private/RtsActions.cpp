@@ -3,21 +3,18 @@
 #include "ActionViewModel.h"
 #include "FoundOrganizationActionViewModel.h"
 
-namespace RtsActions
+void URtsActions::CollectClassesForScope(const ERtsActionScope InScope, TArray<TSubclassOf<UActionViewModel>>& OutClasses)
 {
-	void CollectClassesForScope(const ERtsActionScope InScope, TArray<TSubclassOf<UActionViewModel>>& OutClasses)
+	OutClasses.Reset();
+
+	switch (InScope)
 	{
-		OutClasses.Reset();
+	case ERtsActionScope::RAS_Self:
+		OutClasses.Add(UFoundOrganizationActionViewModel::StaticClass());
+		break;
 
-		switch (InScope)
-		{
-		case ERtsActionScope::RAS_Self:
-			OutClasses.Add(UFoundOrganizationActionViewModel::StaticClass());
-			break;
-
-		case ERtsActionScope::RAS_Position:
-			// No position-scoped action exists yet.
-			break;
-		}
+	case ERtsActionScope::RAS_Position:
+		// No position-scoped action exists yet.
+		break;
 	}
 }
