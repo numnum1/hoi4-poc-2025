@@ -3,6 +3,7 @@
 #include "CharacterProxy.h"
 #include "NationProxy.h"
 #include "OrganizationProxy.h"
+#include "PositionViewModel.h"
 #include "ProvinceProxy.h"
 #include "RtsProxySubsystem.h"
 #include "ScheduleProxy.h"
@@ -133,39 +134,25 @@ void UCharacterViewModel::RefreshSchedule()
 
 void UCharacterViewModel::RefreshPositions()
 {
-	// Indexed rather than via GetOrganizations(), so the role array stays aligned with the
-	// organization array even where GetOrganization(Index) can't resolve a proxy.
 	const int32 Count = Proxy->GetOrganizationCount();
 
-	TArray<FOrganizationId> NewOrganizationIds;
-	TArray<int32> NewOrganizationIdValues;
-	TArray<FRoleId> NewRoleIds;
-	TArray<int32> NewRoleIdValues;
-	NewOrganizationIds.Reserve(Count);
-	NewOrganizationIdValues.Reserve(Count);
-	NewRoleIds.Reserve(Count);
-	NewRoleIdValues.Reserve(Count);
+	TArray<TObjectPtr<UPositionViewModel>> NewPositions;
+	NewPositions.Reserve(Count);
 
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
-		const UOrganizationProxy* Organization = Proxy->GetOrganization(Index);
-		if (Organization == nullptr)
+		if (!PositionEntryCache.IsValidIndex(Index))
 		{
-			continue;
+			PositionEntryCache.Add(NewObject<UPositionViewModel>(this));
 		}
-		NewOrganizationIds.Add(Organization->GetId());
-		NewOrganizationIdValues.Add(Organization->GetId().Value);
 
-		const FRoleId Role = Proxy->GetPositionRole(Index);
-		NewRoleIds.Add(Role);
-		NewRoleIdValues.Add(Role.Value);
+		UPositionViewModel* Entry = PositionEntryCache[Index];
+		Entry->SetSource(Proxy, Index);
+		NewPositions.Add(Entry);
 	}
 
-	UE_MVVM_SET_PROPERTY_VALUE(PositionOrganizationIds, NewOrganizationIds);
-	UE_MVVM_SET_PROPERTY_VALUE(PositionOrganizationIdValues, NewOrganizationIdValues);
-	UE_MVVM_SET_PROPERTY_VALUE(PositionRoleIds, NewRoleIds);
-	UE_MVVM_SET_PROPERTY_VALUE(PositionRoleIdValues, NewRoleIdValues);
-	UE_MVVM_SET_PROPERTY_VALUE(PositionCount, NewOrganizationIds.Num());
+	UE_MVVM_SET_PROPERTY_VALUE(Positions, NewPositions);
+	UE_MVVM_SET_PROPERTY_VALUE(PositionCount, NewPositions.Num());
 }
 
 EScheduleEntryType UCharacterViewModel::GetScheduleAtHour(const int32 InHour) const
@@ -198,11 +185,6 @@ EScheduleEntryType UCharacterViewModel::GetScheduleAtHour(const int32 InHour) co
 	case 23: return ScheduleHour23;
 	default: return EScheduleEntryType::SET_NONE;
 	}
-}
-
-FOrganizationId UCharacterViewModel::GetPositionOrganizationId(const int32 InIndex) const
-{
-	return PositionOrganizationIds.IsValidIndex(InIndex) ? PositionOrganizationIds[InIndex] : FOrganizationId();
 }
 
 void UCharacterViewModel::Unbind()

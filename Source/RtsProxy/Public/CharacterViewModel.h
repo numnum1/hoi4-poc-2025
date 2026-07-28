@@ -8,6 +8,7 @@
 #include "CharacterViewModel.generated.h"
 
 class UCharacterProxy;
+class UPositionViewModel;
 
 /**
  * A read-only C++ MVVM view model for a single character, addressed by the same FCharacterId
@@ -41,10 +42,6 @@ public:
 	/** The schedule entry for one hour of the day, 0-23. Out-of-range hours return SET_NONE. */
 	UFUNCTION(BlueprintPure, Category="Character Viewmodel|Schedule")
 	EScheduleEntryType GetScheduleAtHour(int32 InHour) const;
-
-	/** The organization behind one of this character's positions, or an invalid id if out of range. */
-	UFUNCTION(BlueprintPure, Category="Character Viewmodel|Positions")
-	FOrganizationId GetPositionOrganizationId(int32 InIndex) const;
 
 protected:
 	//~ Identity ---------------------------------------------------------------------------------
@@ -218,19 +215,11 @@ protected:
 	EScheduleEntryType ScheduleHour23 = EScheduleEntryType::SET_NONE;
 
 	//~ Positions --------------------------------------------------------------------------------
-	// FPosition is unwrapped into parallel arrays: an organization id and the role held there.
+	// One UPositionViewModel row per FPosition, cached per index and repointed on refresh rather
+	// than reallocated — see UActionViewModel/UCharacterActionsViewModel for the same shape.
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
-	TArray<FOrganizationId> PositionOrganizationIds;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
-	TArray<int32> PositionOrganizationIdValues;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
-	TArray<FRoleId> PositionRoleIds;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
-	TArray<int32> PositionRoleIdValues;
+	TArray<TObjectPtr<UPositionViewModel>> Positions;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
 	int32 PositionCount = 0;
@@ -292,16 +281,13 @@ public:
 	EScheduleEntryType GetScheduleHour22() const { return ScheduleHour22; }
 	EScheduleEntryType GetScheduleHour23() const { return ScheduleHour23; }
 
-	const TArray<FOrganizationId>& GetPositionOrganizationIds() const { return PositionOrganizationIds; }
-	const TArray<int32>& GetPositionOrganizationIdValues() const { return PositionOrganizationIdValues; }
-	const TArray<FRoleId>& GetPositionRoleIds() const { return PositionRoleIds; }
-	const TArray<int32>& GetPositionRoleIdValues() const { return PositionRoleIdValues; }
+	const TArray<TObjectPtr<UPositionViewModel>>& GetPositions() const { return Positions; }
 	int32 GetPositionCount() const { return PositionCount; }
 
-protected:
+public:
 	UFUNCTION(BlueprintCallable, Category="Character Viewmodel")
 	void Initialize(FCharacterId InCharacterId);
-
+protected:
 	UFUNCTION(BlueprintNativeEvent, Category="Character Viewmodel")
 	void Refresh();
 
@@ -313,11 +299,13 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category="Character Viewmodel")
 	TObjectPtr<UCharacterProxy> Proxy;
 
-private:
 	//~ Begin UObject interface
+	// Protected rather than private: a subclass overriding this must be able to call
+	// Super::BeginDestroy() to run this class's own Unbind().
 	virtual void BeginDestroy() override;
 	//~ End UObject interface
 
+private:
 	void RefreshLocation();
 	void RefreshSchedule();
 	void RefreshPositions();
@@ -325,4 +313,8 @@ private:
 
 	UFUNCTION()
 	void HandleProxyChanged();
+
+	/** One row per position index, reused across refreshes rather than reallocated. */
+	UPROPERTY()
+	TArray<TObjectPtr<UPositionViewModel>> PositionEntryCache;
 };

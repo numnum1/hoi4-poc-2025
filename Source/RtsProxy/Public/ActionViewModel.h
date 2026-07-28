@@ -1,74 +1,71 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ActionType.h"
 #include "RtsActionContext.h"
 #include "MVVMViewModelBase.h"
 #include "ActionViewModel.generated.h"
 
 /**
- * Base for one action, shown as one row in a character's action list.
+ * One action, shown as one row in a character's action list. Pure UI data (name, tooltip, icon)
+ * plus a click callback — everything about what the action actually is comes from URtsActions,
+ * switching over the EAction this entry was given. Gating (is this allowed right now, and why not)
+ * and running the action live in UCharacterActionsViewModel, not here — see its
+ * HandleActionClicked and GetGatedBlockedReason.
  *
- * Every concrete action is a plain C++ subclass — see UFoundOrganizationActionViewModel —
- * implementing GetScope/GetDisplayNameFor/ExecuteAction as ordinary virtual methods. There is no
- * lookup table and no shared action object: RtsActions::CollectClassesForScope hands out a fresh
- * instance per offer, so a subclass is free to hold whatever member state it wants without it
- * leaking between characters or across refreshes.
- *
- * SetContext runs the shared gate before anything else: that the action is genuinely offered for
- * this scope, and for RAS_Position, that the character actually holds the claimed (organization,
- * role) pair and that the role grants GetRequiredPermissions(). That gate is not virtual, so a
- * subclass cannot skip it — GetActionBlockedReason is the hook for an additional, action-specific
- * check layered on top.
+ * Concrete, not abstract: there is one EAction, hardcoded in URtsActions, per action — no per-action
+ * subclass. UCharacterActionsViewModel hands out a fresh instance per offer, so an entry never
+ * leaks state between characters or across refreshes.
  */
-UCLASS(Abstract, BlueprintType)
+UCLASS(BlueprintType)
 class RTSPROXY_API UActionViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
 public:
-	/** Called by the owning UCharacterActionsViewModel right after construction, and on every refresh. */
-	void SetContext(const FRtsActionContext& InContext);
+	/** Called by UCharacterActionsViewModel on every refresh: records which action this entry is
+	 * and recomputes DisplayName/Icon from the current context. Enabled state and tooltip are not
+	 * computed here — see SetEnabled. */
+	void SetContext(EAction InActionType, const FRtsActionContext& InContext);
 
-	/** Re-verifies the gate at call time — never trusts whatever the UI last cached — and runs the action. */
+	/** Pushed by UCharacterActionsViewModel after it evaluates the gate for this action. */
+	void SetEnabled(bool bInEnabled, const FText& InTooltip);
+
+	EAction GetActionType() const { return ActionType; }
+
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionClicked, UActionViewModel*, ClickedAction);
+
+	/** UCharacterActionsViewModel binds one handler here for every action it creates; that handler
+	 * re-verifies the gate and runs the action. Bind a button's OnClicked to CallOnClicked() below,
+	 * not directly to this delegate. */
+	UPROPERTY(BlueprintAssignable, Category="Action")
+	FOnActionClicked OnClicked;
+
+	/** Bind a button's OnClicked to this; it broadcasts OnClicked(this) in turn. */
 	UFUNCTION(BlueprintCallable, Category="Action")
-	bool Execute();
+	void CallOnClicked();
 
 protected:
-	//~ Subclass contract, plain C++ — this is where an action's behavior actually lives ----------
-	// PURE_VIRTUAL rather than "= 0": Unreal still constructs a CDO for every UCLASS, abstract or
-	// not, and a true C++ pure virtual would make that construction ill-formed.
-
-	virtual ERtsActionScope GetScope() const PURE_VIRTUAL(UActionViewModel::GetScope, return ERtsActionScope::RAS_Self;);
-	virtual FText GetDisplayNameFor(const FRtsActionContext& InContext) const PURE_VIRTUAL(UActionViewModel::GetDisplayNameFor, return FText::GetEmpty(););
-	virtual void ExecuteAction(const FRtsActionContext& InContext) const PURE_VIRTUAL(UActionViewModel::ExecuteAction, );
-
-	/** What a RAS_Position context's role must grant. Ignored for RAS_Self. */
-	virtual int32 GetRequiredPermissions() const { return 0; }
-
-	/** An extra, action-specific check run after the shared gate passes. Default: always allowed. */
-	virtual FText GetActionBlockedReason(const FRtsActionContext& InContext) const { return FText::GetEmpty(); }
-
-	//~ FieldNotify state, fed by SetContext -----------------------------------------------------
+	//~ FieldNotify UI state, fed by SetContext/SetEnabled -----------------------------------------
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Action", meta=(AllowPrivateAccess))
 	FText DisplayName;
 
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Action", meta=(AllowPrivateAccess))
+	FSlateBrush Icon;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Action", meta=(AllowPrivateAccess))
+	FText Tooltip;
+
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsEnabled, Category="Action", meta=(AllowPrivateAccess))
 	bool bIsEnabled = false;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Action", meta=(AllowPrivateAccess))
-	FText BlockedReason;
-
 public:
 	FText GetDisplayName() const { return DisplayName; }
+	FSlateBrush GetIcon() const { return Icon; }
+	FText GetTooltip() const { return Tooltip; }
 	bool IsEnabled() const { return bIsEnabled; }
-	FText GetBlockedReason() const { return BlockedReason; }
 
 private:
-	/** Not virtual on purpose — see the class comment. */
-	FText GetGatedBlockedReason(const FRtsActionContext& InContext) const;
-	bool HoldsClaimedPosition(const FRtsActionContext& InContext) const;
-
-	UPROPERTY()
-	FRtsActionContext Context;
+	EAction ActionType = EAction::EA_FoundOrganization;
 };

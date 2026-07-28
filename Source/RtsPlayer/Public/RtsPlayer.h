@@ -15,7 +15,7 @@ public:
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRtsPlayerEvent);
 
 UCLASS(Blueprintable, Abstract)
-class ARtsPlayer : public APlayerController
+class RTSPLAYER_API ARtsPlayer : public APlayerController
 {
     GENERATED_BODY()
 public:

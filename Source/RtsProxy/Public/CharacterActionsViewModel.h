@@ -1,9 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ActionType.h"
 #include "RtsActionContext.h"
 #include "RtsIds.h"
-#include "Templates/SubclassOf.h"
 #include "MVVMViewModelBase.h"
 #include "CharacterActionsViewModel.generated.h"
 
@@ -27,6 +27,14 @@ class UOrganizations;
  * organization immediately becomes a position the player can act as. Action view models are cached
  * per class and repointed via SetContext rather than reallocated, so a refresh that neither adds
  * nor removes an action still updates each row's enabled state and blocked reason.
+ *
+ * UActionViewModel itself holds only UI data (name, tooltip, icon) and an OnClicked callback — what
+ * an EAction actually is (its scope, permissions, display data, what running it does) comes from
+ * URtsActions; the gate (is this action allowed right now) and running it live here, since this
+ * class is the one that actually knows the acting character and the current scope.
+ * GetGatedBlockedReason computes the gate for one entry; Refresh_Implementation pushes the result
+ * into that entry via SetEnabled, and HandleActionClicked re-runs the same gate at click time
+ * before calling URtsActions::ExecuteAction — never trusts whatever was last pushed into the entry.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
 class RTSPROXY_API UCharacterActionsViewModel : public UMVVMViewModelBase
@@ -34,6 +42,11 @@ class RTSPROXY_API UCharacterActionsViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
+	/** Public, unlike the other view models in this module: an owning object (not a subclass —
+	 * see UPlayerCharacterViewModel in RtsUI) needs to drive this one directly. */
+	UFUNCTION(BlueprintCallable, Category="Character Actions Viewmodel")
+	void Initialize(FCharacterId InCharacterId);
+
 	/** Act as the character themselves. */
 	UFUNCTION(BlueprintCallable, Category="Character Actions Viewmodel")
 	void SetScopeSelf();
@@ -54,9 +67,6 @@ public:
 	int32 GetActionCount() const { return ActionCount; }
 
 protected:
-	UFUNCTION(BlueprintCallable, Category="Character Actions Viewmodel")
-	void Initialize(FCharacterId InCharacterId);
-
 	UFUNCTION(BlueprintNativeEvent, Category="Character Actions Viewmodel")
 	void Refresh();
 	virtual void Refresh_Implementation();
@@ -69,6 +79,14 @@ private:
 
 	UFUNCTION()
 	void HandleOrganizationAdded();
+
+	UFUNCTION()
+	void HandleActionClicked(UActionViewModel* ClickedAction);
+
+	/** Not just for Refresh: HandleActionClicked calls this again at click time rather than
+	 * trusting whichever bIsEnabled the entry last had pushed into it. */
+	FText GetGatedBlockedReason(const UActionViewModel* Action) const;
+	bool HoldsClaimedPosition() const;
 
 	virtual void BeginDestroy() override;
 
@@ -85,5 +103,5 @@ private:
 	FRtsActionContext Context;
 
 	UPROPERTY()
-	TMap<TSubclassOf<UActionViewModel>, TObjectPtr<UActionViewModel>> EntryCache;
+	TMap<EAction, TObjectPtr<UActionViewModel>> EntryCache;
 };

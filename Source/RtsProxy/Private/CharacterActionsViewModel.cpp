@@ -4,8 +4,11 @@
 #include "CharacterProxy.h"
 #include "OrganizationProxy.h"
 #include "Organizations.h"
+#include "Roles.h"
 #include "RtsActions.h"
 #include "RtsProxySubsystem.h"
+
+#define LOCTEXT_NAMESPACE "CharacterActionsViewModel"
 
 void UCharacterActionsViewModel::Initialize(const FCharacterId InCharacterId)
 {
@@ -60,21 +63,34 @@ void UCharacterActionsViewModel::SetScopePosition(const int32 InPositionIndex)
 
 void UCharacterActionsViewModel::Refresh_Implementation()
 {
-	TArray<TSubclassOf<UActionViewModel>> OfferedClasses;
-	URtsActions::CollectClassesForScope(Context.Scope, OfferedClasses);
+	TArray<EAction> OfferedActions;
+	if (Context.Scope == ERtsActionScope::RAS_Self)
+	{
+		OfferedActions = URtsActions::GetActionsForSelf();
+	}
+	else
+	{
+		FPosition RequestedPosition;
+		RequestedPosition.OrganizationId = Context.OrganizationId;
+		RequestedPosition.RoleId = Context.RoleId;
+		OfferedActions = URtsActions::GetActionsForPosition(RequestedPosition);
+	}
 
 	TArray<TObjectPtr<UActionViewModel>> NewActions;
-	NewActions.Reserve(OfferedClasses.Num());
+	NewActions.Reserve(OfferedActions.Num());
 
-	for (const TSubclassOf<UActionViewModel>& ActionClass : OfferedClasses)
+	for (const EAction ActionType : OfferedActions)
 	{
-		TObjectPtr<UActionViewModel>& Entry = EntryCache.FindOrAdd(ActionClass);
+		TObjectPtr<UActionViewModel>& Entry = EntryCache.FindOrAdd(ActionType);
 		if (Entry == nullptr)
 		{
-			Entry = NewObject<UActionViewModel>(this, ActionClass);
+			Entry = NewObject<UActionViewModel>(this);
+			Entry->OnClicked.AddDynamic(this, &UCharacterActionsViewModel::HandleActionClicked);
 		}
 
-		Entry->SetContext(Context);
+		Entry->SetContext(ActionType, Context);
+		const FText BlockedReason = GetGatedBlockedReason(Entry);
+		Entry->SetEnabled(BlockedReason.IsEmpty(), BlockedReason);
 		NewActions.Add(Entry);
 	}
 
@@ -90,6 +106,72 @@ void UCharacterActionsViewModel::HandleProxyChanged()
 void UCharacterActionsViewModel::HandleOrganizationAdded()
 {
 	Refresh();
+}
+
+void UCharacterActionsViewModel::HandleActionClicked(UActionViewModel* ClickedAction)
+{
+	if (ClickedAction == nullptr || !GetGatedBlockedReason(ClickedAction).IsEmpty())
+	{
+		return;
+	}
+
+	URtsActions::ExecuteAction(ClickedAction->GetActionType(), Context);
+}
+
+bool UCharacterActionsViewModel::HoldsClaimedPosition() const
+{
+	const int32 Count = Proxy->GetOrganizationCount();
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		const UOrganizationProxy* Organization = Proxy->GetOrganization(Index);
+		if (Organization != nullptr
+			&& Organization->GetId() == Context.OrganizationId
+			&& Proxy->GetPositionRole(Index) == Context.RoleId)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+FText UCharacterActionsViewModel::GetGatedBlockedReason(const UActionViewModel* Action) const
+{
+	if (Proxy == nullptr || !Proxy->IsAlive())
+	{
+		return LOCTEXT("NoActor", "No acting character.");
+	}
+
+	const EAction ActionType = Action->GetActionType();
+
+	if (Context.Scope != URtsActions::GetScope(ActionType))
+	{
+		return LOCTEXT("WrongScope", "Not available in this role.");
+	}
+
+	if (URtsActions::GetScope(ActionType) != ERtsActionScope::RAS_Position)
+	{
+		// Self-scoped: there is no position and no role to check against yet.
+		return URtsActions::GetBlockedReason(ActionType, Context);
+	}
+
+	if (!HoldsClaimedPosition())
+	{
+		return LOCTEXT("PositionNotHeld", "You do not hold that position.");
+	}
+
+	URtsProxySubsystem* Proxies = Proxy->GetProxies();
+	const URoles* Roles = Proxies ? Proxies->GetRolesContainer() : nullptr;
+	if (Roles == nullptr)
+	{
+		return LOCTEXT("NoRoleLibrary", "Role library unavailable.");
+	}
+
+	if (!Roles->HasPermissions(Context.RoleId, URtsActions::GetRequiredPermissions(ActionType)))
+	{
+		return LOCTEXT("MissingPermission", "Your role does not grant this.");
+	}
+
+	return URtsActions::GetBlockedReason(ActionType, Context);
 }
 
 void UCharacterActionsViewModel::Unbind()
@@ -109,3 +191,5 @@ void UCharacterActionsViewModel::BeginDestroy()
 	Unbind();
 	Super::BeginDestroy();
 }
+
+#undef LOCTEXT_NAMESPACE
