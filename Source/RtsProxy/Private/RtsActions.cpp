@@ -3,6 +3,7 @@
 #include "CharacterProxy.h"
 #include "Characters.h"
 #include "OrganizationInfo.h"
+#include "OrganizationProxy.h"
 #include "Organizations.h"
 #include "Roles.h"
 #include "RtsProxySubsystem.h"
@@ -60,8 +61,59 @@ int32 URtsActions::GetRequiredPermissions(const EAction InAction)
 	return 0;
 }
 
+namespace
+{
+	/** Does the acting character really hold the (organization, role) pair the context claims? */
+	bool HoldsClaimedPosition(const FRtsActionContext& InContext)
+	{
+		const int32 Count = InContext.Actor->GetOrganizationCount();
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			const UOrganizationProxy* Organization = InContext.Actor->GetOrganization(Index);
+			if (Organization != nullptr
+				&& Organization->GetId() == InContext.OrganizationId
+				&& InContext.Actor->GetPositionRole(Index) == InContext.RoleId)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+}
+
 FText URtsActions::GetBlockedReason(const EAction InAction, const FRtsActionContext& InContext)
 {
+	if (InContext.Actor == nullptr || !InContext.Actor->IsAlive())
+	{
+		return LOCTEXT("NoActor", "No acting character.");
+	}
+
+	if (InContext.Scope != GetScope(InAction))
+	{
+		return LOCTEXT("WrongScope", "Not available in this role.");
+	}
+
+	if (GetScope(InAction) == ERtsActionScope::RAS_Position)
+	{
+		if (!HoldsClaimedPosition(InContext))
+		{
+			return LOCTEXT("PositionNotHeld", "You do not hold that position.");
+		}
+
+		URtsProxySubsystem* Proxies = InContext.Actor->GetProxies();
+		const URoles* Roles = Proxies ? Proxies->GetRolesContainer() : nullptr;
+		if (Roles == nullptr)
+		{
+			return LOCTEXT("NoRoleLibrary", "Role library unavailable.");
+		}
+
+		if (!Roles->HasPermissions(InContext.RoleId, GetRequiredPermissions(InAction)))
+		{
+			return LOCTEXT("MissingPermission", "Your role does not grant this.");
+		}
+	}
+
+	// Action-specific checks on top of the shared gate.
 	switch (InAction)
 	{
 	case EAction::EA_FoundOrganization:

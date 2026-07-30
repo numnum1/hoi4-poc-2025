@@ -2,7 +2,7 @@
 
 #include "RtsActions.h"
 
-void UActionViewModel::SetContext(const EAction InActionType, const FRtsActionContext& InContext)
+void UActionViewModel::SetAction(const EAction InActionType)
 {
 	ActionType = InActionType;
 	UE_MVVM_SET_PROPERTY_VALUE(DisplayName, URtsActions::GetDisplayName(InActionType));

@@ -39,8 +39,16 @@ public:
 	/** What a RAS_Position context's role must grant. Ignored for RAS_Self actions. */
 	static int32 GetRequiredPermissions(EAction InAction);
 
-	/** An extra, action-specific check run after the shared position/permission gate passes.
-	 * Empty means allowed. */
+	/**
+	 * The whole gate for one action in one context — empty means allowed, otherwise the reason to
+	 * show. Verifies that the action is genuinely offered for this scope and, for RAS_Position, that
+	 * the character actually holds the claimed (organization, role) pair and that the role grants
+	 * GetRequiredPermissions. A context is a claim, not a fact: this re-derives everything from the
+	 * character itself.
+	 *
+	 * A pure function of (action, context), which is why it lives here and not on the view model
+	 * that happens to hold the current selection.
+	 */
 	static FText GetBlockedReason(EAction InAction, const FRtsActionContext& InContext);
 
 	static void ExecuteAction(EAction InAction, const FRtsActionContext& InContext);

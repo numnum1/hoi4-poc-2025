@@ -1,6 +1,10 @@
 #include "PlayerCharacterViewModel.h"
 
-#include "CharacterActionsViewModel.h"
+#include "ActionViewModel.h"
+#include "CharacterProxy.h"
+#include "Characters.h"
+#include "OrganizationProxy.h"
+#include "RtsActions.h"
 #include "RtsPlayer.h"
 
 void UPlayerCharacterViewModel::InitializeForPlayer()
@@ -18,13 +22,6 @@ void UPlayerCharacterViewModel::InitializeForPlayer()
 
 	Player = NewPlayer;
 
-	// Created once and reused: Refresh_Implementation re-initializes it with the current
-	// character every time, it does not need to be rebuilt.
-	if (Actions == nullptr)
-	{
-		Actions = NewObject<UCharacterActionsViewModel>(this);
-	}
-
 	if (Player)
 	{
 		Player->OnControlledCharacterIdChanged.AddDynamic(this, &UPlayerCharacterViewModel::HandleControlledCharacterChanged);
@@ -36,7 +33,7 @@ void UPlayerCharacterViewModel::InitializeForPlayer()
 void UPlayerCharacterViewModel::HandleControlledCharacterChanged()
 {
 	// Inherited from UCharacterViewModel — resolves the proxy, rebinds OnChanged, and calls
-	// Refresh(), which our override below also drives Actions and the selection from.
+	// Refresh(), which the override below drives the selection and the action list from.
 	Initialize(Player ? Player->GetControlledCharacterId() : FCharacterId());
 }
 
@@ -48,30 +45,23 @@ void UPlayerCharacterViewModel::Refresh_Implementation()
 	{
 		UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, INDEX_NONE);
 		UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, true);
-		return;
 	}
-
-	// A position the character no longer holds (or never held, on the first refresh) falls back
-	// to acting as self rather than pointing at a stale index.
-	if (SelectedPositionIndex != INDEX_NONE && !GetPositions().IsValidIndex(SelectedPositionIndex))
+	// A position the character no longer holds (or never held, on the first refresh) falls back to
+	// acting as self rather than pointing at a stale index.
+	else if (SelectedPositionIndex != INDEX_NONE && !GetPositions().IsValidIndex(SelectedPositionIndex))
 	{
 		UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, INDEX_NONE);
 		UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, true);
 	}
 
-	if (Actions)
-	{
-		Actions->Initialize(GetCharacterId());
-	}
-
-	ApplySelection();
+	RefreshActions();
 }
 
 void UPlayerCharacterViewModel::SelectSelf()
 {
 	UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, true);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, INDEX_NONE);
-	ApplySelection();
+	RefreshActions();
 }
 
 void UPlayerCharacterViewModel::SelectPosition(const int32 InPositionIndex)
@@ -83,24 +73,86 @@ void UPlayerCharacterViewModel::SelectPosition(const int32 InPositionIndex)
 
 	UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, false);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, InPositionIndex);
-	ApplySelection();
+	RefreshActions();
 }
 
-void UPlayerCharacterViewModel::ApplySelection()
+FRtsActionContext UPlayerCharacterViewModel::MakeContext() const
 {
-	if (Actions == nullptr)
+	FRtsActionContext Context;
+	Context.Actor = Proxy;
+	Context.Scope = bIsActingAsSelf ? ERtsActionScope::RAS_Self : ERtsActionScope::RAS_Position;
+
+	if (!bIsActingAsSelf)
+	{
+		// Organization and role are read from the same position index, so the context can never
+		// claim a role at an organization the character does not hold it at.
+		const UOrganizationProxy* Organization = Proxy ? Proxy->GetOrganization(SelectedPositionIndex) : nullptr;
+		Context.OrganizationId = Organization ? Organization->GetId() : FOrganizationId();
+		Context.RoleId = Organization ? Proxy->GetPositionRole(SelectedPositionIndex) : FRoleId();
+	}
+
+	return Context;
+}
+
+void UPlayerCharacterViewModel::RefreshActions()
+{
+	const FRtsActionContext Context = MakeContext();
+
+	TArray<EAction> OfferedActions;
+	if (Context.Scope == ERtsActionScope::RAS_Self)
+	{
+		OfferedActions = URtsActions::GetActionsForSelf();
+	}
+	else
+	{
+		FPosition SelectedPosition;
+		SelectedPosition.OrganizationId = Context.OrganizationId;
+		SelectedPosition.RoleId = Context.RoleId;
+		OfferedActions = URtsActions::GetActionsForPosition(SelectedPosition);
+	}
+
+	TArray<TObjectPtr<UActionViewModel>> NewActions;
+	NewActions.Reserve(OfferedActions.Num());
+
+	for (const EAction ActionType : OfferedActions)
+	{
+		TObjectPtr<UActionViewModel>& Entry = ActionEntryCache.FindOrAdd(ActionType);
+		if (Entry == nullptr)
+		{
+			Entry = NewObject<UActionViewModel>(this);
+			Entry->OnClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleActionClicked);
+		}
+
+		Entry->SetAction(ActionType);
+
+		const FText BlockedReason = URtsActions::GetBlockedReason(ActionType, Context);
+		Entry->SetEnabled(BlockedReason.IsEmpty(), BlockedReason);
+
+		NewActions.Add(Entry);
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(Actions, NewActions);
+	UE_MVVM_SET_PROPERTY_VALUE(ActionCount, NewActions.Num());
+}
+
+void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAction)
+{
+	if (ClickedAction == nullptr)
 	{
 		return;
 	}
 
-	if (bIsActingAsSelf)
+	// Re-derive the context and re-run the gate instead of trusting whichever bIsEnabled was last
+	// pushed into the row — the same reason a React handler does not trust the rendered `disabled`.
+	const FRtsActionContext Context = MakeContext();
+	const EAction ActionType = ClickedAction->GetActionType();
+
+	if (!URtsActions::GetBlockedReason(ActionType, Context).IsEmpty())
 	{
-		Actions->SetScopeSelf();
+		return;
 	}
-	else
-	{
-		Actions->SetScopePosition(SelectedPositionIndex);
-	}
+
+	URtsActions::ExecuteAction(ActionType, Context);
 }
 
 void UPlayerCharacterViewModel::BeginDestroy()

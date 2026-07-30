@@ -1,11 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ActionType.h"
 #include "CharacterViewModel.h"
+#include "RtsActionContext.h"
 #include "PlayerCharacterViewModel.generated.h"
 
 class ARtsPlayer;
-class UCharacterActionsViewModel;
+class UActionViewModel;
 
 /**
  * The played character, plus the widget state around it: which of the character's positions is
@@ -16,6 +18,12 @@ class UCharacterActionsViewModel;
  * to invent itself. That is the line between RtsProxy and RtsUI: a value derived from the
  * simulation belongs on the base class in RtsProxy, a value the UI made up (a selection, a
  * confirmation dialog's open/closed state, ...) belongs here.
+ *
+ * The action list lives here rather than in a view model of its own precisely because it is a
+ * function of that selection: the scope an action is offered for *is* SelectedPositionIndex, so a
+ * separate object would only hold a second copy of it to keep in sync by hand. Everything that is
+ * not the selection — which actions exist, whether one is allowed, what running it does — is a pure
+ * function in URtsActions.
  *
  * Call InitializeForPlayer() once (e.g. from a widget's construct event) instead of the inherited
  * Initialize(FCharacterId) — it finds the local ARtsPlayer, follows whichever character it
@@ -48,24 +56,42 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsActingAsSelf, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
 	bool bIsActingAsSelf = true;
 
+	//~ Derived from the selection above -----------------------------------------------------------
+
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
-	TObjectPtr<UCharacterActionsViewModel> Actions;
+	TArray<TObjectPtr<UActionViewModel>> Actions;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
+	int32 ActionCount = 0;
 
 public:
 	int32 GetSelectedPositionIndex() const { return SelectedPositionIndex; }
 	bool IsActingAsSelf() const { return bIsActingAsSelf; }
-	UCharacterActionsViewModel* GetActions() const { return Actions; }
+	const TArray<TObjectPtr<UActionViewModel>>& GetActions() const { return Actions; }
+	int32 GetActionCount() const { return ActionCount; }
 
 protected:
 	virtual void Refresh_Implementation() override;
 	virtual void BeginDestroy() override;
 
 private:
-	void ApplySelection();
+	/** The context the action catalogue is queried and gated with, built straight from the current
+	 * selection. Never stored, so there is no second copy of the selection to keep in sync. */
+	FRtsActionContext MakeContext() const;
+
+	void RefreshActions();
+
+	UFUNCTION()
+	void HandleActionClicked(UActionViewModel* ClickedAction);
 
 	UFUNCTION()
 	void HandleControlledCharacterChanged();
 
 	UPROPERTY()
 	TObjectPtr<ARtsPlayer> Player;
+
+	/** Reused across refreshes so a rebuild that neither adds nor removes an action keeps the same
+	 * row objects — the widget's list does not churn and the OnClicked binding survives. */
+	UPROPERTY()
+	TMap<EAction, TObjectPtr<UActionViewModel>> ActionEntryCache;
 };
