@@ -15,7 +15,7 @@
 
 /**
  * Back-reference from an entity to its stable FCharacterId.
- * Everything outside Mass (FBuildingOwner, ARtsPlayer::ControlledCharacterId,
+ * Everything outside Mass (FBuildingCharacterOwnerFragment, ARtsPlayer::ControlledCharacterId,
  * UOrganizations, the view models) still addresses characters by this id, so every
  * character entity carries the id it was created for.
  */

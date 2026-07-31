@@ -45,6 +45,9 @@ void UPlayerCharacterViewModel::Refresh_Implementation()
 	{
 		UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, INDEX_NONE);
 		UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, true);
+		// A modal belongs to the character that opened it; switching away drops it rather than
+		// leaving a dialog open over someone else.
+		CloseModal();
 	}
 	// A position the character no longer holds (or never held, on the first refresh) falls back to
 	// acting as self rather than pointing at a stale index.
@@ -74,6 +77,93 @@ void UPlayerCharacterViewModel::SelectPosition(const int32 InPositionIndex)
 	UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, false);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, InPositionIndex);
 	RefreshActions();
+}
+
+void UPlayerCharacterViewModel::OpenModal(const EPlayerModal InModal)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(ActiveModal, InModal);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsFoundOrganizationModalOpen, InModal == EPlayerModal::PM_FoundOrganization);
+
+	// Whatever the last modal collected is not this one's starting point.
+	UE_MVVM_SET_PROPERTY_VALUE(PendingOrganizationName, FText::GetEmpty());
+	RefreshModalValidation();
+}
+
+void UPlayerCharacterViewModel::CloseModal()
+{
+	OpenModal(EPlayerModal::PM_None);
+}
+
+void UPlayerCharacterViewModel::SetPendingOrganizationName(const FText& InName)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(PendingOrganizationName, InName);
+	RefreshModalValidation();
+}
+
+void UPlayerCharacterViewModel::ConfirmModal()
+{
+	if (ActiveModal == EPlayerModal::PM_None)
+	{
+		return;
+	}
+
+	// Both gates run again here rather than trusting the bCanConfirmModal last pushed into the
+	// widget — the same reason HandleActionClicked re-derives instead of believing bIsEnabled.
+	const EAction ModalAction = GetModalAction();
+	const FRtsActionContext Context = MakeContext();
+	const FRtsActionInput Input = MakeInput();
+
+	if (!URtsActions::GetBlockedReason(ModalAction, Context).IsEmpty()
+		|| !URtsActions::GetInvalidInputReason(ModalAction, Context, Input).IsEmpty())
+	{
+		return;
+	}
+
+	URtsActions::ExecuteAction(ModalAction, Context, Input);
+	CloseModal();
+}
+
+EAction UPlayerCharacterViewModel::GetModalAction() const
+{
+	switch (ActiveModal)
+	{
+	case EPlayerModal::PM_FoundOrganization:
+		return EAction::EA_FoundOrganization;
+	default:
+		break;
+	}
+	return EAction::EA_FoundOrganization;
+}
+
+void UPlayerCharacterViewModel::RefreshModalValidation()
+{
+	if (ActiveModal == EPlayerModal::PM_None)
+	{
+		UE_MVVM_SET_PROPERTY_VALUE(ModalErrorText, FText::GetEmpty());
+		UE_MVVM_SET_PROPERTY_VALUE(bCanConfirmModal, false);
+		return;
+	}
+
+	const EAction ModalAction = GetModalAction();
+	const FRtsActionContext Context = MakeContext();
+
+	// The action gate counts too: a modal opened a moment ago can become impossible while it is
+	// still on screen, and confirming would then be refused with no visible reason.
+	FText Reason = URtsActions::GetBlockedReason(ModalAction, Context);
+	if (Reason.IsEmpty())
+	{
+		Reason = URtsActions::GetInvalidInputReason(ModalAction, Context, MakeInput());
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(ModalErrorText, Reason);
+	UE_MVVM_SET_PROPERTY_VALUE(bCanConfirmModal, Reason.IsEmpty());
+}
+
+FRtsActionInput UPlayerCharacterViewModel::MakeInput() const
+{
+	FRtsActionInput Input;
+	Input.OrganizationName = PendingOrganizationName;
+	return Input;
 }
 
 FRtsActionContext UPlayerCharacterViewModel::MakeContext() const
@@ -152,7 +242,15 @@ void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAct
 		return;
 	}
 
-	URtsActions::ExecuteAction(ActionType, Context);
+	// Actions that need input from the player open their modal instead of running; ConfirmModal
+	// finishes the job. Which modal that is stays here rather than in URtsActions, because
+	// EPlayerModal is UI state RtsProxy is not allowed to know about.
+	switch (ActionType)
+	{
+	case EAction::EA_FoundOrganization:
+		OpenModal(EPlayerModal::PM_FoundOrganization);
+		return;
+	}
 }
 
 void UPlayerCharacterViewModel::BeginDestroy()

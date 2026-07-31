@@ -196,28 +196,14 @@ TArray<UBuildingProxy*> UCharacterProxy::GetOwnedBuildings() const
 		return Result;
 	}
 
-	// UBuildings has no owner index, so this walks the whole list. That is the deal proxies make:
-	// convenience for the player-facing code, never a path the simulation takes.
 	UBuildings* BuildingsContainer = Proxies->GetBuildingsContainer();
 	if (BuildingsContainer == nullptr)
 	{
 		return Result;
 	}
 
-	for (int32 Index = 0; Index < BuildingsContainer->Num(); ++Index)
+	for (const FBuildingId BuildingId : BuildingsContainer->CollectBuildingsOwnedByCharacter(CharacterId))
 	{
-		const FBuildingId BuildingId(Index);
-		if (!BuildingsContainer->IsAlive(BuildingId))
-		{
-			continue;
-		}
-
-		const FBuildingOwner Owner = BuildingsContainer->GetBuildingOwner(BuildingId);
-		if (Owner.OwnerType != EBuildingOwnerType::BOT_Character || Owner.CharacterId != CharacterId)
-		{
-			continue;
-		}
-
 		if (UBuildingProxy* Building = Proxies->GetBuilding(BuildingId))
 		{
 			Result.Add(Building);

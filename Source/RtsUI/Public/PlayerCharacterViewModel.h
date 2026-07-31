@@ -3,7 +3,9 @@
 #include "CoreMinimal.h"
 #include "ActionType.h"
 #include "CharacterViewModel.h"
+#include "PlayerModal.h"
 #include "RtsActionContext.h"
+#include "RtsActionInput.h"
 #include "PlayerCharacterViewModel.generated.h"
 
 class ARtsPlayer;
@@ -47,6 +49,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel")
 	void SelectPosition(int32 InPositionIndex);
 
+	//~ Modals -------------------------------------------------------------------------------------
+
+	/** Opens a modal, resetting whatever the previous one had collected. */
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
+	void OpenModal(EPlayerModal InModal);
+
+	/** Closes the open modal without running anything. */
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
+	void CloseModal();
+
+	/** Controlled input: the modal's text box pushes every edit here, and gets validation back. */
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
+	void SetPendingOrganizationName(const FText& InName);
+
+	/** Runs the open modal's action after re-checking both gates, then closes it. Does nothing if
+	 * either gate refuses — the widget's last pushed bCanConfirmModal is never trusted. */
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
+	void ConfirmModal();
+
 protected:
 	//~ Widget state — invented by the UI, not derived from the simulation ------------------------
 
@@ -55,6 +76,25 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsActingAsSelf, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
 	bool bIsActingAsSelf = true;
+
+	/** PM_None is a real state, so no separate "any modal open" flag exists to fall out of sync. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	EPlayerModal ActiveModal = EPlayerModal::PM_None;
+
+	/** So a widget can drive its visibility without an enum comparison node. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsFoundOrganizationModalOpen, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	bool bIsFoundOrganizationModalOpen = false;
+
+	/** What the player has typed into the found-organization modal so far. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	FText PendingOrganizationName;
+
+	/** Empty while the current input is usable. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	FText ModalErrorText;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=CanConfirmModal, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	bool bCanConfirmModal = false;
 
 	//~ Derived from the selection above -----------------------------------------------------------
 
@@ -67,6 +107,11 @@ protected:
 public:
 	int32 GetSelectedPositionIndex() const { return SelectedPositionIndex; }
 	bool IsActingAsSelf() const { return bIsActingAsSelf; }
+	EPlayerModal GetActiveModal() const { return ActiveModal; }
+	bool IsFoundOrganizationModalOpen() const { return bIsFoundOrganizationModalOpen; }
+	FText GetPendingOrganizationName() const { return PendingOrganizationName; }
+	FText GetModalErrorText() const { return ModalErrorText; }
+	bool CanConfirmModal() const { return bCanConfirmModal; }
 	const TArray<TObjectPtr<UActionViewModel>>& GetActions() const { return Actions; }
 	int32 GetActionCount() const { return ActionCount; }
 
@@ -79,7 +124,17 @@ private:
 	 * selection. Never stored, so there is no second copy of the selection to keep in sync. */
 	FRtsActionContext MakeContext() const;
 
+	/** Same idea for the modal's collected values — built on demand, never stored twice. */
+	FRtsActionInput MakeInput() const;
+
+	/** Which action the open modal is collecting input for. EA_FoundOrganization is meaningless
+	 * while ActiveModal is PM_None, so callers check that first. */
+	EAction GetModalAction() const;
+
 	void RefreshActions();
+
+	/** Re-runs the input gate and pushes the result into ModalErrorText/bCanConfirmModal. */
+	void RefreshModalValidation();
 
 	UFUNCTION()
 	void HandleActionClicked(UActionViewModel* ClickedAction);

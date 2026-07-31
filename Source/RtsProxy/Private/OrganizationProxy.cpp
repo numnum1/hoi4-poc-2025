@@ -164,20 +164,8 @@ TArray<UBuildingProxy*> UOrganizationProxy::GetOwnedBuildings() const
 		return Result;
 	}
 
-	for (int32 Index = 0; Index < BuildingsContainer->Num(); ++Index)
+	for (const FBuildingId BuildingId : BuildingsContainer->CollectBuildingsOwnedByOrganization(OrganizationId))
 	{
-		const FBuildingId BuildingId(Index);
-		if (!BuildingsContainer->IsAlive(BuildingId))
-		{
-			continue;
-		}
-
-		const FBuildingOwner Owner = BuildingsContainer->GetBuildingOwner(BuildingId);
-		if (Owner.OwnerType != EBuildingOwnerType::BOT_Organization || Owner.OrganizationId != OrganizationId)
-		{
-			continue;
-		}
-
 		if (UBuildingProxy* Building = Proxies->GetBuilding(BuildingId))
 		{
 			Result.Add(Building);

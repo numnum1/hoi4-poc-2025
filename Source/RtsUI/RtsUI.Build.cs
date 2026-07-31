@@ -24,6 +24,9 @@ public class RtsUI : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
+                // Widget base classes (UUserWidget) live here — see "Widgets sind C++-Klassen"
+                // in CLAUDE.md.
+                "UMG",
                 // Only to resolve ARtsPlayer in the .cpp; the header forward-declares it.
                 "RtsPlayer",
                 // FCharacterId/FRtsActionContext plumbing needs the facade types directly

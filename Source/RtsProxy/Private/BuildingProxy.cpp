@@ -23,6 +23,7 @@ void UBuildingProxy::BindEvents()
 	}
 
 	Buildings->OnBuildingDestroyed.AddDynamic(this, &UBuildingProxy::HandleBuildingEvent);
+	Buildings->OnBuildingOwnerChanged.AddDynamic(this, &UBuildingProxy::HandleBuildingEvent);
 }
 
 void UBuildingProxy::UnbindEvents()
@@ -33,6 +34,7 @@ void UBuildingProxy::UnbindEvents()
 	}
 
 	Buildings->OnBuildingDestroyed.RemoveAll(this);
+	Buildings->OnBuildingOwnerChanged.RemoveAll(this);
 }
 
 void UBuildingProxy::HandleBuildingEvent(const FBuildingId InBuildingId)
@@ -64,29 +66,27 @@ UProvinceProxy* UBuildingProxy::GetProvince() const
 
 EBuildingOwnerType UBuildingProxy::GetOwnerType() const
 {
-	return Buildings ? Buildings->GetBuildingOwner(BuildingId).OwnerType : EBuildingOwnerType::BOT_Character;
+	return Buildings ? Buildings->GetOwnerType(BuildingId) : EBuildingOwnerType::BOT_None;
 }
 
 UCharacterProxy* UBuildingProxy::GetOwnerCharacter() const
 {
-	if (Buildings == nullptr || Proxies == nullptr)
+	if (Buildings == nullptr || Proxies == nullptr || GetOwnerType() != EBuildingOwnerType::BOT_Character)
 	{
 		return nullptr;
 	}
 
-	const FBuildingOwner Owner = Buildings->GetBuildingOwner(BuildingId);
-	return Owner.OwnerType == EBuildingOwnerType::BOT_Character ? Proxies->GetCharacter(Owner.CharacterId) : nullptr;
+	return Proxies->GetCharacter(Buildings->GetOwnerCharacter(BuildingId));
 }
 
 UOrganizationProxy* UBuildingProxy::GetOwnerOrganization() const
 {
-	if (Buildings == nullptr || Proxies == nullptr)
+	if (Buildings == nullptr || Proxies == nullptr || GetOwnerType() != EBuildingOwnerType::BOT_Organization)
 	{
 		return nullptr;
 	}
 
-	const FBuildingOwner Owner = Buildings->GetBuildingOwner(BuildingId);
-	return Owner.OwnerType == EBuildingOwnerType::BOT_Organization ? Proxies->GetOrganization(Owner.OrganizationId) : nullptr;
+	return Proxies->GetOrganization(Buildings->GetOwnerOrganization(BuildingId));
 }
 
 void UBuildingProxy::DestroyBuilding()

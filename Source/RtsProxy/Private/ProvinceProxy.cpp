@@ -126,22 +126,14 @@ TArray<UBuildingProxy*> UProvinceProxy::GetBuildings() const
 		return Result;
 	}
 
-	// UBuildings::CollectBuildingsInProvince returns types, not ids, so the ids are found by
-	// walking the list. Convenience over speed, deliberately — see URtsEntityProxy.
 	UBuildings* BuildingsContainer = Proxies->GetBuildingsContainer();
 	if (BuildingsContainer == nullptr)
 	{
 		return Result;
 	}
 
-	for (int32 Index = 0; Index < BuildingsContainer->Num(); ++Index)
+	for (const FBuildingId BuildingId : BuildingsContainer->CollectBuildingsInProvince(ProvinceId))
 	{
-		const FBuildingId BuildingId(Index);
-		if (!BuildingsContainer->IsAlive(BuildingId) || BuildingsContainer->GetProvince(BuildingId) != ProvinceId)
-		{
-			continue;
-		}
-
 		if (UBuildingProxy* Building = Proxies->GetBuilding(BuildingId))
 		{
 			Result.Add(Building);

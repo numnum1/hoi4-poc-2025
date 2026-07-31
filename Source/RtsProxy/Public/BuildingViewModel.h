@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingOwner.h"
+#include "BuildingOwnerType.h"
 #include "RtsIds.h"
 #include "MVVMViewModelBase.h"
 #include "BuildingViewModel.generated.h"
@@ -16,9 +16,9 @@ class UBuildingType;
  * fetches the matching UBuildingProxy from URtsProxySubsystem, and refreshes flat FieldNotify
  * properties whenever that proxy reports a change.
  *
- * FBuildingOwner is taken apart into one property per member — UMG binds single values, not
- * structs. Only one of OwnerCharacterId/OwnerOrganizationId is meaningful; bIsOwnedByCharacter
- * and bIsOwnedByOrganization exist so a widget can switch on it without an enum comparison node.
+ * Ownership is taken apart into one property per member — UMG binds single values, not structs.
+ * Only one of OwnerCharacterId/OwnerOrganizationId is meaningful; bIsOwnedByCharacter and
+ * bIsOwnedByOrganization exist so a widget can switch on it without an enum comparison node.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
 class RTSPROXY_API UBuildingViewModel : public UMVVMViewModelBase
@@ -53,10 +53,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel", meta=(AllowPrivateAccess))
 	int32 ProvinceIdValue = INDEX_NONE;
 
-	//~ FBuildingOwner ---------------------------------------------------------------------------
+	//~ Owner --------------------------------------------------------------------------------------
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel|Owner", meta=(AllowPrivateAccess))
-	EBuildingOwnerType OwnerType = EBuildingOwnerType::BOT_Character;
+	EBuildingOwnerType OwnerType = EBuildingOwnerType::BOT_None;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsOwnedByCharacter, Category="Building Viewmodel|Owner", meta=(AllowPrivateAccess))
 	bool bIsOwnedByCharacter = false;

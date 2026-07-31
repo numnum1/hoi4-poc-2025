@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingOwner.h"
+#include "BuildingOwnerType.h"
 #include "RtsIds.h"
 #include "Components/ActorComponent.h"
 #include "Modules/ModuleManager.h"
@@ -26,6 +26,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildingsEvent, FBuildingId, InBuil
  * this component keeps only the registry mapping an opaque type index back to the actual
  * UBuildingType* (Mass fragments cannot safely hold UObject pointers) and the change events the
  * view models bind to. Every accessor takes the same FBuildingId every other building API uses.
+ *
+ * Ownership has no single "the owner" value at this layer either — AddForCharacter/
+ * AddForOrganization and the two Collect* queries mirror the entity side's two mutually
+ * exclusive owner fragments, translated to EBuildingOwnerType only for GetOwnerType.
  */
 UCLASS(ClassGroup=(Map), meta=(BlueprintSpawnableComponent))
 class BUILDINGS_API UBuildings : public UActorComponent
@@ -39,10 +43,17 @@ public:
 	/** Fired after a building's entity is gone. */
 	UPROPERTY(BlueprintAssignable)
 	FBuildingsEvent OnBuildingDestroyed;
+	/** Fired after SetCharacterOwner/SetOrganizationOwner changed who a building belongs to. */
+	UPROPERTY(BlueprintAssignable)
+	FBuildingsEvent OnBuildingOwnerChanged;
 
 	/** Ids ever created, alive or not. Slot count, not a live headcount — see IsAlive. */
 	UFUNCTION(BlueprintPure)
 	int32 Num() const;
+
+	/** Ids currently alive, in creation order. */
+	UFUNCTION(BlueprintPure)
+	TArray<FBuildingId> GetAliveBuildings() const;
 
 	UFUNCTION(BlueprintPure)
 	bool IsAlive(FBuildingId InBuildingId) const;
@@ -54,20 +65,36 @@ public:
 	FProvinceId GetProvince(FBuildingId InBuildingId) const;
 
 	UFUNCTION(BlueprintPure)
-	FBuildingOwner GetBuildingOwner(FBuildingId InBuildingId) const;
+	EBuildingOwnerType GetOwnerType(FBuildingId InBuildingId) const;
+
+	/** Valid iff GetOwnerType() == BOT_Character. */
+	UFUNCTION(BlueprintPure)
+	FCharacterId GetOwnerCharacter(FBuildingId InBuildingId) const;
+
+	/** Valid iff GetOwnerType() == BOT_Organization. */
+	UFUNCTION(BlueprintPure)
+	FOrganizationId GetOwnerOrganization(FBuildingId InBuildingId) const;
 
 	UFUNCTION(BlueprintPure)
-	TArray<UBuildingType*> CollectBuildingsInProvince(FProvinceId InProvinceId) const;
+	TArray<FBuildingId> CollectBuildingsInProvince(FProvinceId InProvinceId) const;
 
 	UFUNCTION(BlueprintPure)
-	int32 CountBuildingsOfType(FProvinceId InProvinceId, UBuildingType* InBuildingType) const;
+	TArray<FBuildingId> CollectBuildingsOwnedByCharacter(FCharacterId InOwnerId) const;
 
 	UFUNCTION(BlueprintPure)
-	int32 CountBuildingsInSlot(FProvinceId InProvinceId, FName InSlotName) const;
+	TArray<FBuildingId> CollectBuildingsOwnedByOrganization(FOrganizationId InOwnerId) const;
 
-	/** Refuses and returns an invalid id if InProvinceId is already at InBuildingType's MaxPerProvince. */
 	UFUNCTION(BlueprintCallable)
-	FBuildingId Add(UBuildingType* InBuildingType, FProvinceId InProvinceId, const FBuildingOwner& InOwner);
+	FBuildingId AddForCharacter(UBuildingType* InBuildingType, FProvinceId InProvinceId, FCharacterId InOwnerId);
+
+	UFUNCTION(BlueprintCallable)
+	FBuildingId AddForOrganization(UBuildingType* InBuildingType, FProvinceId InProvinceId, FOrganizationId InOwnerId);
+
+	UFUNCTION(BlueprintCallable)
+	void SetCharacterOwner(FBuildingId InBuildingId, FCharacterId InNewOwnerId);
+
+	UFUNCTION(BlueprintCallable)
+	void SetOrganizationOwner(FBuildingId InBuildingId, FOrganizationId InNewOwnerId);
 
 	UFUNCTION(BlueprintCallable)
 	void Destroy(FBuildingId InBuildingId);

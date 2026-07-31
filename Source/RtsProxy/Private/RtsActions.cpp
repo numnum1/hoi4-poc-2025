@@ -122,7 +122,23 @@ FText URtsActions::GetBlockedReason(const EAction InAction, const FRtsActionCont
 	return FText::GetEmpty();
 }
 
-void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext& InContext)
+FText URtsActions::GetInvalidInputReason(const EAction InAction, const FRtsActionContext& InContext,
+                                         const FRtsActionInput& InInput)
+{
+	switch (InAction)
+	{
+	case EAction::EA_FoundOrganization:
+		if (InInput.OrganizationName.IsEmptyOrWhitespace())
+		{
+			return LOCTEXT("EmptyOrganizationName", "Enter a name for the organization.");
+		}
+		return FText::GetEmpty();
+	}
+	return FText::GetEmpty();
+}
+
+void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext& InContext,
+                                const FRtsActionInput& InInput)
 {
 	switch (InAction)
 	{
@@ -142,8 +158,7 @@ void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext&
 		}
 
 		FOrganizationInfo Info;
-		Info.OrganizationName = FText::Format(
-			LOCTEXT("FoundedOrganizationName", "{0}'s Organization"), InContext.Actor->GetDisplayName());
+		Info.OrganizationName = InInput.OrganizationName;
 
 		const FOrganizationId NewOrganizationId = Organizations->Add(Info);
 

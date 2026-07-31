@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingOwner.h"
 #include "RtsIds.h"
 #include "Mass/EntityElementTypes.h"
 #include "BuildingFragments.generated.h"
@@ -43,13 +42,28 @@ struct BUILDINGS_API FBuildingTypeFragment : public FMassFragment
 	int32 TypeIndex = INDEX_NONE;
 };
 
+/**
+ * Presence, not a stored enum, is the owner type — exactly one of this and
+ * FBuildingOrganizationOwnerFragment is ever added to a building entity. See
+ * UBuildingEntitySubsystem::SetCharacterOwner/SetOrganizationOwner for the archetype move that
+ * keeps that true.
+ */
 USTRUCT()
-struct BUILDINGS_API FBuildingOwnerFragment : public FMassFragment
+struct BUILDINGS_API FBuildingCharacterOwnerFragment : public FMassFragment
 {
 	GENERATED_BODY()
 
 	UPROPERTY()
-	FBuildingOwner Owner;
+	FCharacterId OwnerId;
+};
+
+USTRUCT()
+struct BUILDINGS_API FBuildingOrganizationOwnerFragment : public FMassFragment
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FOrganizationId OwnerId;
 };
 
 USTRUCT()

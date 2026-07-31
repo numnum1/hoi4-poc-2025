@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "ActionType.h"
 #include "RtsActionContext.h"
+#include "RtsActionInput.h"
 #include "Characters.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "RtsActions.generated.h"
@@ -51,5 +52,15 @@ public:
 	 */
 	static FText GetBlockedReason(EAction InAction, const FRtsActionContext& InContext);
 
-	static void ExecuteAction(EAction InAction, const FRtsActionContext& InContext);
+	/**
+	 * The gate for the values a modal collected — empty means the input is usable. Separate from
+	 * GetBlockedReason because the two answer different questions at different times: whether the
+	 * action may be offered at all, versus whether what the player typed is acceptable. A widget
+	 * re-runs this on every keystroke; both run again on confirm.
+	 *
+	 * Returns empty for actions that take no input.
+	 */
+	static FText GetInvalidInputReason(EAction InAction, const FRtsActionContext& InContext, const FRtsActionInput& InInput);
+
+	static void ExecuteAction(EAction InAction, const FRtsActionContext& InContext, const FRtsActionInput& InInput);
 };

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingOwner.h"
+#include "BuildingOwnerType.h"
 #include "RtsEntityProxy.h"
 #include "RtsIds.h"
 #include "BuildingProxy.generated.h"
