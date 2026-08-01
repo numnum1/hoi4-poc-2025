@@ -11,7 +11,7 @@ class UPlayerCharacterViewModel;
  * layout and styling. Lives inside the played character's view because it is that character who
  * founds the organization — the modal has no meaning without one.
  *
- * Data down: the owning view pushes the view model in through SetPlayerViewModel; this widget
+ * Data down: UPlayedCharacterView pushes the view model in through SetPlayerViewModel; this widget
  * never resolves it from a subsystem itself. Events up: the Blueprint wires its text box and its
  * two buttons to CommitName/Confirm/Cancel, which only forward — every decision (is the name
  * usable, may the action run, what does running it do) is made by UPlayerCharacterViewModel and

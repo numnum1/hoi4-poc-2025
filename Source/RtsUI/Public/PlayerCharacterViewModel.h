@@ -27,9 +27,10 @@ class UActionViewModel;
  * not the selection — which actions exist, whether one is allowed, what running it does — is a pure
  * function in URtsActions.
  *
- * Call InitializeForPlayer() once (e.g. from a widget's construct event) instead of the inherited
- * Initialize(FCharacterId) — it finds the local ARtsPlayer, follows whichever character it
- * currently controls, and re-initializes itself automatically when the player switches characters.
+ * Call InitializeForPlayer() once — UPlayedCharacterView does this in NativeOnInitialized, right
+ * after constructing the instance — instead of the inherited Initialize(FCharacterId). It finds the
+ * local ARtsPlayer, follows whichever character it currently controls, and re-initializes itself
+ * automatically when the player switches characters.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
 class RTSUI_API UPlayerCharacterViewModel : public UCharacterViewModel

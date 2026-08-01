@@ -22,7 +22,10 @@ public class Nations : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                // UNationActions::RegisterOrganization settles an organization in a nation, which
+                // is an Organizations-facade mutation (FOrganizationSettledNationsFragment).
+                "Organizations"
             }
         );
     }
