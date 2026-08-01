@@ -38,6 +38,7 @@ private:
     FDateTime LastHourBoundary;
 public:
     FORCEINLINE const FDateTime& GetCurrentTime() const { return CurrentTime; }
+    FORCEINLINE int32 GetSpeed() const { return Speed; }
 
     UFUNCTION(BlueprintSetter)
     FORCEINLINE void SetSpeed(const int32 NewSpeed)

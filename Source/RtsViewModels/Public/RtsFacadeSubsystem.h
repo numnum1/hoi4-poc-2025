@@ -11,6 +11,7 @@ class UOrganizations;
 class UProvinces;
 class USchedules;
 class URoles;
+class UTime;
 
 /**
  * Resolves the facade components off the current world's game state and caches them.
@@ -42,6 +43,8 @@ public:
 	UBuildings* GetBuildingsContainer();
 	USchedules* GetSchedulesContainer();
 	URoles* GetRolesContainer();
+	/** Not a domain facade, but the same kind of game state component: the clock. */
+	UTime* GetTimeContainer();
 
 	//~ Begin USubsystem interface
 	virtual void Deinitialize() override;
@@ -72,4 +75,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<URoles> RolesContainer;
+
+	UPROPERTY()
+	TObjectPtr<UTime> TimeContainer;
 };

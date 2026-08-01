@@ -21,6 +21,9 @@ public class RtsViewModels : ModuleRules
                 "Organizations",
                 "Buildings",
                 "Schedules",
+                // UTimezoneViewModel shows the clock, and URtsFacadeSubsystem resolves UTime off
+                // the game state like any other component there.
+                "Time",
                 // The view models derive from UMVVMViewModelBase
                 "ModelViewViewModel"
             }

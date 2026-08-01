@@ -7,6 +7,7 @@
 #include "Provinces.h"
 #include "Roles.h"
 #include "Schedules.h"
+#include "Time.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/GameStateBase.h"
@@ -48,6 +49,7 @@ UOrganizations* URtsFacadeSubsystem::GetOrganizationsContainer() { return Resolv
 UBuildings* URtsFacadeSubsystem::GetBuildingsContainer() { return ResolveContainer(BuildingsContainer); }
 USchedules* URtsFacadeSubsystem::GetSchedulesContainer() { return ResolveContainer(SchedulesContainer); }
 URoles* URtsFacadeSubsystem::GetRolesContainer() { return ResolveContainer(RolesContainer); }
+UTime* URtsFacadeSubsystem::GetTimeContainer() { return ResolveContainer(TimeContainer); }
 
 void URtsFacadeSubsystem::Deinitialize()
 {
@@ -58,6 +60,7 @@ void URtsFacadeSubsystem::Deinitialize()
 	BuildingsContainer = nullptr;
 	SchedulesContainer = nullptr;
 	RolesContainer = nullptr;
+	TimeContainer = nullptr;
 
 	Super::Deinitialize();
 }
