@@ -11,9 +11,10 @@ public class RtsUI : ModuleRules
             {
                 "Core",
                 "RtsCore",
-                // UPlayerCharacterViewModel derives from UCharacterViewModel and reaches every
-                // other view model/proxy through it — the same reason RtsProxy needs its facades.
-                "RtsProxy"
+                // UPlayerCharacterViewModel derives from UCharacterViewModel and reaches its
+                // facades (Characters/Organizations/Roles) through the base class's protected
+                // members — the same reason RtsViewModels needs its facades.
+                "RtsViewModels"
             }
         );
 

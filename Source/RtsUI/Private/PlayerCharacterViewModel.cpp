@@ -1,9 +1,8 @@
 #include "PlayerCharacterViewModel.h"
 
 #include "ActionViewModel.h"
-#include "CharacterProxy.h"
 #include "Characters.h"
-#include "OrganizationProxy.h"
+#include "PositionViewModel.h"
 #include "RtsActions.h"
 #include "RtsPlayer.h"
 
@@ -32,8 +31,8 @@ void UPlayerCharacterViewModel::InitializeForPlayer()
 
 void UPlayerCharacterViewModel::HandleControlledCharacterChanged()
 {
-	// Inherited from UCharacterViewModel — resolves the proxy, rebinds OnChanged, and calls
-	// Refresh(), which the override below drives the selection and the action list from.
+	// Inherited from UCharacterViewModel — resolves the facades, rebinds the Characters events, and
+	// calls Refresh(), which the override below drives the selection and the action list from.
 	Initialize(Player ? Player->GetControlledCharacterId() : FCharacterId());
 }
 
@@ -41,7 +40,7 @@ void UPlayerCharacterViewModel::Refresh_Implementation()
 {
 	Super::Refresh_Implementation();
 
-	if (Proxy == nullptr)
+	if (Characters == nullptr)
 	{
 		UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, INDEX_NONE);
 		UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, true);
@@ -169,16 +168,19 @@ FRtsActionInput UPlayerCharacterViewModel::MakeInput() const
 FRtsActionContext UPlayerCharacterViewModel::MakeContext() const
 {
 	FRtsActionContext Context;
-	Context.Actor = Proxy;
+	Context.ActorId = GetCharacterId();
 	Context.Scope = bIsActingAsSelf ? ERtsActionScope::RAS_Self : ERtsActionScope::RAS_Position;
+	Context.Characters = Characters;
+	Context.Organizations = Organizations;
+	Context.Roles = Roles;
 
 	if (!bIsActingAsSelf)
 	{
 		// Organization and role are read from the same position index, so the context can never
 		// claim a role at an organization the character does not hold it at.
-		const UOrganizationProxy* Organization = Proxy ? Proxy->GetOrganization(SelectedPositionIndex) : nullptr;
-		Context.OrganizationId = Organization ? Organization->GetId() : FOrganizationId();
-		Context.RoleId = Organization ? Proxy->GetPositionRole(SelectedPositionIndex) : FRoleId();
+		const UPositionViewModel* Position = GetPositions().IsValidIndex(SelectedPositionIndex) ? GetPositions()[SelectedPositionIndex].Get() : nullptr;
+		Context.OrganizationId = Position ? Position->GetOrganizationId() : FOrganizationId();
+		Context.RoleId = Position ? Position->GetRoleId() : FRoleId();
 	}
 
 	return Context;
@@ -244,7 +246,7 @@ void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAct
 
 	// Actions that need input from the player open their modal instead of running; ConfirmModal
 	// finishes the job. Which modal that is stays here rather than in URtsActions, because
-	// EPlayerModal is UI state RtsProxy is not allowed to know about.
+	// EPlayerModal is UI state RtsViewModels is not allowed to know about.
 	switch (ActionType)
 	{
 	case EAction::EA_FoundOrganization:
