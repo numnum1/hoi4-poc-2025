@@ -3,8 +3,10 @@
 #include "ActionViewModel.h"
 #include "Characters.h"
 #include "PositionViewModel.h"
+#include "ResourceViewModel.h"
 #include "RtsActions.h"
 #include "RtsPlayer.h"
+#include "RtsResources.h"
 #include "SelectablePositionViewModel.h"
 
 void UPlayerCharacterViewModel::InitializeForPlayer()
@@ -85,6 +87,7 @@ void UPlayerCharacterViewModel::ApplySelection(const int32 InPositionIndex)
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedPosition, NewSelectedPosition);
 
 	RefreshActions();
+	RefreshResources();
 }
 
 void UPlayerCharacterViewModel::OpenModal(const EPlayerModal InModal)
@@ -195,6 +198,31 @@ FRtsActionContext UPlayerCharacterViewModel::MakeContext() const
 	return Context;
 }
 
+FRtsResourceContext UPlayerCharacterViewModel::MakeResourceContext() const
+{
+	FRtsResourceContext Context;
+	Context.Characters = Characters;
+	Context.Organizations = Organizations;
+
+	if (bIsActingAsSelf)
+	{
+		Context.OwnerType = EResourceOwnerType::ROT_Character;
+		Context.OwnerCharacterId = GetCharacterId();
+		return Context;
+	}
+
+	// Same lookup MakeContext uses for OrganizationId — the selected position's organization is
+	// the resource owner while acting on its behalf.
+	const UPositionViewModel* Position = GetPositions().IsValidIndex(SelectedPositionIndex) ? GetPositions()[SelectedPositionIndex].Get() : nullptr;
+	if (Position && Position->GetOrganizationId().IsValid())
+	{
+		Context.OwnerType = EResourceOwnerType::ROT_Organization;
+		Context.OwnerOrganizationId = Position->GetOrganizationId();
+	}
+
+	return Context;
+}
+
 void UPlayerCharacterViewModel::RefreshSelectablePositions()
 {
 	// The rows are built from the UPositionViewModels the base class already refreshed, not from the
@@ -281,6 +309,30 @@ void UPlayerCharacterViewModel::RefreshActions()
 
 	UE_MVVM_SET_PROPERTY_VALUE(Actions, NewActions);
 	UE_MVVM_SET_PROPERTY_VALUE(ActionCount, NewActions.Num());
+}
+
+void UPlayerCharacterViewModel::RefreshResources()
+{
+	const FRtsResourceContext Context = MakeResourceContext();
+	const TArray<EResourceType> OfferedResources = URtsResources::GetResourceTypes(Context.OwnerType);
+
+	TArray<TObjectPtr<UResourceViewModel>> NewResources;
+	NewResources.Reserve(OfferedResources.Num());
+
+	for (const EResourceType ResourceType : OfferedResources)
+	{
+		TObjectPtr<UResourceViewModel>& Entry = ResourceEntryCache.FindOrAdd(ResourceType);
+		if (Entry == nullptr)
+		{
+			Entry = NewObject<UResourceViewModel>(this);
+		}
+
+		Entry->SetSource(ResourceType, Context);
+		NewResources.Add(Entry);
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(Resources, NewResources);
+	UE_MVVM_SET_PROPERTY_VALUE(ResourceCount, NewResources.Num());
 }
 
 void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAction)

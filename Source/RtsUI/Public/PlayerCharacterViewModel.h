@@ -4,12 +4,15 @@
 #include "ActionType.h"
 #include "CharacterViewModel.h"
 #include "PlayerModal.h"
+#include "ResourceType.h"
 #include "RtsActionContext.h"
 #include "RtsActionInput.h"
+#include "RtsResourceContext.h"
 #include "PlayerCharacterViewModel.generated.h"
 
 class ARtsPlayer;
 class UActionViewModel;
+class UResourceViewModel;
 class USelectablePositionViewModel;
 
 /**
@@ -123,6 +126,15 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
 	int32 ActionCount = 0;
 
+	/** One row per resource the current owner (the selection below) has — see MakeResourceContext.
+	 * Same function of the selection as Actions, so it lives here rather than in a view model of
+	 * its own for the same reason. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
+	TArray<TObjectPtr<UResourceViewModel>> Resources;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
+	int32 ResourceCount = 0;
+
 public:
 	int32 GetSelectedPositionIndex() const { return SelectedPositionIndex; }
 	bool IsActingAsSelf() const { return bIsActingAsSelf; }
@@ -136,6 +148,8 @@ public:
 	bool CanConfirmModal() const { return bCanConfirmModal; }
 	const TArray<TObjectPtr<UActionViewModel>>& GetActions() const { return Actions; }
 	int32 GetActionCount() const { return ActionCount; }
+	const TArray<TObjectPtr<UResourceViewModel>>& GetResources() const { return Resources; }
+	int32 GetResourceCount() const { return ResourceCount; }
 
 protected:
 	virtual void Refresh_Implementation() override;
@@ -149,6 +163,10 @@ private:
 	/** Same idea for the modal's collected values — built on demand, never stored twice. */
 	FRtsActionInput MakeInput() const;
 
+	/** The owner the resource list is asked about, built from the same selection MakeContext reads:
+	 * the selected position's organization, or the played character itself while acting as self. */
+	FRtsResourceContext MakeResourceContext() const;
+
 	/** Which action the open modal is collecting input for. EA_FoundOrganization is meaningless
 	 * while ActiveModal is PM_None, so callers check that first. */
 	EAction GetModalAction() const;
@@ -160,6 +178,9 @@ private:
 	void RefreshSelectablePositions();
 
 	void RefreshActions();
+
+	/** Rebuilds Resources for whatever MakeResourceContext currently returns. */
+	void RefreshResources();
 
 	/** Re-runs the input gate and pushes the result into ModalErrorText/bCanConfirmModal. */
 	void RefreshModalValidation();
@@ -186,4 +207,9 @@ private:
 	 * keeps the same row objects, so the picker does not churn and the bindings survive. */
 	UPROPERTY()
 	TArray<TObjectPtr<USelectablePositionViewModel>> SelectablePositionCache;
+
+	/** Keyed by EResourceType like ActionEntryCache is keyed by EAction — a rebuild that offers the
+	 * same resources keeps the same row objects. */
+	UPROPERTY()
+	TMap<EResourceType, TObjectPtr<UResourceViewModel>> ResourceEntryCache;
 };
