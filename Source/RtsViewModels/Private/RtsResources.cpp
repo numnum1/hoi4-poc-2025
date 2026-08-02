@@ -1,5 +1,6 @@
 #include "RtsResources.h"
 
+#include "Banking.h"
 #include "Characters.h"
 
 #define LOCTEXT_NAMESPACE "RtsResources"
@@ -138,11 +139,23 @@ int32 URtsResources::GetAmount(const EResourceType InResource, const EResourceDe
 	switch (InResource)
 	{
 	case EResourceType::RT_Money:
-		// No bank/account backend exists yet. See NationFragments.h's "(diplomacy, treasury, ...)"
-		// note for where an owner's account eventually attaches; each case names what it will read.
 		switch (InDetail)
 		{
-		case EResourceDetail::RD_Total:       return 0; // future: the account's balance
+		case EResourceDetail::RD_Total:
+		{
+			if (InContext.Banking == nullptr)
+			{
+				return 0;
+			}
+
+			// An owner with no open account yet is not a bug — GetBalance(an invalid id) is 0.
+			const FBankAccountId AccountId = InContext.OwnerType == EResourceOwnerType::ROT_Character
+				? InContext.Banking->FindAccountForCharacter(InContext.OwnerCharacterId)
+				: InContext.Banking->FindAccountForOrganization(InContext.OwnerOrganizationId);
+			return InContext.Banking->GetBalance(AccountId);
+		}
+		// No credit/interest model exists yet — see Banking module's FBankTag comment for where a
+		// bank's credit policy eventually attaches.
 		case EResourceDetail::RD_Credit:      return 0; // future: the account's credit line
 		case EResourceDetail::RD_Outstanding: return 0; // future: sum of unpaid dues
 		default: return 0;

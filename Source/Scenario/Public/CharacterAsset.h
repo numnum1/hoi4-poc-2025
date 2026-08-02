@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "BankAsset.h"
 #include "CharacterSimTier.h"
 #include "Engine/DataAsset.h"
 #include "CharacterAsset.generated.h"
@@ -45,6 +46,10 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	UScheduleAsset* Schedule;
 
+	/** Which bank account to open at scenario load. BankAccount.Bank == nullptr means none. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
+	FBankAccountAsset BankAccount;
+
 public:
 	FORCEINLINE ECharacterSimTier GetSimTier() const
 	{
@@ -79,5 +84,10 @@ public:
 	FORCEINLINE UScheduleAsset* GetSchedule() const
 	{
 		return Schedule;
+	}
+
+	FORCEINLINE const FBankAccountAsset& GetBankAccount() const
+	{
+		return BankAccount;
 	}
 };

@@ -115,6 +115,40 @@ struct RTSCORE_API FRaceId
 	friend uint32 GetTypeHash(const FRaceId& Id) { return ::GetTypeHash(Id.Value); }
 };
 
+USTRUCT(BlueprintType)
+struct RTSCORE_API FBankId
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Value = INDEX_NONE;
+
+	FBankId() = default;
+	explicit FBankId(const int32 InValue) : Value(InValue) {}
+
+	bool IsValid() const { return Value != INDEX_NONE; }
+	bool operator==(const FBankId& Other) const { return Value == Other.Value; }
+	bool operator!=(const FBankId& Other) const { return !(*this == Other); }
+	friend uint32 GetTypeHash(const FBankId& Id) { return ::GetTypeHash(Id.Value); }
+};
+
+USTRUCT(BlueprintType)
+struct RTSCORE_API FBankAccountId
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Value = INDEX_NONE;
+
+	FBankAccountId() = default;
+	explicit FBankAccountId(const int32 InValue) : Value(InValue) {}
+
+	bool IsValid() const { return Value != INDEX_NONE; }
+	bool operator==(const FBankAccountId& Other) const { return Value == Other.Value; }
+	bool operator!=(const FBankAccountId& Other) const { return !(*this == Other); }
+	friend uint32 GetTypeHash(const FBankAccountId& Id) { return ::GetTypeHash(Id.Value); }
+};
+
 /**
  * Names an entry in USchedules' library, not a per-character schedule. Like FRaceId it points
  * into authored template data rather than at an entity: many characters follow the same

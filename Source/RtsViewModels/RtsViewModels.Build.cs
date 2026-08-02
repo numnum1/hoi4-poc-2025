@@ -21,6 +21,8 @@ public class RtsViewModels : ModuleRules
                 "Organizations",
                 "Buildings",
                 "Schedules",
+                // URtsResources reads the account balance off UBanking for RT_Money.
+                "Banking",
                 // UTimezoneViewModel shows the clock, and URtsFacadeSubsystem resolves UTime off
                 // the game state like any other component there.
                 "Time",

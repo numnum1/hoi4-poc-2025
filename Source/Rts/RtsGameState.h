@@ -9,6 +9,7 @@
 #include "RtsGameState.generated.h"
 
 class UOrganizations;
+class UBanking;
 class UBuildings;
 class UTime;
 class URaces;
@@ -42,6 +43,8 @@ private:
 	UOrganizations* OrganizationsContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	URoles* RolesContainer;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UBanking* BankingContainer;
 
 	// Simulation
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
@@ -57,6 +60,7 @@ public:
 	FORCEINLINE UBuildings* GetBuildingsContainer() const { return BuildingsContainer; }
 	FORCEINLINE UOrganizations* GetOrganizationsContainer() const { return OrganizationsContainer; }
 	FORCEINLINE URoles* GetRoles() const { return RolesContainer; }
+	FORCEINLINE UBanking* GetBankingContainer() const { return BankingContainer; }
 
 	// Simulation
 	FORCEINLINE USchedules* GetSchedules() const { return SchedulesContainer; }

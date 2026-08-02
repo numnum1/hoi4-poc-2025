@@ -1,5 +1,6 @@
 #include "RtsFacadeSubsystem.h"
 
+#include "Banking.h"
 #include "Buildings.h"
 #include "Characters.h"
 #include "Nations.h"
@@ -49,6 +50,7 @@ UOrganizations* URtsFacadeSubsystem::GetOrganizationsContainer() { return Resolv
 UBuildings* URtsFacadeSubsystem::GetBuildingsContainer() { return ResolveContainer(BuildingsContainer); }
 USchedules* URtsFacadeSubsystem::GetSchedulesContainer() { return ResolveContainer(SchedulesContainer); }
 URoles* URtsFacadeSubsystem::GetRolesContainer() { return ResolveContainer(RolesContainer); }
+UBanking* URtsFacadeSubsystem::GetBankingContainer() { return ResolveContainer(BankingContainer); }
 UTime* URtsFacadeSubsystem::GetTimeContainer() { return ResolveContainer(TimeContainer); }
 
 void URtsFacadeSubsystem::Deinitialize()
@@ -60,6 +62,7 @@ void URtsFacadeSubsystem::Deinitialize()
 	BuildingsContainer = nullptr;
 	SchedulesContainer = nullptr;
 	RolesContainer = nullptr;
+	BankingContainer = nullptr;
 	TimeContainer = nullptr;
 
 	Super::Deinitialize();

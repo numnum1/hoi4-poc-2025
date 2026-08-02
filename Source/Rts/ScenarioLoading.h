@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Algo/Transform.h"
+#include "BankAsset.h"
+#include "BankInfo.h"
 #include "CharacterAsset.h"
 #include "CharacterInfo.h"
 #include "Race.h"
@@ -196,16 +198,22 @@ namespace ScenarioLoader
 	 * so index i of both refers to the same province; it supplies the timezone offset that
 	 * gets cached on the entity. InScheduleIndex is the asset array ExtractSchedules returned,
 	 * so a character's schedule asset resolves to the same FScheduleId USchedules stores it under.
+	 *
+	 * Also returns the filtered (null-skipped) source asset array alongside the spawn data, index
+	 * for index — the same shape ExtractSchedules returns ScheduleAssets in — so RtsGameModeBase can
+	 * read a character's BankAccount asset field back after Create() without redoing the null-filter.
 	 */
-	__inline TArray<FCharacterSpawnData>
+	__inline TTuple<TArray<FCharacterSpawnData>, TArray<UCharacterAsset*>>
 	ExtractCharacters(const TArray<UCharacterAsset*>& InCharacters, const TArray<UProvinceAsset*>& InProvinces,
 	                  const TArray<FProvinceSpawnData>& InProvinceInfos, const TArray<URaceAsset*>& InRaceIndex,
 	                  const TArray<FRace>& InRaces, const TArray<UScheduleAsset*>& InScheduleIndex)
 	{
 		TArray<FCharacterSpawnData> Out;
+		TArray<UCharacterAsset*> CharacterAssets;
 		Out.Reserve(InCharacters.Num());
+		CharacterAssets.Reserve(InCharacters.Num());
 
-		for (const UCharacterAsset* Char : InCharacters)
+		for (UCharacterAsset* Char : InCharacters)
 		{
 			if (!Char) continue;
 
@@ -243,22 +251,27 @@ namespace ScenarioLoader
 			}
 
 			Out.Add(MoveTemp(Data));
+			CharacterAssets.Add(Char);
 		}
 
-		return Out;
+		return { MoveTemp(Out), MoveTemp(CharacterAssets) };
 	}
 
 	/**
 	 * Organizations founded up front by the scenario. RtsGameModeBase feeds each entry to
 	 * UOrganizations::Add — the same entry point a player-triggered founding would use — so
 	 * scenario-authored and in-play organizations end up indistinguishable at runtime.
+	 *
+	 * Also returns the filtered source asset array alongside, same reason as ExtractCharacters.
 	 */
-	__inline TArray<FOrganizationInfo> ExtractOrganizations(const TArray<UOrganizationAsset*>& InOrganizations)
+	__inline TTuple<TArray<FOrganizationInfo>, TArray<UOrganizationAsset*>> ExtractOrganizations(const TArray<UOrganizationAsset*>& InOrganizations)
 	{
 		TArray<FOrganizationInfo> Out;
+		TArray<UOrganizationAsset*> OrganizationAssets;
 		Out.Reserve(InOrganizations.Num());
+		OrganizationAssets.Reserve(InOrganizations.Num());
 
-		for (const UOrganizationAsset* Org : InOrganizations)
+		for (UOrganizationAsset* Org : InOrganizations)
 		{
 			if (!Org) continue;
 
@@ -266,9 +279,36 @@ namespace ScenarioLoader
 			Info.OrganizationName = Org->GetOrganizationName();
 			Info.Logo = Org->GetLogo();
 			Out.Add(MoveTemp(Info));
+			OrganizationAssets.Add(Org);
 		}
 
-		return Out;
+		return { MoveTemp(Out), MoveTemp(OrganizationAssets) };
+	}
+
+	/**
+	 * Banks created up front by the scenario. Also returns the filtered source asset array, so
+	 * a character's/organization's FBankAccountAsset::Bank can resolve to the same FBankId
+	 * RtsGameModeBase's AddBank loop assigned it, by position — same shape as ExtractSchedules.
+	 */
+	__inline TTuple<TArray<FBankInfo>, TArray<UBankAsset*>> ExtractBanks(const TArray<UBankAsset*>& InBanks)
+	{
+		TArray<FBankInfo> Out;
+		TArray<UBankAsset*> BankAssets;
+		Out.Reserve(InBanks.Num());
+		BankAssets.Reserve(InBanks.Num());
+
+		for (UBankAsset* Bank : InBanks)
+		{
+			if (!Bank) continue;
+
+			FBankInfo Info;
+			Info.BankName = Bank->GetBankName();
+			Info.Logo = Bank->GetLogo();
+			Out.Add(MoveTemp(Info));
+			BankAssets.Add(Bank);
+		}
+
+		return { MoveTemp(Out), MoveTemp(BankAssets) };
 	}
 
 	/**

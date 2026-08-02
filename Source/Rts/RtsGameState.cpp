@@ -3,6 +3,7 @@
 
 #include "RtsGameState.h"
 
+#include "Banking.h"
 #include "Buildings.h"
 #include "Time.h"
 #include "Characters.h"
@@ -22,6 +23,7 @@ ARtsGameState::ARtsGameState()
 	BuildingsContainer = CreateDefaultSubobject<UBuildings>(TEXT("BuildingsContainer"));
 	OrganizationsContainer = CreateDefaultSubobject<UOrganizations>(TEXT("OrganizationsContainer"));
 	RolesContainer = CreateDefaultSubobject<URoles>(TEXT("RolesContainer"));
+	BankingContainer = CreateDefaultSubobject<UBanking>(TEXT("BankingContainer"));
 
 	SchedulesContainer = CreateDefaultSubobject<USchedules>(TEXT("SchedulesContainer"));
 	Time = CreateDefaultSubobject<UTime>(TEXT("Time"));

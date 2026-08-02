@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "BankAsset.h"
 #include "Engine/DataAsset.h"
 #include "OrganizationAsset.generated.h"
 
@@ -22,7 +23,11 @@ private:
 	FText OrganizationName;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	FSlateBrush Logo;
+	/** Which bank account to open at scenario load. BankAccount.Bank == nullptr means none. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
+	FBankAccountAsset BankAccount;
 public:
 	FORCEINLINE const FText& GetOrganizationName() const { return OrganizationName; }
 	FORCEINLINE const FSlateBrush& GetLogo() const { return Logo; }
+	FORCEINLINE const FBankAccountAsset& GetBankAccount() const { return BankAccount; }
 };

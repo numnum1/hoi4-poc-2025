@@ -4,6 +4,7 @@
 #include "RtsIds.h"
 #include "RtsResourceContext.generated.h"
 
+class UBanking;
 class UCharacters;
 class UOrganizations;
 
@@ -49,4 +50,8 @@ struct RTSVIEWMODELS_API FRtsResourceContext
 
 	UPROPERTY(BlueprintReadOnly, Category="Resource")
 	TObjectPtr<UOrganizations> Organizations;
+
+	/** RT_Money reads its balance off this — see URtsResources::GetAmount. */
+	UPROPERTY(BlueprintReadOnly, Category="Resource")
+	TObjectPtr<UBanking> Banking;
 };

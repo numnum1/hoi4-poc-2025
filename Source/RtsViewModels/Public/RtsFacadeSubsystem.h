@@ -4,6 +4,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "RtsFacadeSubsystem.generated.h"
 
+class UBanking;
 class UBuildings;
 class UCharacters;
 class UNations;
@@ -43,6 +44,7 @@ public:
 	UBuildings* GetBuildingsContainer();
 	USchedules* GetSchedulesContainer();
 	URoles* GetRolesContainer();
+	UBanking* GetBankingContainer();
 	/** Not a domain facade, but the same kind of game state component: the clock. */
 	UTime* GetTimeContainer();
 
@@ -75,6 +77,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<URoles> RolesContainer;
+
+	UPROPERTY()
+	TObjectPtr<UBanking> BankingContainer;
 
 	UPROPERTY()
 	TObjectPtr<UTime> TimeContainer;

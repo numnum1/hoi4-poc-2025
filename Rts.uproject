@@ -68,6 +68,11 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "Banking",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "Ideologies",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"

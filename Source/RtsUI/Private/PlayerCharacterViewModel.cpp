@@ -5,6 +5,7 @@
 #include "PositionViewModel.h"
 #include "ResourceViewModel.h"
 #include "RtsActions.h"
+#include "RtsFacadeSubsystem.h"
 #include "RtsPlayer.h"
 #include "RtsResources.h"
 #include "SelectablePositionViewModel.h"
@@ -203,6 +204,12 @@ FRtsResourceContext UPlayerCharacterViewModel::MakeResourceContext() const
 	FRtsResourceContext Context;
 	Context.Characters = Characters;
 	Context.Organizations = Organizations;
+	// Not inherited from UCharacterViewModel like Characters/Organizations are, so it is resolved
+	// here directly — the same call URtsFacadeSubsystem::Get every other facade lookup goes through.
+	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
+	{
+		Context.Banking = Facades->GetBankingContainer();
+	}
 
 	if (bIsActingAsSelf)
 	{
