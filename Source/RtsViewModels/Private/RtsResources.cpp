@@ -41,19 +41,36 @@ namespace
 	}
 }
 
-TArray<EResourceType> URtsResources::GetResourceTypes(const EResourceOwnerType InOwnerType)
+TArray<EResourceType> URtsResources::FindResourcesToDisplay(const FResourceOwner& InOwner)
 {
-	switch (InOwnerType)
+	switch (InOwner.OwnerType)
 	{
 	case EResourceOwnerType::ROT_Character:
-		return { EResourceType::RT_Money, EResourceType::RT_Crystals };
+		return FindResourcesToDisplayForCharacter(InOwner.CharacterId);
 	case EResourceOwnerType::ROT_Organization:
-		// Manpower is an organization's supporters — a character has none of their own.
-		return { EResourceType::RT_Money, EResourceType::RT_Manpower, EResourceType::RT_Crystals };
+		return FindResourcesToDisplayForOrganization(InOwner.OrganizationId);
 	case EResourceOwnerType::ROT_None:
 	default:
+		// Not "show nothing because everything is zero" — there is no legal person to show a panel
+		// for at all, which is the one case that legitimately has no rows.
 		return {};
 	}
+}
+
+TArray<EResourceType> URtsResources::FindResourcesToDisplayForCharacter(const FCharacterId InCharacterId)
+{
+	// The id is unused today because every character shows the same two rows. It stays in the
+	// signature because this is the seam where a per-character difference (a race that trades in
+	// something else, say) would be answered, and callers already have the id in hand.
+	//
+	// Manpower is absent by kind, not by amount: it means an organization's supporters, and a
+	// character has none of their own — it would be a permanently meaningless row, not a zero one.
+	return { EResourceType::RT_Money, EResourceType::RT_Crystals };
+}
+
+TArray<EResourceType> URtsResources::FindResourcesToDisplayForOrganization(const FOrganizationId InOrganizationId)
+{
+	return { EResourceType::RT_Money, EResourceType::RT_Manpower, EResourceType::RT_Crystals };
 }
 
 FText URtsResources::GetDisplayName(const EResourceType InResource)
@@ -149,9 +166,17 @@ int32 URtsResources::GetAmount(const EResourceType InResource, const EResourceDe
 			}
 
 			// An owner with no open account yet is not a bug — GetBalance(an invalid id) is 0.
-			const FBankAccountId AccountId = InContext.OwnerType == EResourceOwnerType::ROT_Character
-				? InContext.Banking->FindAccountForCharacter(InContext.OwnerCharacterId)
-				: InContext.Banking->FindAccountForOrganization(InContext.OwnerOrganizationId);
+			if (InContext.Owner.OwnerType == EResourceOwnerType::ROT_Character)
+			{
+				int32 Total = 0;
+				for (const FBankAccountId AccountId : InContext.Banking->GetAccountsForCharacter(InContext.Owner.CharacterId))
+				{
+					Total += InContext.Banking->GetBalance(AccountId);
+				}
+				return Total;
+			}
+
+			const FBankAccountId AccountId = InContext.Banking->FindAccountForOrganization(InContext.Owner.OrganizationId);
 			return InContext.Banking->GetBalance(AccountId);
 		}
 		// No credit/interest model exists yet — see Banking module's FBankTag comment for where a
@@ -164,8 +189,8 @@ int32 URtsResources::GetAmount(const EResourceType InResource, const EResourceDe
 	case EResourceType::RT_Manpower:
 	{
 		// A character has no supporters of their own — only an organization's positions count.
-		const int32 Total = InContext.OwnerType == EResourceOwnerType::ROT_Organization
-			? CountSupporters(InContext.Characters, InContext.OwnerOrganizationId)
+		const int32 Total = InContext.Owner.OwnerType == EResourceOwnerType::ROT_Organization
+			? CountSupporters(InContext.Characters, InContext.Owner.OrganizationId)
 			: 0;
 
 		switch (InDetail)

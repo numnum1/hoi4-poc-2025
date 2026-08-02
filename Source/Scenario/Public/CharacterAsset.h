@@ -46,9 +46,10 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	UScheduleAsset* Schedule;
 
-	/** Which bank account to open at scenario load. BankAccount.Bank == nullptr means none. */
+	/** Which bank accounts to open at scenario load — a character can hold several, possibly at
+	 * different banks. An entry with Bank == nullptr is skipped. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
-	FBankAccountAsset BankAccount;
+	TArray<FBankAccountAsset> BankAccounts;
 
 public:
 	FORCEINLINE ECharacterSimTier GetSimTier() const
@@ -86,8 +87,8 @@ public:
 		return Schedule;
 	}
 
-	FORCEINLINE const FBankAccountAsset& GetBankAccount() const
+	FORCEINLINE const TArray<FBankAccountAsset>& GetBankAccounts() const
 	{
-		return BankAccount;
+		return BankAccounts;
 	}
 };

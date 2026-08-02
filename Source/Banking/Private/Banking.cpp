@@ -96,10 +96,10 @@ int32 UBanking::GetBalance(const FBankAccountId InAccountId) const
 	return Accounts ? Accounts->GetBalance(InAccountId) : 0;
 }
 
-FBankAccountId UBanking::FindAccountForCharacter(const FCharacterId InOwnerId) const
+TArray<FBankAccountId> UBanking::GetAccountsForCharacter(const FCharacterId InOwnerId) const
 {
 	const UBankAccountEntitySubsystem* Accounts = GetAccounts();
-	return Accounts ? Accounts->FindAccountForCharacter(InOwnerId) : FBankAccountId();
+	return Accounts ? Accounts->GetAccountsForCharacter(InOwnerId) : TArray<FBankAccountId>();
 }
 
 FBankAccountId UBanking::FindAccountForOrganization(const FOrganizationId InOwnerId) const

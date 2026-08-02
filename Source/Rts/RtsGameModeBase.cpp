@@ -85,9 +85,13 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 	{
 		CharactersContainer->Create(CharacterSpawnData[Index]);
 
-		const FBankAccountAsset& BankAccount = CharacterAssets[Index]->GetBankAccount();
-		if (BankAccount.Bank != nullptr)
+		for (const FBankAccountAsset& BankAccount : CharacterAssets[Index]->GetBankAccounts())
 		{
+			if (BankAccount.Bank == nullptr)
+			{
+				continue;
+			}
+
 			const FBankId BankId(BankAssets.Find(BankAccount.Bank));
 			const FBankAccountId AccountId = BankingContainer->OpenAccountForCharacter(BankId, FCharacterId(Index));
 			BankingContainer->Deposit(AccountId, BankAccount.InitialBalance);

@@ -21,9 +21,20 @@ class RTSVIEWMODELS_API URtsResources : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	/** Which resources this kind of owner shows at all. */
-	UFUNCTION(BlueprintPure, Category="Rts Resources")
-	static TArray<EResourceType> GetResourceTypes(EResourceOwnerType InOwnerType);
+	/**
+	 * Which resources InOwner's panel shows, in display order. A resource on this list is shown
+	 * whatever its amount turns out to be — "has none of it right now" is a number, not a reason to
+	 * hide the row, so nothing here ever consults GetAmount.
+	 *
+	 * Splits on nothing but the owner kind: the two cases below answer it.
+	 */
+	static TArray<EResourceType> FindResourcesToDisplay(const FResourceOwner& InOwner);
+
+	/** The character case of FindResourcesToDisplay. */
+	static TArray<EResourceType> FindResourcesToDisplayForCharacter(FCharacterId InCharacterId);
+
+	/** The organization case of FindResourcesToDisplay. */
+	static TArray<EResourceType> FindResourcesToDisplayForOrganization(FOrganizationId InOrganizationId);
 
 	static FText GetDisplayName(EResourceType InResource);
 	static FSlateBrush GetIcon(EResourceType InResource);

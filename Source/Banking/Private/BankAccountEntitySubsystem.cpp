@@ -24,7 +24,7 @@ void UBankAccountEntitySubsystem::Deinitialize()
 {
 	EntityByIndex.Reset();
 	AliveIds.Reset();
-	OwnerCharacterToAccount.Reset();
+	OwnerCharacterToAccounts.Reset();
 	OwnerOrganizationToAccount.Reset();
 	EntitySubsystem = nullptr;
 
@@ -39,11 +39,6 @@ FMassEntityManager& UBankAccountEntitySubsystem::GetEntityManager() const
 
 FBankAccountId UBankAccountEntitySubsystem::OpenAccountForCharacter(const FBankId InBankId, const FCharacterId InOwnerId)
 {
-	if (const FBankAccountId* Existing = OwnerCharacterToAccount.Find(InOwnerId))
-	{
-		return *Existing;
-	}
-
 	const FBankAccountId NewId(EntityByIndex.Num());
 
 	// Fragments derive from FMassFragment, so they are not aggregates — fill them by field.
@@ -65,7 +60,7 @@ FBankAccountId UBankAccountEntitySubsystem::OpenAccountForCharacter(const FBankI
 
 	EntityByIndex.Add(Builder.Commit());
 	AliveIds.Add(NewId);
-	OwnerCharacterToAccount.Add(InOwnerId, NewId);
+	OwnerCharacterToAccounts.Add(InOwnerId, NewId);
 	return NewId;
 }
 
@@ -111,7 +106,9 @@ void UBankAccountEntitySubsystem::CloseAccount(const FBankAccountId InAccountId)
 	switch (GetOwnerType(InAccountId))
 	{
 	case EBankAccountOwnerType::BAOT_Character:
-		OwnerCharacterToAccount.Remove(GetOwnerCharacter(InAccountId));
+		// RemoveSingle, not Remove — a character can hold several accounts, so removing by key
+		// alone would close every account it has, not just this one.
+		OwnerCharacterToAccounts.RemoveSingle(GetOwnerCharacter(InAccountId), InAccountId);
 		break;
 	case EBankAccountOwnerType::BAOT_Organization:
 		OwnerOrganizationToAccount.Remove(GetOwnerOrganization(InAccountId));
@@ -195,10 +192,11 @@ FOrganizationId UBankAccountEntitySubsystem::GetOwnerOrganization(const FBankAcc
 	return OwnerFragment ? OwnerFragment->OwnerId : FOrganizationId();
 }
 
-FBankAccountId UBankAccountEntitySubsystem::FindAccountForCharacter(const FCharacterId InOwnerId) const
+TArray<FBankAccountId> UBankAccountEntitySubsystem::GetAccountsForCharacter(const FCharacterId InOwnerId) const
 {
-	const FBankAccountId* Found = OwnerCharacterToAccount.Find(InOwnerId);
-	return Found ? *Found : FBankAccountId();
+	TArray<FBankAccountId> Result;
+	OwnerCharacterToAccounts.MultiFind(InOwnerId, Result);
+	return Result;
 }
 
 FBankAccountId UBankAccountEntitySubsystem::FindAccountForOrganization(const FOrganizationId InOwnerId) const

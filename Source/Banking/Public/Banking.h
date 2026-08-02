@@ -64,17 +64,20 @@ public:
 
 	// --- accounts, forwarded to the entity subsystem ---
 
+	/** Always opens a new account — a character can hold several. */
 	UFUNCTION(BlueprintCallable)
 	FBankAccountId OpenAccountForCharacter(FBankId InBankId, FCharacterId InOwnerId);
 
+	/** Returns the existing account instead of opening a second one, if the organization has one. */
 	UFUNCTION(BlueprintCallable)
 	FBankAccountId OpenAccountForOrganization(FBankId InBankId, FOrganizationId InOwnerId);
 
 	UFUNCTION(BlueprintPure)
 	int32 GetBalance(FBankAccountId InAccountId) const;
 
+	/** Every account the character currently holds, across every bank. Empty if it has none. */
 	UFUNCTION(BlueprintPure)
-	FBankAccountId FindAccountForCharacter(FCharacterId InOwnerId) const;
+	TArray<FBankAccountId> GetAccountsForCharacter(FCharacterId InOwnerId) const;
 
 	UFUNCTION(BlueprintPure)
 	FBankAccountId FindAccountForOrganization(FOrganizationId InOwnerId) const;

@@ -213,8 +213,7 @@ FRtsResourceContext UPlayerCharacterViewModel::MakeResourceContext() const
 
 	if (bIsActingAsSelf)
 	{
-		Context.OwnerType = EResourceOwnerType::ROT_Character;
-		Context.OwnerCharacterId = GetCharacterId();
+		Context.Owner = FResourceOwner::ForCharacter(GetCharacterId());
 		return Context;
 	}
 
@@ -223,8 +222,7 @@ FRtsResourceContext UPlayerCharacterViewModel::MakeResourceContext() const
 	const UPositionViewModel* Position = GetPositions().IsValidIndex(SelectedPositionIndex) ? GetPositions()[SelectedPositionIndex].Get() : nullptr;
 	if (Position && Position->GetOrganizationId().IsValid())
 	{
-		Context.OwnerType = EResourceOwnerType::ROT_Organization;
-		Context.OwnerOrganizationId = Position->GetOrganizationId();
+		Context.Owner = FResourceOwner::ForOrganization(Position->GetOrganizationId());
 	}
 
 	return Context;
@@ -321,7 +319,7 @@ void UPlayerCharacterViewModel::RefreshActions()
 void UPlayerCharacterViewModel::RefreshResources()
 {
 	const FRtsResourceContext Context = MakeResourceContext();
-	const TArray<EResourceType> OfferedResources = URtsResources::GetResourceTypes(Context.OwnerType);
+	const TArray<EResourceType> OfferedResources = URtsResources::FindResourcesToDisplay(Context.Owner);
 
 	TArray<TObjectPtr<UResourceViewModel>> NewResources;
 	NewResources.Reserve(OfferedResources.Num());

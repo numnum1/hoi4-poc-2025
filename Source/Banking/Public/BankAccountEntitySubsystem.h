@@ -18,10 +18,11 @@ struct FMassEntityManager;
  * entity, and GetOwnerType reads that back from fragment presence — see UBuildingEntitySubsystem
  * for the same pattern.
  *
- * An owner has at most one account in this pass: OpenAccountForCharacter/OpenAccountForOrganization
- * return the existing account instead of opening a second one, using OwnerCharacterToAccount /
- * OwnerOrganizationToAccount as a proper reverse index — this is simulation-layer bookkeeping, not
- * the linear "Sammel-Getter" the UI layer is allowed but not required to use.
+ * A character can hold any number of accounts — OwnerCharacterToAccounts is a TMultiMap, and
+ * OpenAccountForCharacter always opens a new one. An organization still has at most one:
+ * OpenAccountForOrganization returns the existing account instead of opening a second one. Both
+ * maps are proper reverse indexes — this is simulation-layer bookkeeping, not the linear
+ * "Sammel-Getter" the UI layer is allowed but not required to use.
  */
 UCLASS()
 class BANKING_API UBankAccountEntitySubsystem : public UWorldSubsystem
@@ -33,7 +34,7 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	/** Opens a new account at InBankId for the character, or returns the one it already has. */
+	/** Always opens a new account at InBankId for the character — a character can hold several. */
 	FBankAccountId OpenAccountForCharacter(FBankId InBankId, FCharacterId InOwnerId);
 
 	/** Opens a new account at InBankId for the organization, or returns the one it already has. */
@@ -65,8 +66,8 @@ public:
 	/** Valid iff GetOwnerType() == BAOT_Organization. */
 	FOrganizationId GetOwnerOrganization(FBankAccountId InAccountId) const;
 
-	/** The character's account, or an invalid id if it has never opened one. */
-	FBankAccountId FindAccountForCharacter(FCharacterId InOwnerId) const;
+	/** Every account the character currently holds, across every bank. Empty if it has none. */
+	TArray<FBankAccountId> GetAccountsForCharacter(FCharacterId InOwnerId) const;
 	/** The organization's account, or an invalid id if it has never opened one. */
 	FBankAccountId FindAccountForOrganization(FOrganizationId InOwnerId) const;
 
@@ -94,8 +95,12 @@ private:
 	/** Ids currently alive, in creation order. */
 	TArray<FBankAccountId> AliveIds;
 
-	/** Owner -> account, so OpenAccountFor... can hand back an existing account instead of opening
-	 * a second one, and FindAccountFor... is O(1). Entries are removed on CloseAccount. */
-	TMap<FCharacterId, FBankAccountId> OwnerCharacterToAccount;
+	/** Owner -> every account it holds. A character can have several; GetAccountsForCharacter is
+	 * O(1) via MultiFind. Entries are removed on CloseAccount. */
+	TMultiMap<FCharacterId, FBankAccountId> OwnerCharacterToAccounts;
+
+	/** Owner -> account, so OpenAccountForOrganization can hand back an existing account instead
+	 * of opening a second one, and FindAccountForOrganization is O(1). Entries are removed on
+	 * CloseAccount. */
 	TMap<FOrganizationId, FBankAccountId> OwnerOrganizationToAccount;
 };
