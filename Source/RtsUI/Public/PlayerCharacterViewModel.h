@@ -192,6 +192,12 @@ private:
 	UFUNCTION()
 	void HandlePositionClicked(USelectablePositionViewModel* ClickedPosition);
 
+	/** Clicking the row that is already the single expanded one collapses it instead of re-opening
+	 * it — same shape as HandlePositionClicked. Re-runs RefreshResources so bIsExpanded is reapplied
+	 * across every cached row, not just the clicked one. */
+	UFUNCTION()
+	void HandleResourceClicked(UResourceViewModel* ClickedResource);
+
 	UFUNCTION()
 	void HandleControlledCharacterChanged();
 
@@ -212,4 +218,11 @@ private:
 	 * same resources keeps the same row objects. */
 	UPROPERTY()
 	TMap<EResourceType, TObjectPtr<UResourceViewModel>> ResourceEntryCache;
+
+	/** Which resource is the single expanded one, and whether that is even the case right now —
+	 * plain private state, not FieldNotify, because nothing binds to the id itself: only each row's
+	 * own bIsExpanded (pushed by RefreshResources) is ever shown. Not folded into EResourceType as a
+	 * "None" sentinel, because that enum is RtsResources' shared catalog, not UI state. */
+	bool bHasExpandedResource = false;
+	EResourceType ExpandedResourceType = EResourceType::RT_Money;
 };

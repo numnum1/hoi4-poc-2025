@@ -37,3 +37,13 @@ void UResourceViewModel::SetSource(const EResourceType InResource, const FRtsRes
 	UE_MVVM_SET_PROPERTY_VALUE(Details, NewDetails);
 	UE_MVVM_SET_PROPERTY_VALUE(DetailCount, NewDetails.Num());
 }
+
+void UResourceViewModel::SetExpanded(const bool bInExpanded)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(bIsExpanded, bInExpanded);
+}
+
+void UResourceViewModel::CallOnClicked()
+{
+	OnClicked.Broadcast(this);
+}

@@ -325,14 +325,34 @@ void UPlayerCharacterViewModel::RefreshResources()
 		if (Entry == nullptr)
 		{
 			Entry = NewObject<UResourceViewModel>(this);
+			Entry->OnClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleResourceClicked);
 		}
 
 		Entry->SetSource(ResourceType, Context);
+		Entry->SetExpanded(bHasExpandedResource && ResourceType == ExpandedResourceType);
 		NewResources.Add(Entry);
 	}
 
 	UE_MVVM_SET_PROPERTY_VALUE(Resources, NewResources);
 	UE_MVVM_SET_PROPERTY_VALUE(ResourceCount, NewResources.Num());
+}
+
+void UPlayerCharacterViewModel::HandleResourceClicked(UResourceViewModel* ClickedResource)
+{
+	if (ClickedResource == nullptr)
+	{
+		return;
+	}
+
+	const EResourceType ClickedType = ClickedResource->GetResourceType();
+	const bool bWasExpanded = bHasExpandedResource && ExpandedResourceType == ClickedType;
+
+	bHasExpandedResource = !bWasExpanded;
+	ExpandedResourceType = ClickedType;
+
+	// Re-derive every row's bIsExpanded from the new state rather than only touching the clicked
+	// one — that is what actually enforces "only one expanded" against whichever row was open before.
+	RefreshResources();
 }
 
 void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAction)

@@ -28,6 +28,9 @@ protected:
 	FText DisplayName;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Resource Detail", meta=(AllowPrivateAccess))
+	FSlateBrush Icon;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Resource Detail", meta=(AllowPrivateAccess))
 	int32 Amount = 0;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Resource Detail", meta=(AllowPrivateAccess))
@@ -35,6 +38,7 @@ protected:
 
 public:
 	FText GetDisplayName() const { return DisplayName; }
+	FSlateBrush GetIcon() const { return Icon; }
 	int32 GetAmount() const { return Amount; }
 	FText GetAmountText() const { return AmountText; }
 
