@@ -104,7 +104,9 @@ void UTimezoneViewModel::Refresh_Implementation()
 	UE_MVVM_SET_PROPERTY_VALUE(LocalMonth, LocalTime.GetMonth());
 	UE_MVVM_SET_PROPERTY_VALUE(LocalYear, LocalTime.GetYear());
 	UE_MVVM_SET_PROPERTY_VALUE(LocalDateText,
-		FText::FromString(FString::Printf(TEXT("%04d-%02d-%02d"), LocalTime.GetYear(), LocalTime.GetMonth(), LocalTime.GetDay())));
+		FText::FromString(FString::Printf(TEXT("%04d-%02d-%02d %02d:%02d"),
+			LocalTime.GetYear(), LocalTime.GetMonth(), LocalTime.GetDay(),
+			LocalTime.GetHour(), LocalTime.GetMinute())));
 
 	const int32 NewSpeed = Time->GetSpeed();
 	UE_MVVM_SET_PROPERTY_VALUE(Speed, NewSpeed);

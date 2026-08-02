@@ -42,6 +42,18 @@ FOrganizationInfo UOrganizations::GetOrganizationInfo(const FOrganizationId InOr
 	return Infos.IsValidIndex(InOrganizationId.Value) ? Infos[InOrganizationId.Value] : FOrganizationInfo();
 }
 
+FCharacterId UOrganizations::GetOwnerCharacter(const FOrganizationId InOrganizationId) const
+{
+	const UOrganizationEntitySubsystem* Entities = GetEntities();
+	return Entities ? Entities->GetOwnerCharacter(InOrganizationId) : FCharacterId();
+}
+
+bool UOrganizations::IsOwnedBy(const FOrganizationId InOrganizationId, const FCharacterId InCharacterId) const
+{
+	// An ownerless organization must not read as owned by an ownerless character.
+	return InCharacterId.IsValid() && GetOwnerCharacter(InOrganizationId) == InCharacterId;
+}
+
 FOrganizationAlignment UOrganizations::GetAlignment(const FOrganizationId InOrganizationId) const
 {
 	const UOrganizationEntitySubsystem* Entities = GetEntities();
@@ -60,7 +72,7 @@ TArray<FOrganizationId> UOrganizations::CollectOrganizationsSettledIn(const FNat
 	return Entities ? Entities->CollectOrganizationsSettledIn(InNationId) : TArray<FOrganizationId>();
 }
 
-FOrganizationId UOrganizations::Add(const FOrganizationInfo& NewOrg)
+FOrganizationId UOrganizations::Add(const FOrganizationInfo& NewOrg, const FCharacterId InFounderId)
 {
 	UOrganizationEntitySubsystem* Entities = GetEntities();
 	if (Entities == nullptr)
@@ -69,7 +81,7 @@ FOrganizationId UOrganizations::Add(const FOrganizationInfo& NewOrg)
 	}
 
 	// The entity claims the id; the display row must line up with it.
-	const FOrganizationId NewId = Entities->CreateOrganization();
+	const FOrganizationId NewId = Entities->CreateOrganization(InFounderId);
 	check(NewId.Value == Infos.Num());
 	Infos.Add(NewOrg);
 

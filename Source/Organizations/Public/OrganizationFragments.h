@@ -29,6 +29,24 @@ struct ORGANIZATIONS_API FOrganizationIndexFragment : public FMassFragment
 // -----------------------------------------------------------------------------
 
 /**
+ * Who owns the organization — the character who founded it, until ownership is handed on.
+ *
+ * The owner's leadership position (FPosition on the character) and this fragment answer two
+ * different questions: the position says what the character may do inside the organization, this
+ * says which single character the organization belongs to. Deriving one from the other would mean
+ * scanning every character for a leadership role, and would break the moment two characters hold
+ * one. An organization loaded from a scenario has no founder and keeps an invalid id.
+ */
+USTRUCT()
+struct ORGANIZATIONS_API FOrganizationOwnerFragment : public FMassFragment
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FCharacterId OwnerId;
+};
+
+/**
  * The ideological stance. Whether it has been published is the FOrganizationPublishedTag,
  * not a bool in here — publishing is a one-way state change worth its own archetype.
  */

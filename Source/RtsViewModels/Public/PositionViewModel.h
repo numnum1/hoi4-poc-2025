@@ -16,8 +16,8 @@ class URoles;
  * Not a single-parameter Initialize(Id): a position has no id of its own, it is identified by
  * (character, index) — see FPosition in Characters.h. SetSource is driven by
  * UCharacterViewModel::RefreshPositions, which owns and caches one instance per index and passes
- * the FPosition plus the two facades needed to display it — this row never resolves anything
- * itself.
+ * the FPosition, the character holding it, and the two facades needed to display it — this row
+ * never resolves anything itself.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="Manual"))
 class RTSVIEWMODELS_API UPositionViewModel : public UMVVMViewModelBase
@@ -26,7 +26,7 @@ class RTSVIEWMODELS_API UPositionViewModel : public UMVVMViewModelBase
 
 public:
 	/** Repoints this row at a new position and re-broadcasts every field. */
-	void SetSource(const FPosition& InPosition, UOrganizations* InOrganizations, URoles* InRoles);
+	void SetSource(const FPosition& InPosition, FCharacterId InHolderId, UOrganizations* InOrganizations, URoles* InRoles);
 
 protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Position", meta=(AllowPrivateAccess))
@@ -50,6 +50,11 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Position", meta=(AllowPrivateAccess))
 	FText RoleName;
 
+	/** True if the character holding this position also owns the organization — they founded it.
+	 * Separate from the role: the role says what they may do, this says the place is theirs. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsOwner, Category="Position", meta=(AllowPrivateAccess))
+	bool bIsOwner = false;
+
 public:
 	FOrganizationId GetOrganizationId() const { return OrganizationId; }
 	int32 GetOrganizationIdValue() const { return OrganizationIdValue; }
@@ -58,4 +63,5 @@ public:
 	FRoleId GetRoleId() const { return RoleId; }
 	int32 GetRoleIdValue() const { return RoleIdValue; }
 	FText GetRoleName() const { return RoleName; }
+	bool IsOwner() const { return bIsOwner; }
 };

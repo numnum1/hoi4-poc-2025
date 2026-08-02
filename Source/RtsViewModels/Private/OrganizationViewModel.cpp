@@ -1,14 +1,18 @@
 #include "OrganizationViewModel.h"
 
+#include "CharacterInfo.h"
+#include "Characters.h"
 #include "Organizations.h"
 #include "RtsFacadeSubsystem.h"
 
 void UOrganizationViewModel::Initialize(const FOrganizationId InOrganizationId)
 {
 	UOrganizations* NewOrganizations = nullptr;
+	UCharacters* NewCharacters = nullptr;
 	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
 	{
 		NewOrganizations = Facades->GetOrganizationsContainer();
+		NewCharacters = Facades->GetCharactersContainer();
 	}
 
 	if (Organizations == NewOrganizations && OrganizationId == InOrganizationId)
@@ -19,6 +23,7 @@ void UOrganizationViewModel::Initialize(const FOrganizationId InOrganizationId)
 	Unbind();
 
 	Organizations = NewOrganizations;
+	Characters = NewCharacters;
 
 	OrganizationId = InOrganizationId;
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(OrganizationId);
@@ -54,6 +59,12 @@ void UOrganizationViewModel::Refresh_Implementation()
 	const FOrganizationInfo Info = Organizations->GetOrganizationInfo(OrganizationId);
 	UE_MVVM_SET_PROPERTY_VALUE(OrganizationName, Info.OrganizationName);
 	UE_MVVM_SET_PROPERTY_VALUE(Logo, Info.Logo);
+
+	const FCharacterId NewOwnerId = Organizations->GetOwnerCharacter(OrganizationId);
+	UE_MVVM_SET_PROPERTY_VALUE(OwnerId, NewOwnerId);
+	UE_MVVM_SET_PROPERTY_VALUE(OwnerIdValue, NewOwnerId.Value);
+	UE_MVVM_SET_PROPERTY_VALUE(OwnerName, Characters && NewOwnerId.IsValid()
+		? Characters->GetDisplayInfo(NewOwnerId).CharacterName : FText::GetEmpty());
 
 	const FOrganizationAlignment Alignment = Organizations->GetAlignment(OrganizationId);
 	UE_MVVM_SET_PROPERTY_VALUE(bAlignmentPublished, Alignment.bPublished);

@@ -6,6 +6,7 @@
 #include "MVVMViewModelBase.h"
 #include "OrganizationViewModel.generated.h"
 
+class UCharacters;
 class UOrganizations;
 
 /**
@@ -54,6 +55,20 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Display", meta=(AllowPrivateAccess))
 	FSlateBrush Logo;
 
+	//~ Owner ------------------------------------------------------------------------------------
+	// The founder, read through UCharacters — the same cross-domain hop UCharacterViewModel makes
+	// for the nation of the province it stands in, and the reason these view models live here.
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Owner", meta=(AllowPrivateAccess))
+	FCharacterId OwnerId;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Owner", meta=(AllowPrivateAccess))
+	int32 OwnerIdValue = INDEX_NONE;
+
+	/** Empty for an organization nobody founded. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Owner", meta=(AllowPrivateAccess))
+	FText OwnerName;
+
 	//~ FOrganizationAlignment -------------------------------------------------------------------
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsAlignmentPublished, Category="Organization Viewmodel|Alignment", meta=(AllowPrivateAccess))
@@ -84,6 +99,10 @@ public:
 	FText GetOrganizationName() const { return OrganizationName; }
 	FSlateBrush GetLogo() const { return Logo; }
 
+	FCharacterId GetOwnerId() const { return OwnerId; }
+	int32 GetOwnerIdValue() const { return OwnerIdValue; }
+	FText GetOwnerName() const { return OwnerName; }
+
 	bool IsAlignmentPublished() const { return bAlignmentPublished; }
 	const TArray<float>& GetAlignmentBranches() const { return AlignmentBranches; }
 	int32 GetAlignmentBranchCount() const { return AlignmentBranchCount; }
@@ -111,4 +130,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UOrganizations> Organizations;
+
+	UPROPERTY()
+	TObjectPtr<UCharacters> Characters;
 };

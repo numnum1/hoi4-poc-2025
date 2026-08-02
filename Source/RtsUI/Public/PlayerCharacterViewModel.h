@@ -10,6 +10,7 @@
 
 class ARtsPlayer;
 class UActionViewModel;
+class USelectablePositionViewModel;
 
 /**
  * The played character, plus the widget state around it: which of the character's positions is
@@ -20,6 +21,10 @@ class UActionViewModel;
  * to invent itself. That is the line between RtsViewModels and RtsUI: a value derived from the
  * simulation belongs on the base class in RtsViewModels, a value the UI made up (a selection, a
  * confirmation dialog's open/closed state, ...) belongs here.
+ *
+ * The picker the player selects with is SelectablePositions — one lean row per position, clicked
+ * back up through HandlePositionClicked. Clicking the selected row clears the selection: the player
+ * drops back to acting as themselves and no row is selected any more.
  *
  * The action list lives here rather than in a view model of its own precisely because it is a
  * function of that selection: the scope an action is offered for *is* SelectedPositionIndex, so a
@@ -78,6 +83,12 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsActingAsSelf, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
 	bool bIsActingAsSelf = true;
 
+	/** The picker row that is currently selected, or null while acting as self — the same state
+	 * SelectedPositionIndex holds, as the object a widget can bind a highlight against. Written in
+	 * exactly one place (ApplySelection) so the two can never disagree. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
+	TObjectPtr<USelectablePositionViewModel> SelectedPosition;
+
 	/** PM_None is a real state, so no separate "any modal open" flag exists to fall out of sync. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	EPlayerModal ActiveModal = EPlayerModal::PM_None;
@@ -99,6 +110,13 @@ protected:
 
 	//~ Derived from the selection above -----------------------------------------------------------
 
+	/** One picker row per position the character holds, in the same order as GetPositions(). */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
+	TArray<TObjectPtr<USelectablePositionViewModel>> SelectablePositions;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
+	int32 SelectablePositionCount = 0;
+
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
 	TArray<TObjectPtr<UActionViewModel>> Actions;
 
@@ -108,6 +126,9 @@ protected:
 public:
 	int32 GetSelectedPositionIndex() const { return SelectedPositionIndex; }
 	bool IsActingAsSelf() const { return bIsActingAsSelf; }
+	USelectablePositionViewModel* GetSelectedPosition() const { return SelectedPosition; }
+	const TArray<TObjectPtr<USelectablePositionViewModel>>& GetSelectablePositions() const { return SelectablePositions; }
+	int32 GetSelectablePositionCount() const { return SelectablePositionCount; }
 	EPlayerModal GetActiveModal() const { return ActiveModal; }
 	bool IsFoundOrganizationModalOpen() const { return bIsFoundOrganizationModalOpen; }
 	FText GetPendingOrganizationName() const { return PendingOrganizationName; }
@@ -132,6 +153,12 @@ private:
 	 * while ActiveModal is PM_None, so callers check that first. */
 	EAction GetModalAction() const;
 
+	/** The one writer of SelectedPositionIndex/bIsActingAsSelf/SelectedPosition. INDEX_NONE means
+	 * acting as self. Refreshes the action list, which is a function of exactly this. */
+	void ApplySelection(int32 InPositionIndex);
+
+	void RefreshSelectablePositions();
+
 	void RefreshActions();
 
 	/** Re-runs the input gate and pushes the result into ModalErrorText/bCanConfirmModal. */
@@ -139,6 +166,10 @@ private:
 
 	UFUNCTION()
 	void HandleActionClicked(UActionViewModel* ClickedAction);
+
+	/** Clicking the row that is already selected clears the selection instead of re-picking it. */
+	UFUNCTION()
+	void HandlePositionClicked(USelectablePositionViewModel* ClickedPosition);
 
 	UFUNCTION()
 	void HandleControlledCharacterChanged();
@@ -150,4 +181,9 @@ private:
 	 * row objects — the widget's list does not churn and the OnClicked binding survives. */
 	UPROPERTY()
 	TMap<EAction, TObjectPtr<UActionViewModel>> ActionEntryCache;
+
+	/** Same idea, one row per position index — a refresh that neither adds nor removes a position
+	 * keeps the same row objects, so the picker does not churn and the bindings survive. */
+	UPROPERTY()
+	TArray<TObjectPtr<USelectablePositionViewModel>> SelectablePositionCache;
 };

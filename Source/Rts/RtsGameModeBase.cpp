@@ -83,7 +83,8 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 	UOrganizations* OrganizationsContainer = RtsGameState->GetOrganizationsContainer();
 	for (const FOrganizationInfo& OrganizationInfo : ScenarioLoader::ExtractOrganizations(InScenario->GetOrganizations()))
 	{
-		OrganizationsContainer->Add(OrganizationInfo);
+		// Nobody founded these — they exist from the start, so they start out ownerless.
+		OrganizationsContainer->Add(OrganizationInfo, FCharacterId());
 	}
 }
 

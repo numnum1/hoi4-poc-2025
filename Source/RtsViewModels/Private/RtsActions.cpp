@@ -148,7 +148,10 @@ void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext&
 		FOrganizationInfo Info;
 		Info.OrganizationName = InInput.OrganizationName;
 
-		const FOrganizationId NewOrganizationId = InContext.Organizations->Add(Info);
+		// Founding is what makes a character an owner: the organization records the founder, and the
+		// founder gets the position that lets them act for it. Two facts, because they answer two
+		// different questions — see FOrganizationOwnerFragment.
+		const FOrganizationId NewOrganizationId = InContext.Organizations->Add(Info, InContext.ActorId);
 
 		// An unauthored role library is legal — the founder still gets their position, just without
 		// a role to hold. See URoles::GetLeadershipRole.

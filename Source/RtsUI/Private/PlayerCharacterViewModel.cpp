@@ -5,6 +5,7 @@
 #include "PositionViewModel.h"
 #include "RtsActions.h"
 #include "RtsPlayer.h"
+#include "SelectablePositionViewModel.h"
 
 void UPlayerCharacterViewModel::InitializeForPlayer()
 {
@@ -40,30 +41,28 @@ void UPlayerCharacterViewModel::Refresh_Implementation()
 {
 	Super::Refresh_Implementation();
 
-	if (Characters == nullptr)
+	// Without a facade the inherited refresh bailed out and left its last values behind, so nothing
+	// below may be trusted — the selection goes back to self and the modal closes, because a modal
+	// belongs to the character that opened it rather than staying open over someone else.
+	const bool bHasCharacters = Characters != nullptr;
+	if (!bHasCharacters)
 	{
-		UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, INDEX_NONE);
-		UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, true);
-		// A modal belongs to the character that opened it; switching away drops it rather than
-		// leaving a dialog open over someone else.
 		CloseModal();
 	}
-	// A position the character no longer holds (or never held, on the first refresh) falls back to
-	// acting as self rather than pointing at a stale index.
-	else if (SelectedPositionIndex != INDEX_NONE && !GetPositions().IsValidIndex(SelectedPositionIndex))
-	{
-		UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, INDEX_NONE);
-		UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, true);
-	}
 
-	RefreshActions();
+	// The picker is rebuilt first so the selection below can point at a current row.
+	RefreshSelectablePositions();
+
+	// A position the character no longer holds (or never held, on the first refresh) falls back to
+	// acting as self rather than pointing at a stale index. Reapplying an unchanged selection also
+	// re-gates the action list against the values that just changed.
+	const bool bKeepSelection = bHasCharacters && GetPositions().IsValidIndex(SelectedPositionIndex);
+	ApplySelection(bKeepSelection ? SelectedPositionIndex : INDEX_NONE);
 }
 
 void UPlayerCharacterViewModel::SelectSelf()
 {
-	UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, true);
-	UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, INDEX_NONE);
-	RefreshActions();
+	ApplySelection(INDEX_NONE);
 }
 
 void UPlayerCharacterViewModel::SelectPosition(const int32 InPositionIndex)
@@ -73,8 +72,18 @@ void UPlayerCharacterViewModel::SelectPosition(const int32 InPositionIndex)
 		return;
 	}
 
-	UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, false);
+	ApplySelection(InPositionIndex);
+}
+
+void UPlayerCharacterViewModel::ApplySelection(const int32 InPositionIndex)
+{
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedPositionIndex, InPositionIndex);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsActingAsSelf, InPositionIndex == INDEX_NONE);
+
+	USelectablePositionViewModel* NewSelectedPosition =
+		SelectablePositions.IsValidIndex(InPositionIndex) ? SelectablePositions[InPositionIndex].Get() : nullptr;
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedPosition, NewSelectedPosition);
+
 	RefreshActions();
 }
 
@@ -186,6 +195,53 @@ FRtsActionContext UPlayerCharacterViewModel::MakeContext() const
 	return Context;
 }
 
+void UPlayerCharacterViewModel::RefreshSelectablePositions()
+{
+	// The rows are built from the UPositionViewModels the base class already refreshed, not from the
+	// facade again — one read of the simulation, two shapes of it.
+	const TArray<TObjectPtr<UPositionViewModel>>& CharacterPositions = GetPositions();
+
+	TArray<TObjectPtr<USelectablePositionViewModel>> NewSelectablePositions;
+	NewSelectablePositions.Reserve(CharacterPositions.Num());
+
+	for (int32 Index = 0; Index < CharacterPositions.Num(); ++Index)
+	{
+		if (!SelectablePositionCache.IsValidIndex(Index))
+		{
+			USelectablePositionViewModel* NewEntry = NewObject<USelectablePositionViewModel>(this);
+			NewEntry->OnClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandlePositionClicked);
+			SelectablePositionCache.Add(NewEntry);
+		}
+
+		const UPositionViewModel* Position = CharacterPositions[Index];
+		USelectablePositionViewModel* Entry = SelectablePositionCache[Index];
+		Entry->SetSource(Index, Position->GetOrganizationName(), Position->GetOrganizationLogo());
+		NewSelectablePositions.Add(Entry);
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(SelectablePositions, NewSelectablePositions);
+	UE_MVVM_SET_PROPERTY_VALUE(SelectablePositionCount, NewSelectablePositions.Num());
+}
+
+void UPlayerCharacterViewModel::HandlePositionClicked(USelectablePositionViewModel* ClickedPosition)
+{
+	if (ClickedPosition == nullptr)
+	{
+		return;
+	}
+
+	// Clicking the selected row is how the player gets back out of a position: the selection clears,
+	// every row goes unselected, and the character acts as themselves again.
+	const int32 ClickedIndex = ClickedPosition->GetPositionIndex();
+	if (ClickedIndex == SelectedPositionIndex)
+	{
+		SelectSelf();
+		return;
+	}
+
+	SelectPosition(ClickedIndex);
+}
+
 void UPlayerCharacterViewModel::RefreshActions()
 {
 	const FRtsActionContext Context = MakeContext();
@@ -197,10 +253,10 @@ void UPlayerCharacterViewModel::RefreshActions()
 	}
 	else
 	{
-		FPosition SelectedPosition;
-		SelectedPosition.OrganizationId = Context.OrganizationId;
-		SelectedPosition.RoleId = Context.RoleId;
-		OfferedActions = URtsActions::GetActionsForPosition(SelectedPosition);
+		FPosition ActingPosition;
+		ActingPosition.OrganizationId = Context.OrganizationId;
+		ActingPosition.RoleId = Context.RoleId;
+		OfferedActions = URtsActions::GetActionsForPosition(ActingPosition);
 	}
 
 	TArray<TObjectPtr<UActionViewModel>> NewActions;

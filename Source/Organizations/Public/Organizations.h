@@ -59,6 +59,14 @@ public:
     FOrganizationInfo GetOrganizationInfo(FOrganizationId InOrganizationId) const;
 
     // --- forwarded to the entity subsystem ---
+    /** The character the organization belongs to — its founder. Invalid for a scenario-authored one. */
+    UFUNCTION(BlueprintPure)
+    FCharacterId GetOwnerCharacter(FOrganizationId InOrganizationId) const;
+
+    /** True if InCharacterId is the one character this organization belongs to. */
+    UFUNCTION(BlueprintPure)
+    bool IsOwnedBy(FOrganizationId InOrganizationId, FCharacterId InCharacterId) const;
+
     UFUNCTION(BlueprintPure)
     FOrganizationAlignment GetAlignment(FOrganizationId InOrganizationId) const;
 
@@ -68,9 +76,10 @@ public:
     UFUNCTION(BlueprintPure)
     TArray<FOrganizationId> CollectOrganizationsSettledIn(FNationId InNationId) const;
 
-    /** Founds an organization and returns its id. */
+    /** Founds an organization owned by InFounderId and returns its id. Pass an invalid founder for
+     * an organization nobody founded — scenario-authored ones are loaded that way. */
     UFUNCTION(BlueprintCallable)
-    FOrganizationId Add(const FOrganizationInfo& NewOrg);
+    FOrganizationId Add(const FOrganizationInfo& NewOrg, FCharacterId InFounderId);
 
     UFUNCTION(BlueprintCallable)
     void PublishAlignment(FOrganizationId InOrganizationId, const TArray<float>& InAlignment);

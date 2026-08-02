@@ -41,7 +41,7 @@ FMassEntityManager& UOrganizationEntitySubsystem::GetEntityManager() const
 	return EntitySubsystem->GetMutableEntityManager();
 }
 
-FOrganizationId UOrganizationEntitySubsystem::CreateOrganization()
+FOrganizationId UOrganizationEntitySubsystem::CreateOrganization(const FCharacterId InOwnerId)
 {
 	const FOrganizationId NewId(EntityByIndex.Num());
 
@@ -49,9 +49,13 @@ FOrganizationId UOrganizationEntitySubsystem::CreateOrganization()
 	FOrganizationIndexFragment IndexFragment;
 	IndexFragment.Id = NewId;
 
+	FOrganizationOwnerFragment OwnerFragment;
+	OwnerFragment.OwnerId = InOwnerId;
+
 	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
 	Builder.Add<FOrganizationTag>()
 	       .Add<FOrganizationIndexFragment>(IndexFragment)
+	       .Add<FOrganizationOwnerFragment>(OwnerFragment)
 	       .Add<FOrganizationAlignmentFragment>()
 	       .Add<FOrganizationSettledNationsFragment>();
 
@@ -95,6 +99,18 @@ namespace
 	{
 		UE_LOG(LogRtsOrganizations, Verbose, TEXT("%s: organization %d is not alive"), InAccessor, InOrganizationId.Value);
 	}
+}
+
+FCharacterId UOrganizationEntitySubsystem::GetOwnerCharacter(const FOrganizationId InOrganizationId) const
+{
+	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
+	if (!Entity.IsValid())
+	{
+		LogInvalidRead(InOrganizationId, TEXT("GetOwnerCharacter"));
+		return FCharacterId();
+	}
+	return FMassEntityView(GetEntityManager(), Entity)
+		.GetFragmentData<FOrganizationOwnerFragment>().OwnerId;
 }
 
 bool UOrganizationEntitySubsystem::IsAlignmentPublished(const FOrganizationId InOrganizationId) const
@@ -212,11 +228,12 @@ void UOrganizationEntitySubsystem::LogOrganization(const FOrganizationId InOrgan
 	}
 
 	const FMassEntityView View(GetEntityManager(), Entity);
+	const FOrganizationOwnerFragment& Owner = View.GetFragmentData<FOrganizationOwnerFragment>();
 	const FOrganizationAlignmentFragment& Alignment = View.GetFragmentData<FOrganizationAlignmentFragment>();
 	const FOrganizationSettledNationsFragment& Settled = View.GetFragmentData<FOrganizationSettledNationsFragment>();
 
-	UE_LOG(LogRtsOrganizations, Log, TEXT("[%d] Published=%d Branches=%d SettledNations=%d"),
-		InOrganizationId.Value, IsAlignmentPublished(InOrganizationId) ? 1 : 0,
+	UE_LOG(LogRtsOrganizations, Log, TEXT("[%d] Owner=%d Published=%d Branches=%d SettledNations=%d"),
+		InOrganizationId.Value, Owner.OwnerId.Value, IsAlignmentPublished(InOrganizationId) ? 1 : 0,
 		Alignment.Branches.Num(), Settled.Values.Num());
 }
 

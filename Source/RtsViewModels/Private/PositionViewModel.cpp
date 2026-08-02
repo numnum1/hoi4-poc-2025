@@ -5,7 +5,8 @@
 #include "RoleInfo.h"
 #include "Roles.h"
 
-void UPositionViewModel::SetSource(const FPosition& InPosition, UOrganizations* InOrganizations, URoles* InRoles)
+void UPositionViewModel::SetSource(const FPosition& InPosition, const FCharacterId InHolderId,
+                                   UOrganizations* InOrganizations, URoles* InRoles)
 {
 	const bool bHasOrganization = InOrganizations != nullptr && InPosition.OrganizationId.IsValid();
 
@@ -16,4 +17,5 @@ void UPositionViewModel::SetSource(const FPosition& InPosition, UOrganizations* 
 	UE_MVVM_SET_PROPERTY_VALUE(RoleId, InPosition.RoleId);
 	UE_MVVM_SET_PROPERTY_VALUE(RoleIdValue, InPosition.RoleId.Value);
 	UE_MVVM_SET_PROPERTY_VALUE(RoleName, InRoles ? InRoles->GetRoleName(InPosition.RoleId) : FText::GetEmpty());
+	UE_MVVM_SET_PROPERTY_VALUE(bIsOwner, bHasOrganization && InOrganizations->IsOwnedBy(InPosition.OrganizationId, InHolderId));
 }

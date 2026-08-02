@@ -113,7 +113,8 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Timezone Viewmodel|Local Time", meta=(AllowPrivateAccess))
 	int32 LocalYear = 0;
 
-	/** "YYYY-MM-DD" in the character's timezone. */
+	/** "YYYY-MM-DD HH:MM" in the character's timezone — the full stamp, for a single-widget display.
+	 * LocalTimeText is the same clock without the date. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Timezone Viewmodel|Local Time", meta=(AllowPrivateAccess))
 	FText LocalDateText;
 

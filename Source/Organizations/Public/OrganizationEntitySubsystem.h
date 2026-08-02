@@ -29,8 +29,9 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	/** Spawns one organization entity and returns its id. Ids are never reused. */
-	FOrganizationId CreateOrganization();
+	/** Spawns one organization entity owned by InOwnerId and returns its id. Ids are never reused.
+	 * An invalid owner is legal — a scenario-authored organization has no founder. */
+	FOrganizationId CreateOrganization(FCharacterId InOwnerId);
 
 	/** Destroys the entity. The id's slot stays reserved and reports not-alive from then on. */
 	void DestroyOrganization(FOrganizationId InOrganizationId);
@@ -52,6 +53,8 @@ public:
 	const TArray<FOrganizationId>& GetAliveIds() const { return AliveIds; }
 
 	// --- read ---
+	/** The character this organization belongs to, or an invalid id if it has no owner. */
+	FCharacterId GetOwnerCharacter(FOrganizationId InOrganizationId) const;
 	bool IsAlignmentPublished(FOrganizationId InOrganizationId) const;
 	FOrganizationAlignment GetAlignment(FOrganizationId InOrganizationId) const;
 	TArray<FNationId> GetSettledNations(FOrganizationId InOrganizationId) const;

@@ -178,7 +178,7 @@ void UCharacterViewModel::RefreshPositions()
 		}
 
 		UPositionViewModel* Entry = PositionEntryCache[Index];
-		Entry->SetSource(CharacterPositions[Index], Organizations, Roles);
+		Entry->SetSource(CharacterPositions[Index], CharacterId, Organizations, Roles);
 		NewPositions.Add(Entry);
 	}
 
