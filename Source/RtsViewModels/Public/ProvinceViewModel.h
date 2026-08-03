@@ -73,6 +73,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel", meta=(AllowPrivateAccess))
 	FText OwningNationName;
 
+	/** Read through UNations directly — Provinces itself is not allowed to know that module. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel", meta=(AllowPrivateAccess))
+	FSlateBrush OwningNationFlag;
+
 	/** Hours offset from game time, read from FProvinceTimeFragment. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel", meta=(AllowPrivateAccess))
 	int32 TimezoneOffset = 0;
@@ -91,6 +95,7 @@ public:
 	FNationId GetOwningNationId() const { return OwningNationId; }
 	int32 GetOwningNationIdValue() const { return OwningNationIdValue; }
 	FText GetOwningNationName() const { return OwningNationName; }
+	FSlateBrush GetOwningNationFlag() const { return OwningNationFlag; }
 	int32 GetTimezoneOffset() const { return TimezoneOffset; }
 
 protected:

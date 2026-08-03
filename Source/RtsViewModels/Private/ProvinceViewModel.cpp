@@ -68,6 +68,7 @@ void UProvinceViewModel::Refresh_Implementation()
 	UE_MVVM_SET_PROPERTY_VALUE(OwningNationId, NewOwningNationId);
 	UE_MVVM_SET_PROPERTY_VALUE(OwningNationIdValue, NewOwningNationId.Value);
 	UE_MVVM_SET_PROPERTY_VALUE(OwningNationName, bHasOwner ? Nations->GetNationInfo(NewOwningNationId).NationName : FText::GetEmpty());
+	UE_MVVM_SET_PROPERTY_VALUE(OwningNationFlag, bHasOwner ? Nations->GetNationInfo(NewOwningNationId).Flag : FSlateNoResource());
 
 	UE_MVVM_SET_PROPERTY_VALUE(TimezoneOffset, Provinces->GetTimezoneOffset(ProvinceId));
 }
