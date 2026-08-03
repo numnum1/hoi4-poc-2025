@@ -32,6 +32,9 @@ public class RtsUI : ModuleRules
                 "RtsPlayer",
                 // FCharacterId/FRtsActionContext plumbing needs the facade types directly
                 "Characters",
+                // SelectProvince plays the province's InspectionSound; resolved via UProvinces
+                // in the .cpp only, not exposed on the header
+                "Provinces",
                 // UPlayerCharacterViewModel derives from UMVVMViewModelBase (via UCharacterViewModel);
                 // the base class's generated FieldNotify machinery needs this linked directly here too.
                 "ModelViewViewModel"

@@ -15,5 +15,6 @@ UENUM(BlueprintType)
 enum class EPlayerModal : uint8
 {
 	PM_None              UMETA(DisplayName = "None"),
-	PM_FoundOrganization UMETA(DisplayName = "Found Organization")
+	PM_FoundOrganization UMETA(DisplayName = "Found Organization"),
+	PM_ViewProvince      UMETA(DisplayName = "View Province")
 };

@@ -2,7 +2,9 @@
 
 #include "ActionViewModel.h"
 #include "Characters.h"
+#include "Kismet/GameplayStatics.h"
 #include "PositionViewModel.h"
+#include "Provinces.h"
 #include "ResourceViewModel.h"
 #include "RtsActions.h"
 #include "RtsFacadeSubsystem.h"
@@ -95,6 +97,7 @@ void UPlayerCharacterViewModel::OpenModal(const EPlayerModal InModal)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(ActiveModal, InModal);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsFoundOrganizationModalOpen, InModal == EPlayerModal::PM_FoundOrganization);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsViewProvinceModalOpen, InModal == EPlayerModal::PM_ViewProvince);
 
 	// Whatever the last modal collected is not this one's starting point.
 	UE_MVVM_SET_PROPERTY_VALUE(PendingOrganizationName, FText::GetEmpty());
@@ -112,9 +115,27 @@ void UPlayerCharacterViewModel::SetPendingOrganizationName(const FText& InName)
 	RefreshModalValidation();
 }
 
+void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceId, InProvinceId);
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceIdValue, InProvinceId.Value);
+
+	if (InProvinceId.IsValid())
+	{
+		OpenModal(EPlayerModal::PM_ViewProvince);
+
+		UProvinces* Provinces = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
+		USoundBase* InspectionSound = Provinces ? Provinces->GetDisplayInfo(InProvinceId).InspectionSound : nullptr;
+		if (InspectionSound)
+		{
+			UGameplayStatics::PlaySound2D(this, InspectionSound);
+		}
+	}
+}
+
 void UPlayerCharacterViewModel::ConfirmModal()
 {
-	if (ActiveModal == EPlayerModal::PM_None)
+	if (!IsActionModal(ActiveModal))
 	{
 		return;
 	}
@@ -147,9 +168,22 @@ EAction UPlayerCharacterViewModel::GetModalAction() const
 	return EAction::EA_FoundOrganization;
 }
 
+bool UPlayerCharacterViewModel::IsActionModal(const EPlayerModal InModal) const
+{
+	switch (InModal)
+	{
+	case EPlayerModal::PM_FoundOrganization:
+		return true;
+	default:
+		return false;
+	}
+}
+
 void UPlayerCharacterViewModel::RefreshModalValidation()
 {
-	if (ActiveModal == EPlayerModal::PM_None)
+	// PM_ViewProvince only displays a UProvinceViewModel and has no EAction to gate — there is
+	// nothing here for it to confirm.
+	if (!IsActionModal(ActiveModal))
 	{
 		UE_MVVM_SET_PROPERTY_VALUE(ModalErrorText, FText::GetEmpty());
 		UE_MVVM_SET_PROPERTY_VALUE(bCanConfirmModal, false);

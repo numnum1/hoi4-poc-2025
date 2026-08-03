@@ -72,6 +72,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void SetPendingOrganizationName(const FText& InName);
 
+	/** Set from the world map click. A valid id opens PM_ViewProvince; an invalid one (SelectedProvinceId
+	 * reset, e.g. because the province was destroyed) only clears the id and leaves whatever modal is
+	 * open alone, the same way an invalid position index falls back rather than tearing down state. */
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
+	void SelectProvince(FProvinceId InProvinceId);
+
 	/** Runs the open modal's action after re-checking both gates, then closes it. Does nothing if
 	 * either gate refuses — the widget's last pushed bCanConfirmModal is never trusted. */
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
@@ -99,6 +105,20 @@ protected:
 	/** So a widget can drive its visibility without an enum comparison node. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsFoundOrganizationModalOpen, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	bool bIsFoundOrganizationModalOpen = false;
+
+	/** Same idea as bIsFoundOrganizationModalOpen, for the view-province modal. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsViewProvinceModalOpen, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	bool bIsViewProvinceModalOpen = false;
+
+	/** The province PM_ViewProvince shows. Bound as a CreateInstance UProvinceViewModel's
+	 * Initialize(FProvinceId) destination in Blueprint — this class holds only the id, never a
+	 * province view model of its own, the same reason CharacterId stays typed here. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	FProvinceId SelectedProvinceId;
+
+	/** SelectedProvinceId as a plain int32, for widgets that cannot bind the id struct. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	int32 SelectedProvinceIdValue = INDEX_NONE;
 
 	/** What the player has typed into the found-organization modal so far. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
@@ -143,6 +163,9 @@ public:
 	int32 GetSelectablePositionCount() const { return SelectablePositionCount; }
 	EPlayerModal GetActiveModal() const { return ActiveModal; }
 	bool IsFoundOrganizationModalOpen() const { return bIsFoundOrganizationModalOpen; }
+	bool IsViewProvinceModalOpen() const { return bIsViewProvinceModalOpen; }
+	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
+	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
 	FText GetPendingOrganizationName() const { return PendingOrganizationName; }
 	FText GetModalErrorText() const { return ModalErrorText; }
 	bool CanConfirmModal() const { return bCanConfirmModal; }
@@ -170,6 +193,10 @@ private:
 	/** Which action the open modal is collecting input for. EA_FoundOrganization is meaningless
 	 * while ActiveModal is PM_None, so callers check that first. */
 	EAction GetModalAction() const;
+
+	/** False for modals that only display something (PM_ViewProvince) rather than collect input for
+	 * an EAction — those have no GetModalAction() and must not run the confirm gate. */
+	bool IsActionModal(EPlayerModal InModal) const;
 
 	/** The one writer of SelectedPositionIndex/bIsActingAsSelf/SelectedPosition. INDEX_NONE means
 	 * acting as self. Refreshes the action list, which is a function of exactly this. */
