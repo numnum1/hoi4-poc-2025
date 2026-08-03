@@ -124,8 +124,8 @@ void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
 	{
 		OpenModal(EPlayerModal::PM_ViewProvince);
 
-		UProvinces* Provinces = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
-		USoundBase* InspectionSound = Provinces ? Provinces->GetDisplayInfo(InProvinceId).InspectionSound : nullptr;
+		UProvinces* ProvincesContainer = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
+		USoundBase* InspectionSound = ProvincesContainer ? ProvincesContainer->GetDisplayInfo(InProvinceId).InspectionSound : nullptr;
 		if (InspectionSound)
 		{
 			UGameplayStatics::PlaySound2D(this, InspectionSound);

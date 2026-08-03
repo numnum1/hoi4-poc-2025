@@ -27,10 +27,11 @@ class RTSVIEWMODELS_API UProvinceViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
-protected:
+public:
 	UFUNCTION(BlueprintCallable, Category="Province Viewmodel")
 	void Initialize(FProvinceId InProvinceId);
 
+protected:
 	//~ Identity ---------------------------------------------------------------------------------
 
 	/** False once the province's entity has been destroyed. Display keeps its last known values. */
