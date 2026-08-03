@@ -120,16 +120,24 @@ void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceId, InProvinceId);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceIdValue, InProvinceId.Value);
 
-	if (InProvinceId.IsValid())
+	if (!InProvinceId.IsValid())
 	{
-		OpenModal(EPlayerModal::PM_ViewProvince);
-
-		UProvinces* ProvincesContainer = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
-		USoundBase* InspectionSound = ProvincesContainer ? ProvincesContainer->GetDisplayInfo(InProvinceId).InspectionSound : nullptr;
-		if (InspectionSound)
+		// The modal has nothing left to show, so it closes with the selection that fed it. Only that
+		// one: another modal is not about the province and has no business being torn down here.
+		if (ActiveModal == EPlayerModal::PM_ViewProvince)
 		{
-			UGameplayStatics::PlaySound2D(this, InspectionSound);
+			CloseModal();
 		}
+		return;
+	}
+
+	OpenModal(EPlayerModal::PM_ViewProvince);
+
+	UProvinces* ProvincesContainer = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
+	USoundBase* InspectionSound = ProvincesContainer ? ProvincesContainer->GetDisplayInfo(InProvinceId).InspectionSound : nullptr;
+	if (InspectionSound)
+	{
+		UGameplayStatics::PlaySound2D(this, InspectionSound);
 	}
 }
 

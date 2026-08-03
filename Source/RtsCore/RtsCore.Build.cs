@@ -10,12 +10,8 @@ public class RtsCore : ModuleRules
             new string[]
             {
                 "Core",
-            }
-        );
-
-        PrivateDependencyModuleNames.AddRange(
-            new string[]
-            {
+                // Public: RtsIdLibrary.h is a UBlueprintFunctionLibrary, so its header pulls in
+                // UObject/Kismet types that every including module needs too.
                 "CoreUObject",
                 "Engine",
             }

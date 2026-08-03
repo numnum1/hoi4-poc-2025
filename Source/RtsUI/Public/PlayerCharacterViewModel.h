@@ -72,9 +72,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void SetPendingOrganizationName(const FText& InName);
 
-	/** Set from the world map click. A valid id opens PM_ViewProvince; an invalid one (SelectedProvinceId
-	 * reset, e.g. because the province was destroyed) only clears the id and leaves whatever modal is
-	 * open alone, the same way an invalid position index falls back rather than tearing down state. */
+	/** Set from the world map click. A valid id opens PM_ViewProvince; an invalid one clears the
+	 * selection and closes PM_ViewProvince again, because that modal shows nothing but this province.
+	 * Any other modal is left alone — it is not about the province. */
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void SelectProvince(FProvinceId InProvinceId);
 
