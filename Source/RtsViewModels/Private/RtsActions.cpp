@@ -1,5 +1,8 @@
 #include "RtsActions.h"
 
+#include "Banking.h"
+#include "BuildingKinds.h"
+#include "Buildings.h"
 #include "Characters.h"
 #include "OrganizationInfo.h"
 #include "Organizations.h"
@@ -77,6 +80,61 @@ namespace
 		}
 		return false;
 	}
+
+	/** Everything the character has, across every account they hold. The same sum the money row in
+	 * the resource panel shows (see URtsResources, RD_Total) — a character's cash is one pot. */
+	int32 GetCharacterFunds(const UBanking* InBanking, const FCharacterId InCharacterId)
+	{
+		if (InBanking == nullptr)
+		{
+			return 0;
+		}
+
+		int32 Total = 0;
+		for (const FBankAccountId AccountId : InBanking->GetAccountsForCharacter(InCharacterId))
+		{
+			Total += InBanking->GetBalance(AccountId);
+		}
+		return Total;
+	}
+
+	/**
+	 * Takes InAmount off the character, spreading it over their accounts. Returns false and moves
+	 * no money at all if they cannot cover it — the total is checked before the first withdrawal,
+	 * so this can never leave a half-paid state behind for the caller to unwind.
+	 *
+	 * No account picker anywhere: the UI shows one number for a character's money, so paying reads
+	 * from the same single pot rather than asking which envelope it comes out of.
+	 */
+	bool PayFromCharacter(UBanking* InBanking, const FCharacterId InCharacterId, const int32 InAmount)
+	{
+		if (InAmount <= 0)
+		{
+			return true;
+		}
+
+		if (InBanking == nullptr || GetCharacterFunds(InBanking, InCharacterId) < InAmount)
+		{
+			return false;
+		}
+
+		int32 Remaining = InAmount;
+		for (const FBankAccountId AccountId : InBanking->GetAccountsForCharacter(InCharacterId))
+		{
+			if (Remaining <= 0)
+			{
+				break;
+			}
+
+			const int32 FromThisAccount = FMath::Min(InBanking->GetBalance(AccountId), Remaining);
+			if (FromThisAccount > 0 && InBanking->Withdraw(AccountId, FromThisAccount))
+			{
+				Remaining -= FromThisAccount;
+			}
+		}
+
+		return Remaining == 0;
+	}
 }
 
 FText URtsActions::GetBlockedReason(const EAction InAction, const FRtsActionContext& InContext)
@@ -124,11 +182,33 @@ FText URtsActions::GetInvalidInputReason(const EAction InAction, const FRtsActio
 	switch (InAction)
 	{
 	case EAction::EA_FoundOrganization:
+	{
+		// Checked in the order the modal fills them in, so the message always points at the next
+		// thing left to do rather than at whatever happens to be last in the struct.
 		if (InInput.OrganizationName.IsEmptyOrWhitespace())
 		{
 			return LOCTEXT("EmptyOrganizationName", "Enter a name for the organization.");
 		}
+
+		if (!UBuildingKinds::IsHeadquarters(InInput.HeadquartersKind))
+		{
+			return LOCTEXT("NotAHeadquarters", "Pick a headquarters to found the organization in.");
+		}
+
+		if (!InInput.HeadquartersProvinceId.IsValid())
+		{
+			return LOCTEXT("NoProvince", "Click a province on the map to place the headquarters.");
+		}
+
+		const int32 Cost = UBuildingKinds::GetBuildCost(InInput.HeadquartersKind);
+		if (GetCharacterFunds(InContext.Banking, InContext.ActorId) < Cost)
+		{
+			return FText::Format(LOCTEXT("CannotAffordHeadquarters", "You cannot afford this: it costs {0}."),
+				FText::AsNumber(Cost));
+		}
+
 		return FText::GetEmpty();
+	}
 	}
 	return FText::GetEmpty();
 }
@@ -140,7 +220,14 @@ void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext&
 	{
 	case EAction::EA_FoundOrganization:
 	{
-		if (InContext.Organizations == nullptr || InContext.Characters == nullptr)
+		if (InContext.Organizations == nullptr || InContext.Characters == nullptr || InContext.Buildings == nullptr)
+		{
+			return;
+		}
+
+		// Paid first, and all of it or none: nothing below is created unless the founder could
+		// actually cover the headquarters.
+		if (!PayFromCharacter(InContext.Banking, InContext.ActorId, UBuildingKinds::GetBuildCost(InInput.HeadquartersKind)))
 		{
 			return;
 		}
@@ -152,6 +239,12 @@ void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext&
 		// founder gets the position that lets them act for it. Two facts, because they answer two
 		// different questions — see FOrganizationOwnerFragment.
 		const FOrganizationId NewOrganizationId = InContext.Organizations->Add(Info, InContext.ActorId);
+
+		// The organization has to exist before the building can belong to it, which is why the seat
+		// is set afterwards rather than passed into Add.
+		const FBuildingId HeadquartersId = InContext.Buildings->AddForOrganization(
+			InInput.HeadquartersKind, InInput.HeadquartersProvinceId, NewOrganizationId);
+		InContext.Organizations->SetHeadquarters(NewOrganizationId, HeadquartersId);
 
 		// An unauthored role library is legal — the founder still gets their position, just without
 		// a role to hold. See URoles::GetLeadershipRole.

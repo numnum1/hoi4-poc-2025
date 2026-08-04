@@ -14,7 +14,10 @@ public class RtsUI : ModuleRules
                 // UPlayerCharacterViewModel derives from UCharacterViewModel and reaches its
                 // facades (Characters/Organizations/Roles) through the base class's protected
                 // members — the same reason RtsViewModels needs its facades.
-                "RtsViewModels"
+                "RtsViewModels",
+                // EBuildingKind is a property on UPlayerCharacterViewModel's header: the
+                // headquarters the found-organization modal is collecting.
+                "Buildings"
             }
         );
 
@@ -32,9 +35,12 @@ public class RtsUI : ModuleRules
                 "RtsPlayer",
                 // FCharacterId/FRtsActionContext plumbing needs the facade types directly
                 "Characters",
-                // SelectProvince plays the province's InspectionSound; resolved via UProvinces
-                // in the .cpp only, not exposed on the header
+                // SelectProvince plays the province's InspectionSound and reads the province name
+                // for the modal's site label; resolved via UProvinces in the .cpp only, not
+                // exposed on the header
                 "Provinces",
+                // MakeContext hands UBanking to URtsActions so founding can be paid for
+                "Banking",
                 // UPlayerCharacterViewModel derives from UMVVMViewModelBase (via UCharacterViewModel);
                 // the base class's generated FieldNotify machinery needs this linked directly here too.
                 "ModelViewViewModel"

@@ -1,7 +1,7 @@
 #include "Buildings.h"
 
 #include "BuildingEntitySubsystem.h"
-#include "BuildingType.h"
+#include "BuildingKinds.h"
 #include "Engine/World.h"
 #include "GameFramework/GameStateBase.h"
 
@@ -35,12 +35,6 @@ UBuildingEntitySubsystem* UBuildings::GetEntities() const
 	return World ? World->GetSubsystem<UBuildingEntitySubsystem>() : nullptr;
 }
 
-int32 UBuildings::ResolveTypeIndex(UBuildingType* InBuildingType)
-{
-	const int32 Existing = BuildingTypes.Find(InBuildingType);
-	return Existing != INDEX_NONE ? Existing : BuildingTypes.Add(InBuildingType);
-}
-
 int32 UBuildings::Num() const
 {
 	const UBuildingEntitySubsystem* Entities = GetEntities();
@@ -59,16 +53,10 @@ bool UBuildings::IsAlive(const FBuildingId InBuildingId) const
 	return Entities && Entities->IsAlive(InBuildingId);
 }
 
-UBuildingType* UBuildings::GetBuildingType(const FBuildingId InBuildingId) const
+EBuildingKind UBuildings::GetKind(const FBuildingId InBuildingId) const
 {
 	const UBuildingEntitySubsystem* Entities = GetEntities();
-	if (!Entities)
-	{
-		return nullptr;
-	}
-
-	const int32 TypeIndex = Entities->GetTypeIndex(InBuildingId);
-	return BuildingTypes.IsValidIndex(TypeIndex) ? BuildingTypes[TypeIndex] : nullptr;
+	return Entities ? Entities->GetKind(InBuildingId) : EBuildingKind::BK_None;
 }
 
 FProvinceId UBuildings::GetProvince(const FBuildingId InBuildingId) const
@@ -113,7 +101,7 @@ TArray<FBuildingId> UBuildings::CollectBuildingsOwnedByOrganization(const FOrgan
 	return Entities ? Entities->CollectBuildingsOwnedByOrganization(InOwnerId) : TArray<FBuildingId>();
 }
 
-FBuildingId UBuildings::AddForCharacter(UBuildingType* InBuildingType, const FProvinceId InProvinceId, const FCharacterId InOwnerId)
+FBuildingId UBuildings::AddForCharacter(const EBuildingKind InKind, const FProvinceId InProvinceId, const FCharacterId InOwnerId)
 {
 	UBuildingEntitySubsystem* Entities = GetEntities();
 	if (!Entities)
@@ -121,13 +109,12 @@ FBuildingId UBuildings::AddForCharacter(UBuildingType* InBuildingType, const FPr
 		return FBuildingId();
 	}
 
-	const int32 TypeIndex = ResolveTypeIndex(InBuildingType);
-	const FBuildingId NewId = Entities->CreateBuildingForCharacter(InProvinceId, TypeIndex, InOwnerId);
+	const FBuildingId NewId = Entities->CreateBuildingForCharacter(InProvinceId, InKind, InOwnerId);
 	OnBuildingAdded.Broadcast(NewId);
 	return NewId;
 }
 
-FBuildingId UBuildings::AddForOrganization(UBuildingType* InBuildingType, const FProvinceId InProvinceId, const FOrganizationId InOwnerId)
+FBuildingId UBuildings::AddForOrganization(const EBuildingKind InKind, const FProvinceId InProvinceId, const FOrganizationId InOwnerId)
 {
 	UBuildingEntitySubsystem* Entities = GetEntities();
 	if (!Entities)
@@ -135,8 +122,7 @@ FBuildingId UBuildings::AddForOrganization(UBuildingType* InBuildingType, const 
 		return FBuildingId();
 	}
 
-	const int32 TypeIndex = ResolveTypeIndex(InBuildingType);
-	const FBuildingId NewId = Entities->CreateBuildingForOrganization(InProvinceId, TypeIndex, InOwnerId);
+	const FBuildingId NewId = Entities->CreateBuildingForOrganization(InProvinceId, InKind, InOwnerId);
 	OnBuildingAdded.Broadcast(NewId);
 	return NewId;
 }
@@ -173,6 +159,14 @@ void UBuildings::Destroy(const FBuildingId InBuildingId)
 		return;
 	}
 
+	// An organization's seat cannot be taken away from it. Enforced here rather than by leaving the
+	// button out of some widget, so it holds for console commands and future callers too.
+	if (Entities->IsAlive(InBuildingId) && UBuildingKinds::IsHeadquarters(Entities->GetKind(InBuildingId)))
+	{
+		UE_LOG(LogRtsBuildingsFacade, Warning, TEXT("Refusing to destroy building %d: it is a headquarters"), InBuildingId.Value);
+		return;
+	}
+
 	Entities->DestroyBuilding(InBuildingId);
 	OnBuildingDestroyed.Broadcast(InBuildingId);
 }
@@ -183,11 +177,9 @@ void UBuildings::Destroy(const FBuildingId InBuildingId)
 
 namespace
 {
-	/** No UBuildingType asset argument on purpose — these commands exist only to exercise the
-	 * facade's queries/events without editor access; the spawned building's type stays null. */
 	static FAutoConsoleCommandWithWorldAndArgs GSpawnBuildingCommand(
 		TEXT("Rts.SpawnBuilding"),
-		TEXT("Rts.SpawnBuilding <ProvinceIdx> <Char|Org> <OwnerIdx> - spawns a building through UBuildings."),
+		TEXT("Rts.SpawnBuilding <ProvinceIdx> <Char|Org> <OwnerIdx> [KindIdx] - spawns a building through UBuildings."),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(
 			[](const TArray<FString>& Args, UWorld* World)
 			{
@@ -201,21 +193,24 @@ namespace
 
 				if (Args.Num() < 3)
 				{
-					UE_LOG(LogRtsBuildingsFacade, Warning, TEXT("Usage: Rts.SpawnBuilding <ProvinceIdx> <Char|Org> <OwnerIdx>"));
+					UE_LOG(LogRtsBuildingsFacade, Warning, TEXT("Usage: Rts.SpawnBuilding <ProvinceIdx> <Char|Org> <OwnerIdx> [KindIdx]"));
 					return;
 				}
 
 				const FProvinceId ProvinceId(FCString::Atoi(*Args[0]));
 				const int32 OwnerIdx = FCString::Atoi(*Args[2]);
+				const EBuildingKind Kind = Args.Num() > 3
+					? static_cast<EBuildingKind>(FCString::Atoi(*Args[3]))
+					: EBuildingKind::BK_PartyOffice; // The only real kind there is so far.
 
 				FBuildingId NewId;
 				if (Args[1] == TEXT("Char"))
 				{
-					NewId = Buildings->AddForCharacter(nullptr, ProvinceId, FCharacterId(OwnerIdx));
+					NewId = Buildings->AddForCharacter(Kind, ProvinceId, FCharacterId(OwnerIdx));
 				}
 				else if (Args[1] == TEXT("Org"))
 				{
-					NewId = Buildings->AddForOrganization(nullptr, ProvinceId, FOrganizationId(OwnerIdx));
+					NewId = Buildings->AddForOrganization(Kind, ProvinceId, FOrganizationId(OwnerIdx));
 				}
 				else
 				{

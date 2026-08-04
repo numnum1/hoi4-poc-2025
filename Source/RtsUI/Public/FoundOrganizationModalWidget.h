@@ -11,15 +11,21 @@ class UPlayerCharacterViewModel;
  * layout and styling. Lives inside the played character's view because it is that character who
  * founds the organization — the modal has no meaning without one.
  *
+ * The modal collects three things: a name, which headquarters to put up, and where it goes. Only
+ * the name comes through this widget. The headquarters is picked from the view model's
+ * HeadquartersKinds rows, which carry their own click; the site is picked by clicking the world map,
+ * which is *the* province interaction in this game — there is no province list or dropdown here.
+ *
  * Data down: UPlayedCharacterView pushes the view model in through SetPlayerViewModel; this widget
  * never resolves it from a subsystem itself. Events up: the Blueprint wires its text box and its
- * two buttons to CommitName/Confirm/Cancel, which only forward — every decision (is the name
+ * two buttons to CommitName/Confirm/Cancel, which only forward — every decision (is the input
  * usable, may the action run, what does running it do) is made by UPlayerCharacterViewModel and
  * URtsActions.
  *
- * Display values are not routed through here at all: bind Visibility, the error label and the
- * confirm button's IsEnabled straight to the view model's FieldNotify properties
- * (bIsFoundOrganizationModalOpen, ModalErrorText, bCanConfirmModal) with MVVM.
+ * Display values are not routed through here at all: bind Visibility, the error label, the site
+ * label, the price and the confirm button's IsEnabled straight to the view model's FieldNotify
+ * properties (bIsFoundOrganizationModalOpen, ModalErrorText, SelectedProvinceName, PendingCost,
+ * bCanConfirmModal) with MVVM.
  */
 UCLASS(Abstract)
 class RTSUI_API UFoundOrganizationModalWidget : public UUserWidget

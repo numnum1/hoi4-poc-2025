@@ -1,13 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "BuildingKind.h"
 #include "BuildingOwnerType.h"
 #include "RtsIds.h"
 #include "MVVMViewModelBase.h"
 #include "BuildingViewModel.generated.h"
 
 class UBuildings;
-class UBuildingType;
 
 /**
  * A read-only C++ MVVM view model for a single building, addressed by the same FBuildingId
@@ -42,10 +42,18 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel", meta=(AllowPrivateAccess))
 	int32 BuildingIdValue = INDEX_NONE;
 
-	//~ Type and location ------------------------------------------------------------------------
+	//~ Kind and location ------------------------------------------------------------------------
+	// The kind travels as the enum plus its display data taken apart, following the same flat rule
+	// the ids do: bind the name and the icon, pass the enum on.
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel", meta=(AllowPrivateAccess))
-	TObjectPtr<UBuildingType> BuildingType;
+	EBuildingKind BuildingKind = EBuildingKind::BK_None;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel", meta=(AllowPrivateAccess))
+	FText BuildingKindName;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel", meta=(AllowPrivateAccess))
+	FSlateBrush BuildingKindIcon;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel", meta=(AllowPrivateAccess))
 	FProvinceId ProvinceId;
@@ -83,7 +91,9 @@ public:
 	FBuildingId GetBuildingId() const { return BuildingId; }
 	int32 GetBuildingIdValue() const { return BuildingIdValue; }
 
-	UBuildingType* GetBuildingType() const { return BuildingType; }
+	EBuildingKind GetBuildingKind() const { return BuildingKind; }
+	FText GetBuildingKindName() const { return BuildingKindName; }
+	FSlateBrush GetBuildingKindIcon() const { return BuildingKindIcon; }
 	FProvinceId GetProvinceId() const { return ProvinceId; }
 	int32 GetProvinceIdValue() const { return ProvinceIdValue; }
 

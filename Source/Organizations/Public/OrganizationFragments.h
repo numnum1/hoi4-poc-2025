@@ -68,6 +68,25 @@ struct ORGANIZATIONS_API FOrganizationSettledNationsFragment : public FMassFragm
 	TArray<FNationId> Values;
 };
 
+/**
+ * The building the organization is seated in — and, with it, the only thing that says what kind of
+ * organization this is. There is no organization type: an organization is a party because its
+ * headquarters is a party office, which is a fact about the world rather than a label somebody
+ * picked. See URtsActions::EA_FoundOrganization for how the two are created together.
+ *
+ * An FBuildingId, not an FMassEntityHandle — the id is the reference that survives a session, and
+ * holding it here costs Organizations no dependency on Buildings (both ids live in RtsCore).
+ * Invalid for a scenario-authored organization, which is founded without a building.
+ */
+USTRUCT()
+struct ORGANIZATIONS_API FOrganizationHeadquartersFragment : public FMassFragment
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FBuildingId BuildingId;
+};
+
 // Both hold open-ended arrays, so neither is a flat POD. Mass wants that said out loud.
 template<>
 struct TMassFragmentTraits<FOrganizationAlignmentFragment> final

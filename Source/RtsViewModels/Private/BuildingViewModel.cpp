@@ -1,5 +1,6 @@
 #include "BuildingViewModel.h"
 
+#include "BuildingKinds.h"
 #include "Buildings.h"
 #include "RtsFacadeSubsystem.h"
 
@@ -50,7 +51,10 @@ void UBuildingViewModel::Refresh_Implementation()
 
 	UE_MVVM_SET_PROPERTY_VALUE(bIsValid, Buildings->IsAlive(BuildingId));
 
-	UE_MVVM_SET_PROPERTY_VALUE(BuildingType, Buildings->GetBuildingType(BuildingId));
+	const EBuildingKind NewKind = Buildings->GetKind(BuildingId);
+	UE_MVVM_SET_PROPERTY_VALUE(BuildingKind, NewKind);
+	UE_MVVM_SET_PROPERTY_VALUE(BuildingKindName, UBuildingKinds::GetDisplayName(NewKind));
+	UE_MVVM_SET_PROPERTY_VALUE(BuildingKindIcon, UBuildingKinds::GetIcon(NewKind));
 
 	const FProvinceId NewProvinceId = Buildings->GetProvince(BuildingId);
 	UE_MVVM_SET_PROPERTY_VALUE(ProvinceId, NewProvinceId);

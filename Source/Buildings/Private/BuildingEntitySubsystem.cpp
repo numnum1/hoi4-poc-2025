@@ -51,7 +51,7 @@ FMassEntityManager& UBuildingEntitySubsystem::GetEntityManager() const
 	return EntitySubsystem->GetMutableEntityManager();
 }
 
-FBuildingId UBuildingEntitySubsystem::CreateBuilding(const FProvinceId InProvinceId, const int32 InTypeIndex, UE::Mass::FEntityBuilder& InOutBuilder)
+FBuildingId UBuildingEntitySubsystem::CreateBuilding(const FProvinceId InProvinceId, const EBuildingKind InKind, UE::Mass::FEntityBuilder& InOutBuilder)
 {
 	const FBuildingId NewId(EntityByIndex.Num());
 
@@ -62,20 +62,20 @@ FBuildingId UBuildingEntitySubsystem::CreateBuilding(const FProvinceId InProvinc
 	FBuildingLocationFragment LocationFragment;
 	LocationFragment.ProvinceId = InProvinceId;
 
-	FBuildingTypeFragment TypeFragment;
-	TypeFragment.TypeIndex = InTypeIndex;
+	FBuildingKindFragment KindFragment;
+	KindFragment.Kind = InKind;
 
 	InOutBuilder.Add<FBuildingTag>()
 	            .Add<FBuildingIndexFragment>(IndexFragment)
 	            .Add<FBuildingLocationFragment>(LocationFragment)
-	            .Add<FBuildingTypeFragment>(TypeFragment);
+	            .Add<FBuildingKindFragment>(KindFragment);
 
 	EntityByIndex.Add(InOutBuilder.Commit());
 	AliveIds.Add(NewId);
 	return NewId;
 }
 
-FBuildingId UBuildingEntitySubsystem::CreateBuildingForCharacter(const FProvinceId InProvinceId, const int32 InTypeIndex,
+FBuildingId UBuildingEntitySubsystem::CreateBuildingForCharacter(const FProvinceId InProvinceId, const EBuildingKind InKind,
                                                                  const FCharacterId InOwnerId)
 {
 	FBuildingCharacterOwnerFragment OwnerFragment;
@@ -83,10 +83,10 @@ FBuildingId UBuildingEntitySubsystem::CreateBuildingForCharacter(const FProvince
 
 	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
 	Builder.Add<FBuildingCharacterOwnerFragment>(OwnerFragment);
-	return CreateBuilding(InProvinceId, InTypeIndex, Builder);
+	return CreateBuilding(InProvinceId, InKind, Builder);
 }
 
-FBuildingId UBuildingEntitySubsystem::CreateBuildingForOrganization(const FProvinceId InProvinceId, const int32 InTypeIndex,
+FBuildingId UBuildingEntitySubsystem::CreateBuildingForOrganization(const FProvinceId InProvinceId, const EBuildingKind InKind,
                                                                     const FOrganizationId InOwnerId)
 {
 	FBuildingOrganizationOwnerFragment OwnerFragment;
@@ -94,7 +94,7 @@ FBuildingId UBuildingEntitySubsystem::CreateBuildingForOrganization(const FProvi
 
 	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
 	Builder.Add<FBuildingOrganizationOwnerFragment>(OwnerFragment);
-	return CreateBuilding(InProvinceId, InTypeIndex, Builder);
+	return CreateBuilding(InProvinceId, InKind, Builder);
 }
 
 void UBuildingEntitySubsystem::DestroyBuilding(const FBuildingId InBuildingId)
@@ -124,14 +124,14 @@ FProvinceId UBuildingEntitySubsystem::GetProvince(const FBuildingId InBuildingId
 	return FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FBuildingLocationFragment>().ProvinceId;
 }
 
-int32 UBuildingEntitySubsystem::GetTypeIndex(const FBuildingId InBuildingId) const
+EBuildingKind UBuildingEntitySubsystem::GetKind(const FBuildingId InBuildingId) const
 {
 	const FMassEntityHandle Entity = GetEntity(InBuildingId);
 	if (!Entity.IsValid())
 	{
-		return INDEX_NONE;
+		return EBuildingKind::BK_None;
 	}
-	return FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FBuildingTypeFragment>().TypeIndex;
+	return FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FBuildingKindFragment>().Kind;
 }
 
 EBuildingOwnerType UBuildingEntitySubsystem::GetOwnerType(const FBuildingId InBuildingId) const
@@ -307,7 +307,7 @@ void UBuildingEntitySubsystem::LogBuilding(const FBuildingId InBuildingId) const
 
 	const FMassEntityView View(GetEntityManager(), Entity);
 	const FBuildingLocationFragment& Location = View.GetFragmentData<FBuildingLocationFragment>();
-	const FBuildingTypeFragment& Type = View.GetFragmentData<FBuildingTypeFragment>();
+	const FBuildingKindFragment& Kind = View.GetFragmentData<FBuildingKindFragment>();
 
 	FString OwnerDescription = TEXT("None");
 	switch (GetOwnerType(InBuildingId))
@@ -322,8 +322,9 @@ void UBuildingEntitySubsystem::LogBuilding(const FBuildingId InBuildingId) const
 		break;
 	}
 
-	UE_LOG(LogRtsBuildings, Log, TEXT("[%d] Province=%d TypeIndex=%d Owner=%s"),
-		InBuildingId.Value, Location.ProvinceId.Value, Type.TypeIndex, *OwnerDescription);
+	UE_LOG(LogRtsBuildings, Log, TEXT("[%d] Province=%d Kind=%s Owner=%s"),
+		InBuildingId.Value, Location.ProvinceId.Value,
+		*UEnum::GetValueAsString(Kind.Kind), *OwnerDescription);
 }
 
 static FAutoConsoleCommandWithWorldAndArgs GDumpBuildingsCommand(

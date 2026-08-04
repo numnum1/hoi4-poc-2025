@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "ActionType.h"
+#include "BuildingKind.h"
 #include "CharacterViewModel.h"
 #include "PlayerModal.h"
 #include "ResourceType.h"
@@ -12,6 +13,7 @@
 
 class ARtsPlayer;
 class UActionViewModel;
+class UBuildingKindViewModel;
 class UResourceViewModel;
 class USelectablePositionViewModel;
 
@@ -28,6 +30,12 @@ class USelectablePositionViewModel;
  * The picker the player selects with is SelectablePositions — one lean row per position, clicked
  * back up through HandlePositionClicked. Clicking the selected row clears the selection: the player
  * drops back to acting as themselves and no row is selected any more.
+ *
+ * The found-organization modal's state sits here for the same reason: what the player has typed,
+ * which headquarters they picked and which province they clicked are things the UI invented, and
+ * the organization that comes out of them is what URtsActions makes of it. Note that there is no
+ * organization type anywhere — an organization is a party because its headquarters is a party
+ * office, so picking the building *is* picking what is being founded.
  *
  * The action list lives here rather than in a view model of its own precisely because it is a
  * function of that selection: the scope an action is offered for *is* SelectedPositionIndex, so a
@@ -72,9 +80,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void SetPendingOrganizationName(const FText& InName);
 
-	/** Set from the world map click. A valid id opens PM_ViewProvince; an invalid one clears the
-	 * selection and closes PM_ViewProvince again, because that modal shows nothing but this province.
-	 * Any other modal is left alone — it is not about the province. */
+	/** Which headquarters the found-organization modal is about to put up. BK_None means the player
+	 * has not picked one yet, which is what the input gate refuses on. */
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
+	void SelectHeadquartersKind(EBuildingKind InKind);
+
+	/** Set from the world map click, and the only place a province is ever picked — see CLAUDE.md
+	 * on the world map being *the* province interaction.
+	 *
+	 * What the click means depends on what is open: with the found-organization modal up it is the
+	 * headquarters' site and the modal stays where it is, because opening PM_ViewProvince over it
+	 * would tear down the half-filled form. Otherwise a valid id opens PM_ViewProvince and an
+	 * invalid one closes it again, that modal being about nothing but this province. Either way the
+	 * selection itself is one value, not one per reader. */
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void SelectProvince(FProvinceId InProvinceId);
 
@@ -120,9 +138,36 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	int32 SelectedProvinceIdValue = INDEX_NONE;
 
+	/** The selected province's name, so the found-organization modal can show its site as a label
+	 * without spawning a whole UProvinceViewModel for one string. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	FText SelectedProvinceName;
+
 	/** What the player has typed into the found-organization modal so far. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	FText PendingOrganizationName;
+
+	/** Which headquarters the found-organization modal will put up, BK_None until one is picked. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	EBuildingKind PendingHeadquartersKind = EBuildingKind::BK_None;
+
+	/** What founding currently costs — the picked headquarters' build cost, 0 while none is picked. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	int32 PendingCost = 0;
+
+	/** One row per headquarters kind the player can found in. Rebuilt whenever the modal opens or
+	 * the character's money changes, so the price tags and their affordability stay honest. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	TArray<TObjectPtr<UBuildingKindViewModel>> HeadquartersKinds;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	int32 HeadquartersKindCount = 0;
+
+	/** The picked row, or null while none is — the same state PendingHeadquartersKind holds, as the
+	 * object a widget can bind a highlight against. Written only in ApplyHeadquartersKind, so the
+	 * two cannot disagree. Same shape as SelectedPosition. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	TObjectPtr<UBuildingKindViewModel> SelectedHeadquartersKind;
 
 	/** Empty while the current input is usable. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
@@ -166,7 +211,13 @@ public:
 	bool IsViewProvinceModalOpen() const { return bIsViewProvinceModalOpen; }
 	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
 	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
+	FText GetSelectedProvinceName() const { return SelectedProvinceName; }
 	FText GetPendingOrganizationName() const { return PendingOrganizationName; }
+	EBuildingKind GetPendingHeadquartersKind() const { return PendingHeadquartersKind; }
+	int32 GetPendingCost() const { return PendingCost; }
+	const TArray<TObjectPtr<UBuildingKindViewModel>>& GetHeadquartersKinds() const { return HeadquartersKinds; }
+	int32 GetHeadquartersKindCount() const { return HeadquartersKindCount; }
+	UBuildingKindViewModel* GetSelectedHeadquartersKind() const { return SelectedHeadquartersKind; }
 	FText GetModalErrorText() const { return ModalErrorText; }
 	bool CanConfirmModal() const { return bCanConfirmModal; }
 	const TArray<TObjectPtr<UActionViewModel>>& GetActions() const { return Actions; }
@@ -202,6 +253,17 @@ private:
 	 * acting as self. Refreshes the action list, which is a function of exactly this. */
 	void ApplySelection(int32 InPositionIndex);
 
+	/** The one writer of PendingHeadquartersKind/PendingCost/SelectedHeadquartersKind, for the same
+	 * reason ApplySelection is the one writer of the position selection. */
+	void ApplyHeadquartersKind(EBuildingKind InKind);
+
+	/** Rebuilds the headquarters rows and pushes each one's affordability. */
+	void RefreshHeadquartersKinds();
+
+	/** What the played character can spend, read through URtsResources so the modal and the money
+	 * row can never disagree about what "the character's money" means. */
+	int32 GetCharacterFunds() const;
+
 	void RefreshSelectablePositions();
 
 	void RefreshActions();
@@ -225,6 +287,10 @@ private:
 	UFUNCTION()
 	void HandleResourceClicked(UResourceViewModel* ClickedResource);
 
+	/** Clicking the picked row unpicks it, the same way HandlePositionClicked clears a selection. */
+	UFUNCTION()
+	void HandleHeadquartersKindClicked(UBuildingKindViewModel* ClickedKind);
+
 	UFUNCTION()
 	void HandleControlledCharacterChanged();
 
@@ -245,6 +311,10 @@ private:
 	 * same resources keeps the same row objects. */
 	UPROPERTY()
 	TMap<EResourceType, TObjectPtr<UResourceViewModel>> ResourceEntryCache;
+
+	/** Same idea, keyed by EBuildingKind. */
+	UPROPERTY()
+	TMap<EBuildingKind, TObjectPtr<UBuildingKindViewModel>> HeadquartersKindCache;
 
 	/** Which resource is the single expanded one, and whether that is even the case right now —
 	 * plain private state, not FieldNotify, because nothing binds to the id itself: only each row's

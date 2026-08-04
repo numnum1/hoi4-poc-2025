@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "BuildingKind.h"
+#include "RtsIds.h"
 #include "RtsActionInput.generated.h"
 
 /**
@@ -20,4 +22,13 @@ struct RTSVIEWMODELS_API FRtsActionInput
 	/** EA_FoundOrganization: the name the player typed for the new organization. */
 	UPROPERTY(BlueprintReadWrite, Category="Action")
 	FText OrganizationName;
+
+	/** EA_FoundOrganization: which headquarters to put up. This is the whole of what the new
+	 * organization *is* — there is no separate organization type to pick. */
+	UPROPERTY(BlueprintReadWrite, Category="Action")
+	EBuildingKind HeadquartersKind = EBuildingKind::BK_None;
+
+	/** EA_FoundOrganization: where that headquarters goes, set by clicking the world map. */
+	UPROPERTY(BlueprintReadWrite, Category="Action")
+	FProvinceId HeadquartersProvinceId;
 };

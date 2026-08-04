@@ -1,6 +1,8 @@
 #include "PlayerCharacterViewModel.h"
 
 #include "ActionViewModel.h"
+#include "BuildingKindViewModel.h"
+#include "BuildingKinds.h"
 #include "Characters.h"
 #include "Kismet/GameplayStatics.h"
 #include "PositionViewModel.h"
@@ -63,6 +65,10 @@ void UPlayerCharacterViewModel::Refresh_Implementation()
 	// re-gates the action list against the values that just changed.
 	const bool bKeepSelection = bHasCharacters && GetPositions().IsValidIndex(SelectedPositionIndex);
 	ApplySelection(bKeepSelection ? SelectedPositionIndex : INDEX_NONE);
+
+	// An open modal has to survive a refresh with current values rather than with the ones it was
+	// opened on: the character may have moved, been paid or gone broke since.
+	RefreshModalValidation();
 }
 
 void UPlayerCharacterViewModel::SelectSelf()
@@ -99,9 +105,11 @@ void UPlayerCharacterViewModel::OpenModal(const EPlayerModal InModal)
 	UE_MVVM_SET_PROPERTY_VALUE(bIsFoundOrganizationModalOpen, InModal == EPlayerModal::PM_FoundOrganization);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsViewProvinceModalOpen, InModal == EPlayerModal::PM_ViewProvince);
 
-	// Whatever the last modal collected is not this one's starting point.
+	// Whatever the last modal collected is not this one's starting point. The province is not reset
+	// with it: that is where the player is looking on the map, not something this modal collected —
+	// and starting the form on the province they were just inspecting is the useful default.
 	UE_MVVM_SET_PROPERTY_VALUE(PendingOrganizationName, FText::GetEmpty());
-	RefreshModalValidation();
+	ApplyHeadquartersKind(EBuildingKind::BK_None);
 }
 
 void UPlayerCharacterViewModel::CloseModal()
@@ -117,8 +125,21 @@ void UPlayerCharacterViewModel::SetPendingOrganizationName(const FText& InName)
 
 void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
 {
+	UProvinces* ProvincesContainer = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
+
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceId, InProvinceId);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceIdValue, InProvinceId.Value);
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceName,
+		ProvincesContainer && InProvinceId.IsValid() ? ProvincesContainer->GetDisplayInfo(InProvinceId).Name : FText::GetEmpty());
+
+	// While the player is filling in the found-organization form, a map click is that form's site
+	// field. Opening the province modal over it would throw the half-filled form away, so the
+	// selection lands and nothing else moves.
+	if (ActiveModal == EPlayerModal::PM_FoundOrganization)
+	{
+		RefreshModalValidation();
+		return;
+	}
 
 	if (!InProvinceId.IsValid())
 	{
@@ -133,7 +154,6 @@ void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
 
 	OpenModal(EPlayerModal::PM_ViewProvince);
 
-	UProvinces* ProvincesContainer = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
 	USoundBase* InspectionSound = ProvincesContainer ? ProvincesContainer->GetDisplayInfo(InProvinceId).InspectionSound : nullptr;
 	if (InspectionSound)
 	{
@@ -187,8 +207,89 @@ bool UPlayerCharacterViewModel::IsActionModal(const EPlayerModal InModal) const
 	}
 }
 
+void UPlayerCharacterViewModel::SelectHeadquartersKind(const EBuildingKind InKind)
+{
+	ApplyHeadquartersKind(InKind);
+}
+
+void UPlayerCharacterViewModel::ApplyHeadquartersKind(const EBuildingKind InKind)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(PendingHeadquartersKind, InKind);
+	UE_MVVM_SET_PROPERTY_VALUE(PendingCost, UBuildingKinds::GetBuildCost(InKind));
+
+	// Everything else about the pick — which row is highlighted, what the gate says — is derived
+	// from the value just written, by the refresh below.
+	RefreshModalValidation();
+}
+
+void UPlayerCharacterViewModel::HandleHeadquartersKindClicked(UBuildingKindViewModel* ClickedKind)
+{
+	if (ClickedKind == nullptr)
+	{
+		return;
+	}
+
+	// Clicking the picked row unpicks it, exactly as clicking the selected position row does.
+	const EBuildingKind ClickedBuildingKind = ClickedKind->GetBuildingKind();
+	ApplyHeadquartersKind(ClickedBuildingKind == PendingHeadquartersKind ? EBuildingKind::BK_None : ClickedBuildingKind);
+}
+
+int32 UPlayerCharacterViewModel::GetCharacterFunds() const
+{
+	FRtsResourceContext Context;
+	Context.Characters = Characters;
+	Context.Organizations = Organizations;
+	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
+	{
+		Context.Banking = Facades->GetBankingContainer();
+	}
+
+	// Deliberately the character rather than MakeResourceContext's owner: founding is paid for by
+	// the player themselves, whatever they happen to be acting as at the moment.
+	Context.Owner = FResourceOwner::ForCharacter(GetCharacterId());
+	return URtsResources::GetAmount(EResourceType::RT_Money, EResourceDetail::RD_Total, Context);
+}
+
+void UPlayerCharacterViewModel::RefreshHeadquartersKinds()
+{
+	const int32 Funds = GetCharacterFunds();
+
+	TArray<TObjectPtr<UBuildingKindViewModel>> NewKinds;
+	UBuildingKindViewModel* NewSelectedKind = nullptr;
+
+	for (const EBuildingKind Kind : UBuildingKinds::GetHeadquarterKinds())
+	{
+		TObjectPtr<UBuildingKindViewModel>& Entry = HeadquartersKindCache.FindOrAdd(Kind);
+		if (Entry == nullptr)
+		{
+			Entry = NewObject<UBuildingKindViewModel>(this);
+			Entry->OnClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleHeadquartersKindClicked);
+		}
+
+		Entry->SetSource(Kind);
+		Entry->SetAffordable(Funds >= UBuildingKinds::GetBuildCost(Kind));
+
+		const bool bIsPicked = Kind == PendingHeadquartersKind;
+		Entry->SetSelected(bIsPicked);
+		if (bIsPicked)
+		{
+			NewSelectedKind = Entry;
+		}
+
+		NewKinds.Add(Entry);
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(HeadquartersKinds, NewKinds);
+	UE_MVVM_SET_PROPERTY_VALUE(HeadquartersKindCount, NewKinds.Num());
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedHeadquartersKind, NewSelectedKind);
+}
+
 void UPlayerCharacterViewModel::RefreshModalValidation()
 {
+	// The rows carry prices and affordability, both of which move with the character's money — so
+	// they are re-derived wherever the gate is, not only when the modal opens.
+	RefreshHeadquartersKinds();
+
 	// PM_ViewProvince only displays a UProvinceViewModel and has no EAction to gate — there is
 	// nothing here for it to confirm.
 	if (!IsActionModal(ActiveModal))
@@ -217,6 +318,10 @@ FRtsActionInput UPlayerCharacterViewModel::MakeInput() const
 {
 	FRtsActionInput Input;
 	Input.OrganizationName = PendingOrganizationName;
+	Input.HeadquartersKind = PendingHeadquartersKind;
+	// The map selection *is* the site — there is no second "pending province" to keep in step with
+	// what the player clicked.
+	Input.HeadquartersProvinceId = SelectedProvinceId;
 	return Input;
 }
 
@@ -228,6 +333,14 @@ FRtsActionContext UPlayerCharacterViewModel::MakeContext() const
 	Context.Characters = Characters;
 	Context.Organizations = Organizations;
 	Context.Roles = Roles;
+
+	// Not inherited from UCharacterViewModel like the three above — resolved here, the same way
+	// MakeResourceContext resolves Banking.
+	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
+	{
+		Context.Buildings = Facades->GetBuildingsContainer();
+		Context.Banking = Facades->GetBankingContainer();
+	}
 
 	if (!bIsActingAsSelf)
 	{

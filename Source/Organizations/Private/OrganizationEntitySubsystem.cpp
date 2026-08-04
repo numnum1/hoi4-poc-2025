@@ -53,11 +53,14 @@ FOrganizationId UOrganizationEntitySubsystem::CreateOrganization(const FCharacte
 	OwnerFragment.OwnerId = InOwnerId;
 
 	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
+	// The headquarters starts out invalid and is filled in by SetHeadquarters: the building has to
+	// be created for this organization, so the id it needs cannot exist before this call returns.
 	Builder.Add<FOrganizationTag>()
 	       .Add<FOrganizationIndexFragment>(IndexFragment)
 	       .Add<FOrganizationOwnerFragment>(OwnerFragment)
 	       .Add<FOrganizationAlignmentFragment>()
-	       .Add<FOrganizationSettledNationsFragment>();
+	       .Add<FOrganizationSettledNationsFragment>()
+	       .Add<FOrganizationHeadquartersFragment>();
 
 	EntityByIndex.Add(Builder.Commit());
 	AliveIds.Add(NewId);
@@ -111,6 +114,30 @@ FCharacterId UOrganizationEntitySubsystem::GetOwnerCharacter(const FOrganization
 	}
 	return FMassEntityView(GetEntityManager(), Entity)
 		.GetFragmentData<FOrganizationOwnerFragment>().OwnerId;
+}
+
+FBuildingId UOrganizationEntitySubsystem::GetHeadquarters(const FOrganizationId InOrganizationId) const
+{
+	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
+	if (!Entity.IsValid())
+	{
+		LogInvalidRead(InOrganizationId, TEXT("GetHeadquarters"));
+		return FBuildingId();
+	}
+	return FMassEntityView(GetEntityManager(), Entity)
+		.GetFragmentData<FOrganizationHeadquartersFragment>().BuildingId;
+}
+
+void UOrganizationEntitySubsystem::SetHeadquarters(const FOrganizationId InOrganizationId, const FBuildingId InBuildingId)
+{
+	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
+	if (!ensureMsgf(Entity.IsValid(), TEXT("SetHeadquarters: organization %d is not alive"), InOrganizationId.Value))
+	{
+		return;
+	}
+
+	FMassEntityView(GetEntityManager(), Entity)
+		.GetFragmentData<FOrganizationHeadquartersFragment>().BuildingId = InBuildingId;
 }
 
 bool UOrganizationEntitySubsystem::IsAlignmentPublished(const FOrganizationId InOrganizationId) const
@@ -231,10 +258,11 @@ void UOrganizationEntitySubsystem::LogOrganization(const FOrganizationId InOrgan
 	const FOrganizationOwnerFragment& Owner = View.GetFragmentData<FOrganizationOwnerFragment>();
 	const FOrganizationAlignmentFragment& Alignment = View.GetFragmentData<FOrganizationAlignmentFragment>();
 	const FOrganizationSettledNationsFragment& Settled = View.GetFragmentData<FOrganizationSettledNationsFragment>();
+	const FOrganizationHeadquartersFragment& Headquarters = View.GetFragmentData<FOrganizationHeadquartersFragment>();
 
-	UE_LOG(LogRtsOrganizations, Log, TEXT("[%d] Owner=%d Published=%d Branches=%d SettledNations=%d"),
+	UE_LOG(LogRtsOrganizations, Log, TEXT("[%d] Owner=%d Published=%d Branches=%d SettledNations=%d Headquarters=%d"),
 		InOrganizationId.Value, Owner.OwnerId.Value, IsAlignmentPublished(InOrganizationId) ? 1 : 0,
-		Alignment.Branches.Num(), Settled.Values.Num());
+		Alignment.Branches.Num(), Settled.Values.Num(), Headquarters.BuildingId.Value);
 }
 
 static FAutoConsoleCommandWithWorldAndArgs GDumpOrganizationsCommand(

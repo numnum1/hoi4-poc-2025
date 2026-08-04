@@ -44,6 +44,9 @@ public:
     /** Fired after an organization's entity is gone. Its display row (name, logo) stays around. */
     UPROPERTY(BlueprintAssignable)
     FOrganizationEvent OnOrganizationDissolved;
+    /** Fired after SetHeadquarters seated the organization in a different building. */
+    UPROPERTY(BlueprintAssignable)
+    FOrganizationEvent OnHeadquartersChanged;
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TArray<FOrganizationInfo> Infos;
@@ -67,6 +70,11 @@ public:
     UFUNCTION(BlueprintPure)
     bool IsOwnedBy(FOrganizationId InOrganizationId, FCharacterId InCharacterId) const;
 
+    /** The building the organization is seated in. Invalid for a scenario-authored one, which is
+     * created without a building — see FOrganizationHeadquartersFragment. */
+    UFUNCTION(BlueprintPure)
+    FBuildingId GetHeadquarters(FOrganizationId InOrganizationId) const;
+
     UFUNCTION(BlueprintPure)
     FOrganizationAlignment GetAlignment(FOrganizationId InOrganizationId) const;
 
@@ -80,6 +88,11 @@ public:
      * an organization nobody founded — scenario-authored ones are loaded that way. */
     UFUNCTION(BlueprintCallable)
     FOrganizationId Add(const FOrganizationInfo& NewOrg, FCharacterId InFounderId);
+
+    /** Seats the organization in a building. Called right after Add by whoever founded it, once the
+     * building exists — the organization has to be there first for the building to belong to it. */
+    UFUNCTION(BlueprintCallable)
+    void SetHeadquarters(FOrganizationId InOrganizationId, FBuildingId InBuildingId);
 
     UFUNCTION(BlueprintCallable)
     void PublishAlignment(FOrganizationId InOrganizationId, const TArray<float>& InAlignment);

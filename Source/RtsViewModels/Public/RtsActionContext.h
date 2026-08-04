@@ -4,6 +4,8 @@
 #include "RtsIds.h"
 #include "RtsActionContext.generated.h"
 
+class UBanking;
+class UBuildings;
 class UCharacters;
 class UOrganizations;
 class URoles;
@@ -55,4 +57,12 @@ struct RTSVIEWMODELS_API FRtsActionContext
 
 	UPROPERTY(BlueprintReadOnly, Category="Action")
 	TObjectPtr<URoles> Roles;
+
+	/** Founding puts up a building and pays for it, so both facades ride along for the same reason
+	 * the three above do: URtsActions stays a pure function of its inputs. */
+	UPROPERTY(BlueprintReadOnly, Category="Action")
+	TObjectPtr<UBuildings> Buildings;
+
+	UPROPERTY(BlueprintReadOnly, Category="Action")
+	TObjectPtr<UBanking> Banking;
 };
