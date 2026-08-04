@@ -15,6 +15,6 @@ void UPlayedCharacterView::NativeOnInitialized()
 
 	if (FoundOrganizationModal)
 	{
-		FoundOrganizationModal->SetViewModel(PlayerViewModel->GetFoundOrganizationModalViewModel());
+		FoundOrganizationModal->SetPlayerViewModel(PlayerViewModel);
 	}
 }

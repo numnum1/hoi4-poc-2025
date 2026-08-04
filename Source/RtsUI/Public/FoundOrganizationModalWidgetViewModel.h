@@ -8,56 +8,62 @@ class UBuildingKindViewModel;
 
 /**
  * The found-organization modal's own component, in exactly the sense the "ViewModels sind
- * Komponenten" rule in CLAUDE.md means it: UPlayerCharacterViewModel owns a single cached
- * instance and pushes every value on it from RefreshFoundOrganizationModal. This class invents
- * nothing itself — not even the selection, that stays on the parent as PendingHeadquartersType/
- * SelectedProvinceId — it only carries what the parent last pushed, plus the events a click or a
- * keystroke needs to report upward.
+ * Komponenten" rule in CLAUDE.md means it — but unlike a list row (UActionViewModel,
+ * UBuildingKindViewModel, ...), this one is CreateInstance: the widget's own Blueprint spawns it,
+ * it is never constructed or cached from C++. UPlayerCharacterViewModel does not know this class
+ * exists.
  *
- * OrganizationName is fully controlled, the same way a React controlled input is: its value is a
- * pushed prop (SetSource), never written locally by SetOrganizationName. Typing calls
- * SetOrganizationName, which does nothing but broadcast OnOrganizationNameChanged; the parent
- * re-validates the keystroke (UPlayerCharacterViewModel::SetPendingOrganizationName already does)
- * and the authoritative value comes back down through the next SetSource. Bind the widget's text
- * box two-way to OrganizationName and the parent's PendingOrganizationName two-way to
- * OrganizationName in the same way, and a keystroke flows widget -> here -> parent -> here ->
- * widget, never trusting an intermediate hop as the truth.
+ * Every property here is therefore just one half of a binding pair the widget's Blueprint wires
+ * up itself: a one-way Function binding from UPlayerCharacterViewModel's matching Get (e.g.
+ * GetHeadquartersTypes -> SetHeadquartersTypes) for everything the modal only displays, and a
+ * genuine Two Way Function binding for OrganizationName (Get/SetOrganizationName here <->
+ * GetPendingOrganizationName/SetPendingOrganizationName there) — typing calls SetOrganizationName,
+ * which writes the property like any other so the widget sees it immediately, and the same edit
+ * also flows to UPlayerCharacterViewModel::SetPendingOrganizationName, whose own re-validation
+ * writes back down through the same binding on the next tick. Widgets must still resolve
+ * UPlayerCharacterViewModel to bind against (UFoundOrganizationModalWidget::GetPlayerViewModel())
+ * — this class only carries the mirrored values, it never reaches for the parent itself.
  *
  * Confirm/Cancel stay plain click events (OnConfirmClicked/OnCancelClicked), the same shape every
- * other row in this codebase reports a click with (UActionViewModel, UBuildingKindViewModel,
- * USelectablePositionViewModel) — a two-way property does not fit a button.
+ * other row in this codebase reports a click with — a two-way property does not fit a button.
  */
-UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="Manual"))
+UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
 class RTSUI_API UFoundOrganizationModalWidgetViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
 public:
-	/** Pushed by UPlayerCharacterViewModel::RefreshFoundOrganizationModal whenever any of the
-	 * modal's derived state changes — every value here, OrganizationName included. */
-	void SetSource(const FText& InOrganizationName,
-	               const TArray<TObjectPtr<UBuildingKindViewModel>>& InHeadquartersTypes,
-	               UBuildingKindViewModel* InSelectedHeadquartersType,
-	               const FText& InSelectedProvinceName,
-	               int32 InPendingCost,
-	               const FText& InModalErrorText,
-	               bool bInCanConfirm);
-
-	/** Bind the name text box's two-way binding target to this. Never writes OrganizationName
-	 * itself — see the class comment — only reports the edit upward. */
+	/** Two-way binding target: writes locally (so the widget sees the keystroke at once) and is
+	 * also the destination half of a Two Way Function binding to
+	 * UPlayerCharacterViewModel::PendingOrganizationName, whose re-validated value is what actually
+	 * comes back down the same binding. */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
 	void SetOrganizationName(const FText& InName);
 
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnOrganizationNameChanged, FText, NewName);
-	UPROPERTY(BlueprintAssignable, Category="Found Organization Modal")
-	FOnOrganizationNameChanged OnOrganizationNameChanged;
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void SetHeadquartersTypes(const TArray<UBuildingKindViewModel*>& InHeadquartersTypes);
+
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void SetSelectedHeadquartersType(UBuildingKindViewModel* InSelectedHeadquartersType);
+
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void SetSelectedProvinceName(const FText& InSelectedProvinceName);
+
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void SetPendingCost(int32 InPendingCost);
+
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void SetModalErrorText(const FText& InModalErrorText);
+
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void SetCanConfirm(bool bInCanConfirm);
 
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnConfirmClicked);
-	/** UPlayerCharacterViewModel binds one handler here at creation; that handler runs
-	 * ConfirmModal(). Bind the confirm button's OnClicked to CallOnConfirmClicked() below. */
 	UPROPERTY(BlueprintAssignable, Category="Found Organization Modal")
 	FOnConfirmClicked OnConfirmClicked;
 
+	/** Bind the confirm button's OnClicked to this. Broadcasts OnConfirmClicked, which the widget's
+	 * Blueprint wires (Event binding) to UPlayerCharacterViewModel::ConfirmModal(). */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
 	void CallOnConfirmClicked();
 
@@ -69,6 +75,8 @@ public:
 	void CallOnCancelClicked();
 
 protected:
+	/** Written by SetOrganizationName below, the same shape every other flat property here uses —
+	 * not a UPROPERTY Setter, so it stays a plain UFUNCTION Blueprint/MVVM can target directly. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Found Organization Modal", meta=(AllowPrivateAccess))
 	FText OrganizationName;
 

@@ -5,7 +5,6 @@
 #include "BuildingType.h"
 #include "Buildings.h"
 #include "Characters.h"
-#include "FoundOrganizationModalWidgetViewModel.h"
 #include "Kismet/GameplayStatics.h"
 #include "PositionViewModel.h"
 #include "Provinces.h"
@@ -301,7 +300,6 @@ void UPlayerCharacterViewModel::RefreshModalValidation()
 	{
 		UE_MVVM_SET_PROPERTY_VALUE(ModalErrorText, FText::GetEmpty());
 		UE_MVVM_SET_PROPERTY_VALUE(bCanConfirmModal, false);
-		RefreshFoundOrganizationModal();
 		return;
 	}
 
@@ -318,51 +316,6 @@ void UPlayerCharacterViewModel::RefreshModalValidation()
 
 	UE_MVVM_SET_PROPERTY_VALUE(ModalErrorText, Reason);
 	UE_MVVM_SET_PROPERTY_VALUE(bCanConfirmModal, Reason.IsEmpty());
-
-	RefreshFoundOrganizationModal();
-}
-
-UFoundOrganizationModalWidgetViewModel* UPlayerCharacterViewModel::GetFoundOrganizationModalViewModel()
-{
-	if (FoundOrganizationModalViewModel == nullptr)
-	{
-		FoundOrganizationModalViewModel = NewObject<UFoundOrganizationModalWidgetViewModel>(this);
-		FoundOrganizationModalViewModel->OnOrganizationNameChanged.AddDynamic(this, &UPlayerCharacterViewModel::HandleFoundOrganizationNameChanged);
-		FoundOrganizationModalViewModel->OnConfirmClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleFoundOrganizationConfirmClicked);
-		FoundOrganizationModalViewModel->OnCancelClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleFoundOrganizationCancelClicked);
-
-		// Whoever asks for this before the first RefreshModalValidation ran (e.g. the root widget
-		// pushing it into place in NativeOnInitialized) still gets a correctly-seeded instance.
-		RefreshFoundOrganizationModal();
-	}
-	return FoundOrganizationModalViewModel;
-}
-
-void UPlayerCharacterViewModel::RefreshFoundOrganizationModal()
-{
-	GetFoundOrganizationModalViewModel()->SetSource(
-		PendingOrganizationName,
-		HeadquartersTypes,
-		SelectedHeadquartersType,
-		SelectedProvinceName,
-		PendingCost,
-		ModalErrorText,
-		bCanConfirmModal);
-}
-
-void UPlayerCharacterViewModel::HandleFoundOrganizationNameChanged(const FText NewName)
-{
-	SetPendingOrganizationName(NewName);
-}
-
-void UPlayerCharacterViewModel::HandleFoundOrganizationConfirmClicked()
-{
-	ConfirmModal();
-}
-
-void UPlayerCharacterViewModel::HandleFoundOrganizationCancelClicked()
-{
-	CloseModal();
 }
 
 FRtsActionInput UPlayerCharacterViewModel::MakeInput() const

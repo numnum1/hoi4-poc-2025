@@ -14,7 +14,6 @@ class ARtsPlayer;
 class UActionViewModel;
 class UBuildingKindViewModel;
 class UBuildingType;
-class UFoundOrganizationModalWidgetViewModel;
 class UResourceViewModel;
 class USelectablePositionViewModel;
 
@@ -39,11 +38,12 @@ class USelectablePositionViewModel;
  * office (a UBuildingType asset with bIsHeadquarters set), so picking the building *is* picking
  * what is being founded.
  *
- * The modal's own widget binds to its own component, UFoundOrganizationModalWidgetViewModel, not
- * to these properties directly — GetFoundOrganizationModalViewModel() returns the single cached
- * instance, pushed by RefreshFoundOrganizationModal every time the values above change. The
- * fields on this class stay the source of truth (ApplyHeadquartersType/MakeInput/ConfirmModal all
- * read them directly); the child only ever carries the last thing it was handed.
+ * The modal's own widget binds to its own component, UFoundOrganizationModalWidgetViewModel — a
+ * CreateInstance view model the widget's Blueprint spawns itself, not something this class creates
+ * or pushes into. The properties below stay the source of truth (ApplyHeadquartersType/MakeInput/
+ * ConfirmModal all read them directly); getting them onto the modal's component is Blueprint
+ * binding work (one-way Function bindings for the display-only ones, a Two Way Function binding
+ * for PendingOrganizationName/SetPendingOrganizationName), not something this class does.
  *
  * The action list lives here rather than in a view model of its own precisely because it is a
  * function of that selection: the scope an action is offered for *is* SelectedPositionIndex, so a
@@ -233,13 +233,6 @@ public:
 	const TArray<TObjectPtr<UResourceViewModel>>& GetResources() const { return Resources; }
 	int32 GetResourceCount() const { return ResourceCount; }
 
-	/** The found-organization modal's own component. Created on first use and cached — its
-	 * identity never changes, only what RefreshFoundOrganizationModal pushes onto it, so this is a
-	 * plain getter rather than a FieldNotify property. Push this (not GetPlayerViewModel()) into
-	 * UFoundOrganizationModalWidget. */
-	UFUNCTION(BlueprintPure, Category="Player Character Viewmodel|Modal")
-	UFoundOrganizationModalWidgetViewModel* GetFoundOrganizationModalViewModel();
-
 protected:
 	virtual void Refresh_Implementation() override;
 	virtual void BeginDestroy() override;
@@ -289,11 +282,6 @@ private:
 	/** Re-runs the input gate and pushes the result into ModalErrorText/bCanConfirmModal. */
 	void RefreshModalValidation();
 
-	/** Pushes the current modal state onto GetFoundOrganizationModalViewModel()'s cached instance.
-	 * Called at the end of RefreshModalValidation, which already runs everywhere the modal's
-	 * derived state can change. */
-	void RefreshFoundOrganizationModal();
-
 	UFUNCTION()
 	void HandleActionClicked(UActionViewModel* ClickedAction);
 
@@ -310,18 +298,6 @@ private:
 	/** Clicking the picked row unpicks it, the same way HandlePositionClicked clears a selection. */
 	UFUNCTION()
 	void HandleHeadquartersTypeClicked(UBuildingKindViewModel* ClickedType);
-
-	/** Bound once, at creation, to the modal child's OnOrganizationNameChanged — the event-up half
-	 * of the two-way name binding described on UFoundOrganizationModalWidgetViewModel. Runs the
-	 * same re-validation SetPendingOrganizationName always has. */
-	UFUNCTION()
-	void HandleFoundOrganizationNameChanged(FText NewName);
-
-	UFUNCTION()
-	void HandleFoundOrganizationConfirmClicked();
-
-	UFUNCTION()
-	void HandleFoundOrganizationCancelClicked();
 
 	UFUNCTION()
 	void HandleControlledCharacterChanged();
@@ -347,11 +323,6 @@ private:
 	/** Same idea, keyed by the UBuildingType asset. */
 	UPROPERTY()
 	TMap<TObjectPtr<UBuildingType>, TObjectPtr<UBuildingKindViewModel>> HeadquartersTypeCache;
-
-	/** The found-organization modal's own component — see GetFoundOrganizationModalViewModel().
-	 * Created once, on first use; every later call reuses the same instance. */
-	UPROPERTY()
-	TObjectPtr<UFoundOrganizationModalWidgetViewModel> FoundOrganizationModalViewModel;
 
 	/** Which resource is the single expanded one, and whether that is even the case right now —
 	 * plain private state, not FieldNotify, because nothing binds to the id itself: only each row's
