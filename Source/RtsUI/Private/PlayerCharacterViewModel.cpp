@@ -589,7 +589,16 @@ void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAct
 	switch (ActionType)
 	{
 	case EAction::EA_FoundOrganization:
-		OpenModal(EPlayerModal::PM_FoundOrganization);
+		// Clicking the action again while its modal is already open closes it, the same toggle shape
+		// HandlePositionClicked and HandleHeadquartersTypeClicked use for their own selections.
+		if (ActiveModal == EPlayerModal::PM_FoundOrganization)
+		{
+			CloseModal();
+		}
+		else
+		{
+			OpenModal(EPlayerModal::PM_FoundOrganization);
+		}
 		return;
 	}
 }
