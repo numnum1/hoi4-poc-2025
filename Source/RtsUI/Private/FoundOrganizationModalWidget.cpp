@@ -1,32 +1,32 @@
 #include "FoundOrganizationModalWidget.h"
 
-#include "PlayerCharacterViewModel.h"
+#include "FoundOrganizationModalWidgetViewModel.h"
 
-void UFoundOrganizationModalWidget::SetPlayerViewModel(UPlayerCharacterViewModel* InPlayerViewModel)
+void UFoundOrganizationModalWidget::SetViewModel(UFoundOrganizationModalWidgetViewModel* InViewModel)
 {
-	PlayerViewModel = InPlayerViewModel;
+	ViewModel = InViewModel;
 }
 
 void UFoundOrganizationModalWidget::CommitName(const FText& InName)
 {
-	if (PlayerViewModel)
+	if (ViewModel)
 	{
-		PlayerViewModel->SetPendingOrganizationName(InName);
+		ViewModel->SetOrganizationName(InName);
 	}
 }
 
 void UFoundOrganizationModalWidget::Confirm()
 {
-	if (PlayerViewModel)
+	if (ViewModel)
 	{
-		PlayerViewModel->ConfirmModal();
+		ViewModel->CallOnConfirmClicked();
 	}
 }
 
 void UFoundOrganizationModalWidget::Cancel()
 {
-	if (PlayerViewModel)
+	if (ViewModel)
 	{
-		PlayerViewModel->CloseModal();
+		ViewModel->CallOnCancelClicked();
 	}
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingKind.h"
 #include "RtsIds.h"
 #include "Mass/EntityElementTypes.h"
 #include "BuildingFragments.generated.h"
@@ -30,18 +29,17 @@ struct BUILDINGS_API FBuildingLocationFragment : public FMassFragment
 };
 
 /**
- * What kind of building this is. A plain enum, so the entity carries the whole answer — there is
- * no registry to resolve it through and nothing here that Mass would have to enter into the GC
- * reference graph. UBuildingKinds turns it into display data, a build cost and the headquarters
- * rule.
+ * Index into UBuildings::BuildingTypes rather than a UBuildingType* — Mass does not enter
+ * TObjectPtr fields in fragments into the GC reference graph, the same reason FText/FSlateBrush
+ * stay out of every other domain's fragments.
  */
 USTRUCT()
-struct BUILDINGS_API FBuildingKindFragment : public FMassFragment
+struct BUILDINGS_API FBuildingTypeFragment : public FMassFragment
 {
 	GENERATED_BODY()
 
 	UPROPERTY()
-	EBuildingKind Kind = EBuildingKind::BK_None;
+	int32 TypeIndex = INDEX_NONE;
 };
 
 /**

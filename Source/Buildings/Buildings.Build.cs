@@ -22,7 +22,9 @@ public class Buildings : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                // UBuildingCatalogSettings derives from UDeveloperSettings
+                "DeveloperSettings"
             }
         );
     }

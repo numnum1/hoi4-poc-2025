@@ -1,23 +1,24 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingKind.h"
 #include "MVVMViewModelBase.h"
 #include "BuildingKindViewModel.generated.h"
 
+class UBuildingType;
+
 /**
- * One kind of building, shown as one row in a picker: name, icon, price tag, and a click. The same
+ * One building type, shown as one row in a picker: name, icon, price tag, and a click. The same
  * shape USelectablePositionViewModel has, and for the same reason — the row decides nothing. What a
- * kind costs and what it is called comes from UBuildingKinds; whether the player can afford it and
- * whether it is the selected one are *pushed in* by the owning view model, which is the one that
- * knows the character's money and the current selection.
+ * type costs and what it is called are authored on the UBuildingType asset itself; whether the
+ * player can afford it and whether it is the selected one are *pushed in* by the owning view model,
+ * which is the one that knows the character's money and the current selection.
  *
  * bIsAffordable and bIsSelected are therefore display values, never the truth: the owner re-derives
  * both when the click comes back up, exactly as UPlayerCharacterViewModel::HandleActionClicked does
  * rather than trusting the last pushed bIsEnabled.
  *
- * Written against EBuildingKind in general, not against headquarters: the found-organization modal
- * is the first user, and the same row carries the general build menu once more kinds exist.
+ * Written against UBuildingType in general, not against headquarters: the found-organization modal
+ * is the first user, and the same row carries the general build menu once more types are catalogued.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="Manual"))
 class RTSVIEWMODELS_API UBuildingKindViewModel : public UMVVMViewModelBase
@@ -25,8 +26,8 @@ class RTSVIEWMODELS_API UBuildingKindViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	/** Which kind this row stands for. Name, icon and cost follow from it via UBuildingKinds. */
-	void SetSource(EBuildingKind InKind);
+	/** Which type this row stands for. Name, icon and cost are read straight off the asset. */
+	void SetSource(UBuildingType* InBuildingType);
 
 	/** Pushed by the owning view model, which is the one that knows the buyer's funds. */
 	void SetAffordable(bool bInAffordable);
@@ -34,7 +35,7 @@ public:
 	/** Pushed by the owning view model, which owns the selection. */
 	void SetSelected(bool bInSelected);
 
-	EBuildingKind GetBuildingKind() const { return BuildingKind; }
+	UBuildingType* GetBuildingType() const { return BuildingType; }
 
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBuildingKindClicked, UBuildingKindViewModel*, ClickedKind);
 
@@ -76,5 +77,6 @@ public:
 	bool IsSelected() const { return bIsSelected; }
 
 private:
-	EBuildingKind BuildingKind = EBuildingKind::BK_None;
+	UPROPERTY()
+	TObjectPtr<UBuildingType> BuildingType;
 };

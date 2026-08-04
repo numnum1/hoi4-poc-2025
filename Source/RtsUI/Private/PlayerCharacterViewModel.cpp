@@ -2,8 +2,10 @@
 
 #include "ActionViewModel.h"
 #include "BuildingKindViewModel.h"
-#include "BuildingKinds.h"
+#include "BuildingType.h"
+#include "Buildings.h"
 #include "Characters.h"
+#include "FoundOrganizationModalWidgetViewModel.h"
 #include "Kismet/GameplayStatics.h"
 #include "PositionViewModel.h"
 #include "Provinces.h"
@@ -109,7 +111,7 @@ void UPlayerCharacterViewModel::OpenModal(const EPlayerModal InModal)
 	// with it: that is where the player is looking on the map, not something this modal collected —
 	// and starting the form on the province they were just inspecting is the useful default.
 	UE_MVVM_SET_PROPERTY_VALUE(PendingOrganizationName, FText::GetEmpty());
-	ApplyHeadquartersKind(EBuildingKind::BK_None);
+	ApplyHeadquartersType(nullptr);
 }
 
 void UPlayerCharacterViewModel::CloseModal()
@@ -207,31 +209,31 @@ bool UPlayerCharacterViewModel::IsActionModal(const EPlayerModal InModal) const
 	}
 }
 
-void UPlayerCharacterViewModel::SelectHeadquartersKind(const EBuildingKind InKind)
+void UPlayerCharacterViewModel::SelectHeadquartersType(UBuildingType* InBuildingType)
 {
-	ApplyHeadquartersKind(InKind);
+	ApplyHeadquartersType(InBuildingType);
 }
 
-void UPlayerCharacterViewModel::ApplyHeadquartersKind(const EBuildingKind InKind)
+void UPlayerCharacterViewModel::ApplyHeadquartersType(UBuildingType* InBuildingType)
 {
-	UE_MVVM_SET_PROPERTY_VALUE(PendingHeadquartersKind, InKind);
-	UE_MVVM_SET_PROPERTY_VALUE(PendingCost, UBuildingKinds::GetBuildCost(InKind));
+	UE_MVVM_SET_PROPERTY_VALUE(PendingHeadquartersType, InBuildingType);
+	UE_MVVM_SET_PROPERTY_VALUE(PendingCost, InBuildingType ? InBuildingType->GetBuildCost() : 0);
 
 	// Everything else about the pick — which row is highlighted, what the gate says — is derived
 	// from the value just written, by the refresh below.
 	RefreshModalValidation();
 }
 
-void UPlayerCharacterViewModel::HandleHeadquartersKindClicked(UBuildingKindViewModel* ClickedKind)
+void UPlayerCharacterViewModel::HandleHeadquartersTypeClicked(UBuildingKindViewModel* ClickedType)
 {
-	if (ClickedKind == nullptr)
+	if (ClickedType == nullptr)
 	{
 		return;
 	}
 
 	// Clicking the picked row unpicks it, exactly as clicking the selected position row does.
-	const EBuildingKind ClickedBuildingKind = ClickedKind->GetBuildingKind();
-	ApplyHeadquartersKind(ClickedBuildingKind == PendingHeadquartersKind ? EBuildingKind::BK_None : ClickedBuildingKind);
+	UBuildingType* ClickedBuildingType = ClickedType->GetBuildingType();
+	ApplyHeadquartersType(ClickedBuildingType == PendingHeadquartersType ? nullptr : ClickedBuildingType);
 }
 
 int32 UPlayerCharacterViewModel::GetCharacterFunds() const
@@ -250,45 +252,48 @@ int32 UPlayerCharacterViewModel::GetCharacterFunds() const
 	return URtsResources::GetAmount(EResourceType::RT_Money, EResourceDetail::RD_Total, Context);
 }
 
-void UPlayerCharacterViewModel::RefreshHeadquartersKinds()
+void UPlayerCharacterViewModel::RefreshHeadquartersTypes()
 {
 	const int32 Funds = GetCharacterFunds();
 
-	TArray<TObjectPtr<UBuildingKindViewModel>> NewKinds;
-	UBuildingKindViewModel* NewSelectedKind = nullptr;
+	UBuildings* BuildingsContainer = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetBuildingsContainer() : nullptr;
+	const TArray<UBuildingType*> Catalogue = BuildingsContainer ? BuildingsContainer->GetHeadquarterBuildingTypes() : TArray<UBuildingType*>();
 
-	for (const EBuildingKind Kind : UBuildingKinds::GetHeadquarterKinds())
+	TArray<TObjectPtr<UBuildingKindViewModel>> NewTypes;
+	UBuildingKindViewModel* NewSelectedType = nullptr;
+
+	for (UBuildingType* BuildingType : Catalogue)
 	{
-		TObjectPtr<UBuildingKindViewModel>& Entry = HeadquartersKindCache.FindOrAdd(Kind);
+		TObjectPtr<UBuildingKindViewModel>& Entry = HeadquartersTypeCache.FindOrAdd(BuildingType);
 		if (Entry == nullptr)
 		{
 			Entry = NewObject<UBuildingKindViewModel>(this);
-			Entry->OnClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleHeadquartersKindClicked);
+			Entry->OnClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleHeadquartersTypeClicked);
 		}
 
-		Entry->SetSource(Kind);
-		Entry->SetAffordable(Funds >= UBuildingKinds::GetBuildCost(Kind));
+		Entry->SetSource(BuildingType);
+		Entry->SetAffordable(Funds >= (BuildingType ? BuildingType->GetBuildCost() : 0));
 
-		const bool bIsPicked = Kind == PendingHeadquartersKind;
+		const bool bIsPicked = BuildingType == PendingHeadquartersType;
 		Entry->SetSelected(bIsPicked);
 		if (bIsPicked)
 		{
-			NewSelectedKind = Entry;
+			NewSelectedType = Entry;
 		}
 
-		NewKinds.Add(Entry);
+		NewTypes.Add(Entry);
 	}
 
-	UE_MVVM_SET_PROPERTY_VALUE(HeadquartersKinds, NewKinds);
-	UE_MVVM_SET_PROPERTY_VALUE(HeadquartersKindCount, NewKinds.Num());
-	UE_MVVM_SET_PROPERTY_VALUE(SelectedHeadquartersKind, NewSelectedKind);
+	UE_MVVM_SET_PROPERTY_VALUE(HeadquartersTypes, NewTypes);
+	UE_MVVM_SET_PROPERTY_VALUE(HeadquartersTypeCount, NewTypes.Num());
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedHeadquartersType, NewSelectedType);
 }
 
 void UPlayerCharacterViewModel::RefreshModalValidation()
 {
 	// The rows carry prices and affordability, both of which move with the character's money — so
 	// they are re-derived wherever the gate is, not only when the modal opens.
-	RefreshHeadquartersKinds();
+	RefreshHeadquartersTypes();
 
 	// PM_ViewProvince only displays a UProvinceViewModel and has no EAction to gate — there is
 	// nothing here for it to confirm.
@@ -296,6 +301,7 @@ void UPlayerCharacterViewModel::RefreshModalValidation()
 	{
 		UE_MVVM_SET_PROPERTY_VALUE(ModalErrorText, FText::GetEmpty());
 		UE_MVVM_SET_PROPERTY_VALUE(bCanConfirmModal, false);
+		RefreshFoundOrganizationModal();
 		return;
 	}
 
@@ -312,13 +318,58 @@ void UPlayerCharacterViewModel::RefreshModalValidation()
 
 	UE_MVVM_SET_PROPERTY_VALUE(ModalErrorText, Reason);
 	UE_MVVM_SET_PROPERTY_VALUE(bCanConfirmModal, Reason.IsEmpty());
+
+	RefreshFoundOrganizationModal();
+}
+
+UFoundOrganizationModalWidgetViewModel* UPlayerCharacterViewModel::GetFoundOrganizationModalViewModel()
+{
+	if (FoundOrganizationModalViewModel == nullptr)
+	{
+		FoundOrganizationModalViewModel = NewObject<UFoundOrganizationModalWidgetViewModel>(this);
+		FoundOrganizationModalViewModel->OnOrganizationNameChanged.AddDynamic(this, &UPlayerCharacterViewModel::HandleFoundOrganizationNameChanged);
+		FoundOrganizationModalViewModel->OnConfirmClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleFoundOrganizationConfirmClicked);
+		FoundOrganizationModalViewModel->OnCancelClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleFoundOrganizationCancelClicked);
+
+		// Whoever asks for this before the first RefreshModalValidation ran (e.g. the root widget
+		// pushing it into place in NativeOnInitialized) still gets a correctly-seeded instance.
+		RefreshFoundOrganizationModal();
+	}
+	return FoundOrganizationModalViewModel;
+}
+
+void UPlayerCharacterViewModel::RefreshFoundOrganizationModal()
+{
+	GetFoundOrganizationModalViewModel()->SetSource(
+		PendingOrganizationName,
+		HeadquartersTypes,
+		SelectedHeadquartersType,
+		SelectedProvinceName,
+		PendingCost,
+		ModalErrorText,
+		bCanConfirmModal);
+}
+
+void UPlayerCharacterViewModel::HandleFoundOrganizationNameChanged(const FText NewName)
+{
+	SetPendingOrganizationName(NewName);
+}
+
+void UPlayerCharacterViewModel::HandleFoundOrganizationConfirmClicked()
+{
+	ConfirmModal();
+}
+
+void UPlayerCharacterViewModel::HandleFoundOrganizationCancelClicked()
+{
+	CloseModal();
 }
 
 FRtsActionInput UPlayerCharacterViewModel::MakeInput() const
 {
 	FRtsActionInput Input;
 	Input.OrganizationName = PendingOrganizationName;
-	Input.HeadquartersKind = PendingHeadquartersKind;
+	Input.HeadquartersType = PendingHeadquartersType;
 	// The map selection *is* the site — there is no second "pending province" to keep in step with
 	// what the player clicked.
 	Input.HeadquartersProvinceId = SelectedProvinceId;

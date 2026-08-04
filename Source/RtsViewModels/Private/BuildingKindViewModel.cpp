@@ -1,15 +1,15 @@
 #include "BuildingKindViewModel.h"
 
-#include "BuildingKinds.h"
+#include "BuildingType.h"
 
-void UBuildingKindViewModel::SetSource(const EBuildingKind InKind)
+void UBuildingKindViewModel::SetSource(UBuildingType* InBuildingType)
 {
-	BuildingKind = InKind;
+	BuildingType = InBuildingType;
 
-	UE_MVVM_SET_PROPERTY_VALUE(DisplayName, UBuildingKinds::GetDisplayName(InKind));
-	UE_MVVM_SET_PROPERTY_VALUE(Icon, UBuildingKinds::GetIcon(InKind));
+	UE_MVVM_SET_PROPERTY_VALUE(DisplayName, InBuildingType ? InBuildingType->GetBuildingName() : FText::GetEmpty());
+	UE_MVVM_SET_PROPERTY_VALUE(Icon, InBuildingType ? InBuildingType->GetIcon() : FSlateNoResource());
 
-	const int32 NewCost = UBuildingKinds::GetBuildCost(InKind);
+	const int32 NewCost = InBuildingType ? InBuildingType->GetBuildCost() : 0;
 	UE_MVVM_SET_PROPERTY_VALUE(Cost, NewCost);
 	UE_MVVM_SET_PROPERTY_VALUE(CostText, FText::AsNumber(NewCost));
 }

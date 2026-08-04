@@ -15,7 +15,7 @@ public class RtsUI : ModuleRules
                 // facades (Characters/Organizations/Roles) through the base class's protected
                 // members — the same reason RtsViewModels needs its facades.
                 "RtsViewModels",
-                // EBuildingKind is a property on UPlayerCharacterViewModel's header: the
+                // UBuildingType is a property on UPlayerCharacterViewModel's header: the
                 // headquarters the found-organization modal is collecting.
                 "Buildings"
             }

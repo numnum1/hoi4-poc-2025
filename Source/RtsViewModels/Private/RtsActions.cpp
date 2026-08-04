@@ -1,7 +1,7 @@
 #include "RtsActions.h"
 
 #include "Banking.h"
-#include "BuildingKinds.h"
+#include "BuildingType.h"
 #include "Buildings.h"
 #include "Characters.h"
 #include "OrganizationInfo.h"
@@ -190,7 +190,7 @@ FText URtsActions::GetInvalidInputReason(const EAction InAction, const FRtsActio
 			return LOCTEXT("EmptyOrganizationName", "Enter a name for the organization.");
 		}
 
-		if (!UBuildingKinds::IsHeadquarters(InInput.HeadquartersKind))
+		if (InInput.HeadquartersType == nullptr || !InInput.HeadquartersType->IsHeadquarters())
 		{
 			return LOCTEXT("NotAHeadquarters", "Pick a headquarters to found the organization in.");
 		}
@@ -200,7 +200,7 @@ FText URtsActions::GetInvalidInputReason(const EAction InAction, const FRtsActio
 			return LOCTEXT("NoProvince", "Click a province on the map to place the headquarters.");
 		}
 
-		const int32 Cost = UBuildingKinds::GetBuildCost(InInput.HeadquartersKind);
+		const int32 Cost = InInput.HeadquartersType->GetBuildCost();
 		if (GetCharacterFunds(InContext.Banking, InContext.ActorId) < Cost)
 		{
 			return FText::Format(LOCTEXT("CannotAffordHeadquarters", "You cannot afford this: it costs {0}."),
@@ -225,9 +225,14 @@ void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext&
 			return;
 		}
 
+		if (InInput.HeadquartersType == nullptr)
+		{
+			return;
+		}
+
 		// Paid first, and all of it or none: nothing below is created unless the founder could
 		// actually cover the headquarters.
-		if (!PayFromCharacter(InContext.Banking, InContext.ActorId, UBuildingKinds::GetBuildCost(InInput.HeadquartersKind)))
+		if (!PayFromCharacter(InContext.Banking, InContext.ActorId, InInput.HeadquartersType->GetBuildCost()))
 		{
 			return;
 		}
@@ -243,7 +248,7 @@ void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext&
 		// The organization has to exist before the building can belong to it, which is why the seat
 		// is set afterwards rather than passed into Add.
 		const FBuildingId HeadquartersId = InContext.Buildings->AddForOrganization(
-			InInput.HeadquartersKind, InInput.HeadquartersProvinceId, NewOrganizationId);
+			InInput.HeadquartersType, InInput.HeadquartersProvinceId, NewOrganizationId);
 		InContext.Organizations->SetHeadquarters(NewOrganizationId, HeadquartersId);
 
 		// An unauthored role library is legal — the founder still gets their position, just without

@@ -1,13 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingKind.h"
 #include "BuildingOwnerType.h"
 #include "RtsIds.h"
 #include "Components/ActorComponent.h"
 #include "Modules/ModuleManager.h"
 #include "Buildings.generated.h"
 
+class UBuildingType;
 class UBuildingEntitySubsystem;
 
 class FBuildingsModule : public IModuleInterface
@@ -22,11 +22,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildingsEvent, FBuildingId, InBuil
 /**
  * The UI-facing face of the building data.
  *
- * Identity, location, kind and owner live in Mass entities owned by UBuildingEntitySubsystem;
- * this component keeps only the change events the view models bind to. There is no type registry
- * any more — a building's kind is the plain EBuildingKind on the entity, and UBuildingKinds turns
- * it into display data and costs. Every accessor takes the same FBuildingId every other building
- * API uses.
+ * Identity, location, type and owner live in Mass entities owned by UBuildingEntitySubsystem;
+ * this component keeps the registry mapping an opaque type index back to the actual
+ * UBuildingType* (Mass fragments cannot safely hold UObject pointers), seeded from
+ * UBuildingCatalogSettings on first use, and the change events the view models bind to. Every
+ * accessor takes the same FBuildingId every other building API uses.
  *
  * Ownership has no single "the owner" value at this layer either — AddForCharacter/
  * AddForOrganization and the two Collect* queries mirror the entity side's two mutually
@@ -60,7 +60,12 @@ public:
 	bool IsAlive(FBuildingId InBuildingId) const;
 
 	UFUNCTION(BlueprintPure)
-	EBuildingKind GetKind(FBuildingId InBuildingId) const;
+	UBuildingType* GetBuildingType(FBuildingId InBuildingId) const;
+
+	/** Every catalogued type with bIsHeadquarters set — the list the found-organization modal
+	 * offers. Reads UBuildingCatalogSettings, not a per-entity query. */
+	UFUNCTION(BlueprintPure)
+	TArray<UBuildingType*> GetHeadquarterBuildingTypes() const;
 
 	UFUNCTION(BlueprintPure)
 	FProvinceId GetProvince(FBuildingId InBuildingId) const;
@@ -86,10 +91,10 @@ public:
 	TArray<FBuildingId> CollectBuildingsOwnedByOrganization(FOrganizationId InOwnerId) const;
 
 	UFUNCTION(BlueprintCallable)
-	FBuildingId AddForCharacter(EBuildingKind InKind, FProvinceId InProvinceId, FCharacterId InOwnerId);
+	FBuildingId AddForCharacter(UBuildingType* InBuildingType, FProvinceId InProvinceId, FCharacterId InOwnerId);
 
 	UFUNCTION(BlueprintCallable)
-	FBuildingId AddForOrganization(EBuildingKind InKind, FProvinceId InProvinceId, FOrganizationId InOwnerId);
+	FBuildingId AddForOrganization(UBuildingType* InBuildingType, FProvinceId InProvinceId, FOrganizationId InOwnerId);
 
 	UFUNCTION(BlueprintCallable)
 	void SetCharacterOwner(FBuildingId InBuildingId, FCharacterId InNewOwnerId);
@@ -97,11 +102,23 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetOrganizationOwner(FBuildingId InBuildingId, FOrganizationId InNewOwnerId);
 
-	/** Does nothing for a headquarters — see UBuildingKinds::IsHeadquarters. The rule lives here
+	/** Does nothing for a headquarters — see UBuildingType::IsHeadquarters. The rule lives here
 	 * rather than in the UI so it holds for every caller, not just for the one that has no button. */
 	UFUNCTION(BlueprintCallable)
 	void Destroy(FBuildingId InBuildingId);
 
 private:
 	UBuildingEntitySubsystem* GetEntities() const;
+
+	/** Loads UBuildingCatalogSettings into BuildingTypes on first use. Idempotent. */
+	void EnsureCatalogLoaded() const;
+
+	/** Find-or-add registry; never shrinks. Seeded from the project's building catalog, but also
+	 * accepts a type that was not catalogued — the same permissiveness the original registry had. */
+	int32 ResolveTypeIndex(UBuildingType* InBuildingType);
+
+	UPROPERTY(Transient)
+	mutable TArray<TObjectPtr<UBuildingType>> BuildingTypes;
+
+	mutable bool bCatalogLoaded = false;
 };

@@ -1,9 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingKind.h"
 #include "RtsIds.h"
 #include "RtsActionInput.generated.h"
+
+class UBuildingType;
 
 /**
  * What an action needs from the player on top of FRtsActionContext — the values a modal collects
@@ -24,9 +25,10 @@ struct RTSVIEWMODELS_API FRtsActionInput
 	FText OrganizationName;
 
 	/** EA_FoundOrganization: which headquarters to put up. This is the whole of what the new
-	 * organization *is* — there is no separate organization type to pick. */
+	 * organization *is* — there is no separate organization type to pick. Null until the player
+	 * has chosen one; URtsActions::GetInvalidInputReason refuses on that, same as on an empty name. */
 	UPROPERTY(BlueprintReadWrite, Category="Action")
-	EBuildingKind HeadquartersKind = EBuildingKind::BK_None;
+	TObjectPtr<UBuildingType> HeadquartersType;
 
 	/** EA_FoundOrganization: where that headquarters goes, set by clicking the world map. */
 	UPROPERTY(BlueprintReadWrite, Category="Action")
