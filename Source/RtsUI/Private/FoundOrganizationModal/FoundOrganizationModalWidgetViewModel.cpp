@@ -180,8 +180,7 @@ void UFoundOrganizationModalWidgetViewModel::CallOnConfirmClicked()
 		return;
 	}
 
-	// Testweise ohne Payload — siehe Kommentar bei FOnConfirmClicked im Header.
-	OnConfirmClicked.Broadcast();
+	OnConfirmClicked.Broadcast(OrganizationName, PendingHeadquartersType, SelectedProvinceId);
 }
 
 void UFoundOrganizationModalWidgetViewModel::CallOnCancelClicked()

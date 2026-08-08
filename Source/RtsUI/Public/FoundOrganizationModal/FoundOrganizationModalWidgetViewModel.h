@@ -64,10 +64,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
 	void ResetForm();
 
-	// Testweise ohne Parameter — siehe Chat-Verlauf: das Event-Binding im Blueprint auf
-	// UPlayerCharacterViewModel::HandleFoundOrganizationConfirmed(Name, HeadquartersType, ProvinceId)
-	// ließ sich nicht herstellen. Sobald das geklärt ist, wieder auf die Drei-Parameter-Version zurück.
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnConfirmClicked);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnConfirmClicked, FText, OrganizationName, UBuildingType*, HeadquartersType, FProvinceId, ProvinceId);
 	UPROPERTY(BlueprintAssignable, Category="Found Organization Modal")
 	FOnConfirmClicked OnConfirmClicked;
 

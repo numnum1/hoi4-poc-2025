@@ -6,7 +6,7 @@
 
 class UPlayerCharacterViewModel;
 
-/**
+/**en 
  * The found-organization modal, as the C++ half of a widget whose Blueprint child carries only
  * layout and styling. Lives inside the played character's view because it is that character who
  * founds the organization — the modal has no meaning without one.
