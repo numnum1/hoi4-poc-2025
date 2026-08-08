@@ -5,16 +5,16 @@
 
 #include "Banking.h"
 #include "Buildings.h"
-#include "Time.h"
 #include "Characters.h"
 #include "Departments.h"
+#include "Economy/RtsEconomy.h"
 #include "Nations.h"
 #include "Organizations.h"
 #include "Provinces.h"
 #include "Races.h"
 #include "Roles.h"
-#include "RtsEconomy.h"
 #include "Schedules.h"
+#include "Time.h"
 
 ARtsGameState::ARtsGameState()
 {
