@@ -19,4 +19,5 @@ enum class ERolePermission : uint8
 	RP_PublishAlignment  = 1 << 0 UMETA(DisplayName = "Publish Alignment"),
 	RP_SettleNation      = 1 << 1 UMETA(DisplayName = "Settle Nation"),
 	RP_Dissolve          = 1 << 2 UMETA(DisplayName = "Dissolve"),
+	RP_Recruit           = 1 << 3 UMETA(DisplayName = "Recruit"),
 };

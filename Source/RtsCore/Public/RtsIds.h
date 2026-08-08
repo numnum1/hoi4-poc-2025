@@ -98,6 +98,28 @@ struct RTSCORE_API FBuildingId
 	friend uint32 GetTypeHash(const FBuildingId& Id) { return ::GetTypeHash(Id.Value); }
 };
 
+/**
+ * Names one department — a node inside an organization, seated in a building. An organization
+ * points at its root department, a department at its parent; both directions are ids rather than
+ * FMassEntityHandles for the usual reason (handles do not survive a session).
+ */
+USTRUCT(BlueprintType)
+struct RTSCORE_API FDepartmentId
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Value = INDEX_NONE;
+
+	FDepartmentId() = default;
+	explicit FDepartmentId(const int32 InValue) : Value(InValue) {}
+
+	bool IsValid() const { return Value != INDEX_NONE; }
+	bool operator==(const FDepartmentId& Other) const { return Value == Other.Value; }
+	bool operator!=(const FDepartmentId& Other) const { return !(*this == Other); }
+	friend uint32 GetTypeHash(const FDepartmentId& Id) { return ::GetTypeHash(Id.Value); }
+};
+
 USTRUCT(BlueprintType)
 struct RTSCORE_API FRaceId
 {

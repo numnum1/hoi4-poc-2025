@@ -1,18 +1,26 @@
 #include "PlayerCharacterViewModel.h"
 
 #include "ActionViewModel.h"
+#include "Banking.h"
 #include "BuildingKindViewModel.h"
 #include "BuildingType.h"
 #include "Buildings.h"
+#include "CharacterInfo.h"
 #include "Characters.h"
+#include "Departments.h"
 #include "Kismet/GameplayStatics.h"
+#include "OrganizationInfo.h"
+#include "Organizations.h"
 #include "PositionViewModel.h"
 #include "Provinces.h"
 #include "ResourceViewModel.h"
 #include "RtsActions.h"
 #include "RtsFacadeSubsystem.h"
 #include "RtsPlayer.h"
+#include "RtsPresence.h"
 #include "RtsResources.h"
+#include "SelectableCharacterViewModel.h"
+#include "SelectableOrganizationViewModel.h"
 #include "SelectablePositionViewModel.h"
 
 void UPlayerCharacterViewModel::InitializeForPlayer()
@@ -47,6 +55,16 @@ void UPlayerCharacterViewModel::HandleControlledCharacterChanged()
 
 void UPlayerCharacterViewModel::Refresh_Implementation()
 {
+	// Captured before Super rebuilds Positions: which organization (not which index) was selected.
+	// A position lower in the list can now disappear — EA_LeaveOrganization removes one — which
+	// shifts every later index down. Re-deriving the selection by index alone would silently land
+	// on a different organization's position; identity is what actually has to survive a refresh.
+	const bool bWasActingAsPosition = !bIsActingAsSelf && GetPositions().IsValidIndex(SelectedPositionIndex);
+	const FOrganizationId PreviouslySelectedOrganizationId =
+		bWasActingAsPosition ? GetPositions()[SelectedPositionIndex]->GetOrganizationId() : FOrganizationId();
+
+	BindBanking();
+
 	Super::Refresh_Implementation();
 
 	// Without a facade the inherited refresh bailed out and left its last values behind, so nothing
@@ -64,8 +82,20 @@ void UPlayerCharacterViewModel::Refresh_Implementation()
 	// A position the character no longer holds (or never held, on the first refresh) falls back to
 	// acting as self rather than pointing at a stale index. Reapplying an unchanged selection also
 	// re-gates the action list against the values that just changed.
-	const bool bKeepSelection = bHasCharacters && GetPositions().IsValidIndex(SelectedPositionIndex);
-	ApplySelection(bKeepSelection ? SelectedPositionIndex : INDEX_NONE);
+	int32 NewSelectedPositionIndex = INDEX_NONE;
+	if (bHasCharacters && PreviouslySelectedOrganizationId.IsValid())
+	{
+		const TArray<TObjectPtr<UPositionViewModel>>& CurrentPositions = GetPositions();
+		for (int32 Index = 0; Index < CurrentPositions.Num(); ++Index)
+		{
+			if (CurrentPositions[Index] && CurrentPositions[Index]->GetOrganizationId() == PreviouslySelectedOrganizationId)
+			{
+				NewSelectedPositionIndex = Index;
+				break;
+			}
+		}
+	}
+	ApplySelection(NewSelectedPositionIndex);
 
 	// An open modal has to survive a refresh with current values rather than with the ones it was
 	// opened on: the character may have moved, been paid or gone broke since.
@@ -104,13 +134,18 @@ void UPlayerCharacterViewModel::OpenModal(const EPlayerModal InModal)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(ActiveModal, InModal);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsFoundOrganizationModalOpen, InModal == EPlayerModal::PM_FoundOrganization);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsJoinOrganizationModalOpen, InModal == EPlayerModal::PM_JoinOrganization);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsViewProvinceModalOpen, InModal == EPlayerModal::PM_ViewProvince);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsViewOrganizationModalOpen, InModal == EPlayerModal::PM_ViewOrganization);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsRecruitCharacterModalOpen, InModal == EPlayerModal::PM_RecruitCharacter);
 
 	// Whatever the last modal collected is not this one's starting point. The province is not reset
 	// with it: that is where the player is looking on the map, not something this modal collected —
 	// and starting the form on the province they were just inspecting is the useful default.
 	UE_MVVM_SET_PROPERTY_VALUE(PendingOrganizationName, FText::GetEmpty());
 	ApplyHeadquartersType(nullptr);
+	ApplyJoinTarget(FOrganizationId());
+	ApplyRecruitTarget(FCharacterId());
 }
 
 void UPlayerCharacterViewModel::CloseModal()
@@ -162,6 +197,13 @@ void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
 	}
 }
 
+void UPlayerCharacterViewModel::ViewOrganization(const FOrganizationId InOrganizationId)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedOrganizationId, InOrganizationId);
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedOrganizationIdValue, InOrganizationId.Value);
+	OpenModal(EPlayerModal::PM_ViewOrganization);
+}
+
 void UPlayerCharacterViewModel::ConfirmModal()
 {
 	if (!IsActionModal(ActiveModal))
@@ -191,6 +233,10 @@ EAction UPlayerCharacterViewModel::GetModalAction() const
 	{
 	case EPlayerModal::PM_FoundOrganization:
 		return EAction::EA_FoundOrganization;
+	case EPlayerModal::PM_JoinOrganization:
+		return EAction::EA_JoinOrganization;
+	case EPlayerModal::PM_RecruitCharacter:
+		return EAction::EA_RecruitCharacter;
 	default:
 		break;
 	}
@@ -202,6 +248,8 @@ bool UPlayerCharacterViewModel::IsActionModal(const EPlayerModal InModal) const
 	switch (InModal)
 	{
 	case EPlayerModal::PM_FoundOrganization:
+	case EPlayerModal::PM_JoinOrganization:
+	case EPlayerModal::PM_RecruitCharacter:
 		return true;
 	default:
 		return false;
@@ -233,6 +281,60 @@ void UPlayerCharacterViewModel::HandleHeadquartersTypeClicked(UBuildingKindViewM
 	// Clicking the picked row unpicks it, exactly as clicking the selected position row does.
 	UBuildingType* ClickedBuildingType = ClickedType->GetBuildingType();
 	ApplyHeadquartersType(ClickedBuildingType == PendingHeadquartersType ? nullptr : ClickedBuildingType);
+}
+
+void UPlayerCharacterViewModel::SelectJoinTarget(const FOrganizationId InOrganizationId)
+{
+	ApplyJoinTarget(InOrganizationId);
+}
+
+void UPlayerCharacterViewModel::ApplyJoinTarget(const FOrganizationId InOrganizationId)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(PendingJoinOrganizationId, InOrganizationId);
+	UE_MVVM_SET_PROPERTY_VALUE(PendingJoinOrganizationIdValue, InOrganizationId.Value);
+
+	// Everything else about the pick — which row is highlighted, what the gate says — is derived
+	// from the value just written, by the refresh below.
+	RefreshModalValidation();
+}
+
+void UPlayerCharacterViewModel::HandleJoinableOrganizationClicked(USelectableOrganizationViewModel* ClickedOrganization)
+{
+	if (ClickedOrganization == nullptr)
+	{
+		return;
+	}
+
+	// Clicking the picked row unpicks it, same toggle shape as HandleHeadquartersTypeClicked.
+	const FOrganizationId ClickedId = ClickedOrganization->GetOrganizationId();
+	ApplyJoinTarget(ClickedId == PendingJoinOrganizationId ? FOrganizationId() : ClickedId);
+}
+
+void UPlayerCharacterViewModel::SelectRecruitTarget(const FCharacterId InCharacterId)
+{
+	ApplyRecruitTarget(InCharacterId);
+}
+
+void UPlayerCharacterViewModel::ApplyRecruitTarget(const FCharacterId InCharacterId)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(PendingRecruitCharacterId, InCharacterId);
+	UE_MVVM_SET_PROPERTY_VALUE(PendingRecruitCharacterIdValue, InCharacterId.Value);
+
+	// Everything else about the pick — which row is highlighted, what the gate says — is derived
+	// from the value just written, by the refresh below.
+	RefreshModalValidation();
+}
+
+void UPlayerCharacterViewModel::HandleRecruitableCharacterClicked(USelectableCharacterViewModel* ClickedCharacter)
+{
+	if (ClickedCharacter == nullptr)
+	{
+		return;
+	}
+
+	// Clicking the picked row unpicks it, same toggle shape as HandleHeadquartersTypeClicked.
+	const FCharacterId ClickedId = ClickedCharacter->GetCharacterId();
+	ApplyRecruitTarget(ClickedId == PendingRecruitCharacterId ? FCharacterId() : ClickedId);
 }
 
 int32 UPlayerCharacterViewModel::GetCharacterFunds() const
@@ -288,11 +390,139 @@ void UPlayerCharacterViewModel::RefreshHeadquartersTypes()
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedHeadquartersType, NewSelectedType);
 }
 
+void UPlayerCharacterViewModel::RefreshJoinableOrganizations()
+{
+	UDepartments* DepartmentsContainer = nullptr;
+	UBuildings* BuildingsContainer = nullptr;
+	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
+	{
+		DepartmentsContainer = Facades->GetDepartmentsContainer();
+		BuildingsContainer = Facades->GetBuildingsContainer();
+	}
+
+	const FProvinceId CurrentProvinceId = Characters ? Characters->GetCurrentProvince(GetCharacterId()) : FProvinceId();
+	const TArray<FOrganizationId> PresentIds = URtsPresence::CollectOrganizationsIn(CurrentProvinceId, DepartmentsContainer, BuildingsContainer);
+
+	TArray<TObjectPtr<USelectableOrganizationViewModel>> NewRows;
+	USelectableOrganizationViewModel* NewSelectedRow = nullptr;
+
+	for (const FOrganizationId Id : PresentIds)
+	{
+		// Already a member — nothing to join here, see HoldsAnyPositionAt's counterpart in
+		// RtsActions.cpp for the same check on the execute side.
+		bool bAlreadyMember = false;
+		for (const UPositionViewModel* Position : GetPositions())
+		{
+			if (Position && Position->GetOrganizationId() == Id)
+			{
+				bAlreadyMember = true;
+				break;
+			}
+		}
+		if (bAlreadyMember)
+		{
+			continue;
+		}
+
+		TObjectPtr<USelectableOrganizationViewModel>& Entry = JoinableOrganizationCache.FindOrAdd(Id);
+		if (Entry == nullptr)
+		{
+			Entry = NewObject<USelectableOrganizationViewModel>(this);
+			Entry->OnClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleJoinableOrganizationClicked);
+		}
+
+		const FOrganizationInfo Info = Organizations ? Organizations->GetOrganizationInfo(Id) : FOrganizationInfo();
+		Entry->SetSource(Id, Info.OrganizationName, Info.Logo);
+
+		if (Id == PendingJoinOrganizationId)
+		{
+			NewSelectedRow = Entry;
+		}
+
+		NewRows.Add(Entry);
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(JoinableOrganizations, NewRows);
+	UE_MVVM_SET_PROPERTY_VALUE(JoinableOrganizationCount, NewRows.Num());
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedJoinOrganization, NewSelectedRow);
+}
+
+void UPlayerCharacterViewModel::RefreshRecruitableCharacters()
+{
+	// Recruiting is a RAS_Position action — meaningless while acting as self, so the list is empty
+	// then rather than guessing which organization is meant.
+	if (bIsActingAsSelf || Characters == nullptr)
+	{
+		UE_MVVM_SET_PROPERTY_VALUE(RecruitableCharacters, TArray<TObjectPtr<USelectableCharacterViewModel>>());
+		UE_MVVM_SET_PROPERTY_VALUE(RecruitableCharacterCount, 0);
+		UE_MVVM_SET_PROPERTY_VALUE(SelectedRecruitCharacter, nullptr);
+		return;
+	}
+
+	const UPositionViewModel* ActingPosition = GetPositions().IsValidIndex(SelectedPositionIndex) ? GetPositions()[SelectedPositionIndex].Get() : nullptr;
+	const FOrganizationId ActingOrganizationId = ActingPosition ? ActingPosition->GetOrganizationId() : FOrganizationId();
+
+	UDepartments* DepartmentsContainer = nullptr;
+	UBuildings* BuildingsContainer = nullptr;
+	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
+	{
+		DepartmentsContainer = Facades->GetDepartmentsContainer();
+		BuildingsContainer = Facades->GetBuildingsContainer();
+	}
+
+	const FProvinceId SeatProvinceId = URtsPresence::FindSeatProvince(ActingOrganizationId, Organizations, DepartmentsContainer, BuildingsContainer);
+	const TArray<FCharacterId> CandidateIds = SeatProvinceId.IsValid() ? Characters->CollectCharactersInProvince(SeatProvinceId) : TArray<FCharacterId>();
+
+	TArray<TObjectPtr<USelectableCharacterViewModel>> NewRows;
+	USelectableCharacterViewModel* NewSelectedRow = nullptr;
+
+	for (const FCharacterId CandidateId : CandidateIds)
+	{
+		// Already holds a position here — nothing to recruit, same check ExecuteAction's gate makes.
+		bool bAlreadyMember = false;
+		for (const FPosition& Position : Characters->GetPositions(CandidateId))
+		{
+			if (Position.OrganizationId == ActingOrganizationId)
+			{
+				bAlreadyMember = true;
+				break;
+			}
+		}
+		if (bAlreadyMember)
+		{
+			continue;
+		}
+
+		TObjectPtr<USelectableCharacterViewModel>& Entry = RecruitableCharacterCache.FindOrAdd(CandidateId);
+		if (Entry == nullptr)
+		{
+			Entry = NewObject<USelectableCharacterViewModel>(this);
+			Entry->OnClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleRecruitableCharacterClicked);
+		}
+
+		const FCharacterDisplayInfo Display = Characters->GetDisplayInfo(CandidateId);
+		Entry->SetSource(CandidateId, Display.CharacterName, Display.Portrait);
+
+		if (CandidateId == PendingRecruitCharacterId)
+		{
+			NewSelectedRow = Entry;
+		}
+
+		NewRows.Add(Entry);
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(RecruitableCharacters, NewRows);
+	UE_MVVM_SET_PROPERTY_VALUE(RecruitableCharacterCount, NewRows.Num());
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedRecruitCharacter, NewSelectedRow);
+}
+
 void UPlayerCharacterViewModel::RefreshModalValidation()
 {
 	// The rows carry prices and affordability, both of which move with the character's money — so
 	// they are re-derived wherever the gate is, not only when the modal opens.
 	RefreshHeadquartersTypes();
+	RefreshJoinableOrganizations();
+	RefreshRecruitableCharacters();
 
 	// PM_ViewProvince only displays a UProvinceViewModel and has no EAction to gate — there is
 	// nothing here for it to confirm.
@@ -326,6 +556,8 @@ FRtsActionInput UPlayerCharacterViewModel::MakeInput() const
 	// The map selection *is* the site — there is no second "pending province" to keep in step with
 	// what the player clicked.
 	Input.HeadquartersProvinceId = SelectedProvinceId;
+	Input.TargetOrganizationId = PendingJoinOrganizationId;
+	Input.TargetCharacterId = PendingRecruitCharacterId;
 	return Input;
 }
 
@@ -343,6 +575,7 @@ FRtsActionContext UPlayerCharacterViewModel::MakeContext() const
 	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
 	{
 		Context.Buildings = Facades->GetBuildingsContainer();
+		Context.Departments = Facades->GetDepartmentsContainer();
 		Context.Banking = Facades->GetBankingContainer();
 	}
 
@@ -368,6 +601,7 @@ FRtsResourceContext UPlayerCharacterViewModel::MakeResourceContext() const
 	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
 	{
 		Context.Banking = Facades->GetBankingContainer();
+		Context.Departments = Facades->GetDepartmentsContainer();
 	}
 
 	if (bIsActingAsSelf)
@@ -553,7 +787,66 @@ void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAct
 			OpenModal(EPlayerModal::PM_FoundOrganization);
 		}
 		return;
+
+	case EAction::EA_JoinOrganization:
+		if (ActiveModal == EPlayerModal::PM_JoinOrganization)
+		{
+			CloseModal();
+		}
+		else
+		{
+			OpenModal(EPlayerModal::PM_JoinOrganization);
+		}
+		return;
+
+	case EAction::EA_LeaveOrganization:
+		// No input to collect — this one runs straight from the click, same as any RAS_Position
+		// action with an empty FRtsActionInput would. The refresh that follows (OnPositionChanged ->
+		// Characters event -> Refresh_Implementation) rebuilds the selection and action list.
+		URtsActions::ExecuteAction(ActionType, Context, FRtsActionInput());
+		return;
+
+	case EAction::EA_RecruitCharacter:
+		if (ActiveModal == EPlayerModal::PM_RecruitCharacter)
+		{
+			CloseModal();
+		}
+		else
+		{
+			OpenModal(EPlayerModal::PM_RecruitCharacter);
+		}
+		return;
 	}
+}
+
+void UPlayerCharacterViewModel::BindBanking()
+{
+	UBanking* NewBanking = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetBankingContainer() : nullptr;
+	if (Banking == NewBanking)
+	{
+		return;
+	}
+
+	if (Banking)
+	{
+		Banking->OnBalanceChanged.RemoveAll(this);
+	}
+
+	Banking = NewBanking;
+
+	if (Banking)
+	{
+		Banking->OnBalanceChanged.AddDynamic(this, &UPlayerCharacterViewModel::HandleBalanceChanged);
+	}
+}
+
+void UPlayerCharacterViewModel::HandleBalanceChanged(const FBankAccountId InAccountId)
+{
+	// Unfiltered — this fires for every account's balance change, not just this character's or their
+	// organization's. Re-deriving both is cheap and the same tolerance ProvinceViewModel/
+	// OrganizationViewModel already have for their own unfiltered facade events.
+	RefreshResources();
+	RefreshModalValidation();
 }
 
 void UPlayerCharacterViewModel::BeginDestroy()
@@ -562,5 +855,11 @@ void UPlayerCharacterViewModel::BeginDestroy()
 	{
 		Player->OnControlledCharacterIdChanged.RemoveAll(this);
 	}
+
+	if (Banking)
+	{
+		Banking->OnBalanceChanged.RemoveAll(this);
+	}
+
 	Super::BeginDestroy();
 }

@@ -3,6 +3,9 @@
 #include "BankAccountEntitySubsystem.h"
 #include "BankEntitySubsystem.h"
 #include "Engine/World.h"
+#include "GameFramework/GameStateBase.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogRtsBankingFacade, Log, All);
 
 #define LOCTEXT_NAMESPACE "FBankingModule"
 
@@ -96,6 +99,12 @@ int32 UBanking::GetBalance(const FBankAccountId InAccountId) const
 	return Accounts ? Accounts->GetBalance(InAccountId) : 0;
 }
 
+FBankId UBanking::GetBank(const FBankAccountId InAccountId) const
+{
+	const UBankAccountEntitySubsystem* Accounts = GetAccounts();
+	return Accounts ? Accounts->GetBankId(InAccountId) : FBankId();
+}
+
 TArray<FBankAccountId> UBanking::GetAccountsForCharacter(const FCharacterId InOwnerId) const
 {
 	const UBankAccountEntitySubsystem* Accounts = GetAccounts();
@@ -153,4 +162,50 @@ bool UBanking::Transfer(const FBankAccountId InFromId, const FBankAccountId InTo
 	OnBalanceChanged.Broadcast(InFromId);
 	OnBalanceChanged.Broadcast(InToId);
 	return true;
+}
+
+// -----------------------------------------------------------------------------
+// Debug
+// -----------------------------------------------------------------------------
+
+namespace
+{
+	/** No InAmount clamp beyond what Withdraw already refuses (an overdraft) — the point of this
+	 * command is to force an account negative-relative-to-obligations for testing URtsEconomy's
+	 * insolvency path, not to model a real transaction. */
+	static FAutoConsoleCommandWithWorldAndArgs GSetBalanceCommand(
+		TEXT("Rts.SetBalance"),
+		TEXT("Rts.SetBalance <AccountIdx> <Amount> - sets a bank account's balance through UBanking."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(
+			[](const TArray<FString>& Args, UWorld* World)
+			{
+				const AGameStateBase* GameState = World ? World->GetGameState() : nullptr;
+				UBanking* Banking = GameState ? GameState->FindComponentByClass<UBanking>() : nullptr;
+				if (!Banking)
+				{
+					UE_LOG(LogRtsBankingFacade, Warning, TEXT("No UBanking component in this world"));
+					return;
+				}
+
+				if (Args.Num() < 2)
+				{
+					UE_LOG(LogRtsBankingFacade, Warning, TEXT("Usage: Rts.SetBalance <AccountIdx> <Amount>"));
+					return;
+				}
+
+				const FBankAccountId AccountId(FCString::Atoi(*Args[0]));
+				const int32 TargetAmount = FCString::Atoi(*Args[1]);
+				const int32 Delta = TargetAmount - Banking->GetBalance(AccountId);
+
+				if (Delta > 0)
+				{
+					Banking->Deposit(AccountId, Delta);
+				}
+				else if (Delta < 0)
+				{
+					Banking->Withdraw(AccountId, -Delta);
+				}
+
+				UE_LOG(LogRtsBankingFacade, Log, TEXT("Account %d balance is now %d"), AccountId.Value, Banking->GetBalance(AccountId));
+			}));
 }

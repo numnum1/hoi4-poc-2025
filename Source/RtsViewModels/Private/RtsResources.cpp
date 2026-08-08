@@ -2,44 +2,9 @@
 
 #include "Banking.h"
 #include "Characters.h"
+#include "RtsPresence.h"
 
 #define LOCTEXT_NAMESPACE "RtsResources"
-
-namespace
-{
-	/**
-	 * Every character currently holding a position at InOrganizationId — the organization's
-	 * supporters. Linear over all characters: CLAUDE.md sanctions exactly this "Sammel-Getter ohne
-	 * Rückwärtsindex" for the UI layer, the same shape URtsActions::HoldsClaimedPosition uses.
-	 */
-	int32 CountSupporters(const UCharacters* InCharacters, const FOrganizationId InOrganizationId)
-	{
-		if (InCharacters == nullptr || !InOrganizationId.IsValid())
-		{
-			return 0;
-		}
-
-		int32 Count = 0;
-		for (int32 Index = 0; Index < InCharacters->Num(); ++Index)
-		{
-			const FCharacterId Id(Index);
-			if (!InCharacters->IsAlive(Id))
-			{
-				continue;
-			}
-
-			for (const FPosition& Position : InCharacters->GetPositions(Id))
-			{
-				if (Position.OrganizationId == InOrganizationId)
-				{
-					++Count;
-					break;
-				}
-			}
-		}
-		return Count;
-	}
-}
 
 TArray<EResourceType> URtsResources::FindResourcesToDisplay(const FResourceOwner& InOwner)
 {
@@ -188,21 +153,26 @@ int32 URtsResources::GetAmount(const EResourceType InResource, const EResourceDe
 
 	case EResourceType::RT_Manpower:
 	{
-		// A character has no supporters of their own — only an organization's positions count.
-		const int32 Total = InContext.Owner.OwnerType == EResourceOwnerType::ROT_Organization
-			? CountSupporters(InContext.Characters, InContext.Owner.OrganizationId)
-			: 0;
+		// A character has no seats of their own — only an organization's departments have room to
+		// fill. Total is the room itself (URtsPresence::GetCapacity), Used is how much of it is
+		// filled (URtsPresence::CountMembers) — recruiting is what moves Used toward Total, and
+		// building more department space is what moves Total itself.
+		if (InContext.Owner.OwnerType != EResourceOwnerType::ROT_Organization)
+		{
+			return 0;
+		}
+
+		const int32 Capacity = URtsPresence::GetCapacity(InContext.Owner.OrganizationId, InContext.Departments);
+		const int32 Used = URtsPresence::CountMembers(InContext.Owner.OrganizationId, InContext.Characters);
 
 		switch (InDetail)
 		{
 		case EResourceDetail::RD_Total:
-			return Total;
+			return Capacity;
 		case EResourceDetail::RD_Used:
-			// No task/assignment concept exists yet, so nobody is counted as busy.
-			return 0;
+			return Used;
 		case EResourceDetail::RD_Free:
-			// Total - Used; Used is 0 today, so every supporter reads as free until tasks exist.
-			return Total;
+			return FMath::Max(Capacity - Used, 0);
 		default:
 			return 0;
 		}

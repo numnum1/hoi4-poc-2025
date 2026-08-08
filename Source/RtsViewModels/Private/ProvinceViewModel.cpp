@@ -1,18 +1,33 @@
 #include "ProvinceViewModel.h"
 
+#include "Buildings.h"
+#include "Characters.h"
+#include "Departments.h"
 #include "NationInfo.h"
 #include "Nations.h"
+#include "OrganizationInfo.h"
+#include "Organizations.h"
 #include "Provinces.h"
 #include "RtsFacadeSubsystem.h"
+#include "RtsPresence.h"
+#include "SelectableOrganizationViewModel.h"
 
 void UProvinceViewModel::Initialize(const FProvinceId InProvinceId)
 {
 	UProvinces* NewProvinces = nullptr;
 	UNations* NewNations = nullptr;
+	UOrganizations* NewOrganizations = nullptr;
+	UDepartments* NewDepartments = nullptr;
+	UBuildings* NewBuildings = nullptr;
+	UCharacters* NewCharacters = nullptr;
 	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
 	{
 		NewProvinces = Facades->GetProvincesContainer();
 		NewNations = Facades->GetNationsContainer();
+		NewOrganizations = Facades->GetOrganizationsContainer();
+		NewDepartments = Facades->GetDepartmentsContainer();
+		NewBuildings = Facades->GetBuildingsContainer();
+		NewCharacters = Facades->GetCharactersContainer();
 	}
 
 	if (Provinces == NewProvinces && ProvinceId == InProvinceId)
@@ -24,6 +39,10 @@ void UProvinceViewModel::Initialize(const FProvinceId InProvinceId)
 
 	Provinces = NewProvinces;
 	Nations = NewNations;
+	Organizations = NewOrganizations;
+	Departments = NewDepartments;
+	Buildings = NewBuildings;
+	Characters = NewCharacters;
 
 	ProvinceId = InProvinceId;
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ProvinceId);
@@ -35,6 +54,24 @@ void UProvinceViewModel::Initialize(const FProvinceId InProvinceId)
 		Provinces->OnProvinceDestroyed.AddDynamic(this, &UProvinceViewModel::HandleProvinceEvent);
 	}
 
+	if (Departments)
+	{
+		Departments->OnDepartmentCreated.AddDynamic(this, &UProvinceViewModel::HandlePresenceEvent);
+		Departments->OnDepartmentDissolved.AddDynamic(this, &UProvinceViewModel::HandlePresenceEvent);
+		Departments->OnDepartmentSeatChanged.AddDynamic(this, &UProvinceViewModel::HandlePresenceEvent);
+	}
+
+	if (Buildings)
+	{
+		Buildings->OnBuildingAdded.AddDynamic(this, &UProvinceViewModel::HandleBuildingEvent);
+		Buildings->OnBuildingDestroyed.AddDynamic(this, &UProvinceViewModel::HandleBuildingEvent);
+	}
+
+	if (Characters)
+	{
+		Characters->OnCurrentProvinceChanged.AddDynamic(this, &UProvinceViewModel::HandleCharacterMoved);
+	}
+
 	Refresh();
 }
 
@@ -43,6 +80,29 @@ void UProvinceViewModel::HandleProvinceEvent(const FProvinceId InProvinceId)
 	if (InProvinceId == ProvinceId)
 	{
 		Refresh();
+	}
+}
+
+void UProvinceViewModel::HandlePresenceEvent(const FDepartmentId InDepartmentId)
+{
+	Refresh();
+}
+
+void UProvinceViewModel::HandleBuildingEvent(const FBuildingId InBuildingId)
+{
+	Refresh();
+}
+
+void UProvinceViewModel::HandleCharacterMoved(const FCharacterId InCharacterId)
+{
+	Refresh();
+}
+
+void UProvinceViewModel::HandleOrganizationRowClicked(USelectableOrganizationViewModel* ClickedOrganization)
+{
+	if (ClickedOrganization)
+	{
+		OnOrganizationClicked.Broadcast(ClickedOrganization->GetOrganizationId());
 	}
 }
 
@@ -71,6 +131,35 @@ void UProvinceViewModel::Refresh_Implementation()
 	UE_MVVM_SET_PROPERTY_VALUE(OwningNationFlag, bHasOwner ? Nations->GetNationInfo(NewOwningNationId).Flag : FSlateNoResource());
 
 	UE_MVVM_SET_PROPERTY_VALUE(TimezoneOffset, Provinces->GetTimezoneOffset(ProvinceId));
+
+	RefreshOrganizationsPresent();
+	UE_MVVM_SET_PROPERTY_VALUE(BuildingCount, Buildings ? Buildings->CollectBuildingsInProvince(ProvinceId).Num() : 0);
+	UE_MVVM_SET_PROPERTY_VALUE(CharacterCount, Characters ? Characters->CollectCharactersInProvince(ProvinceId).Num() : 0);
+}
+
+void UProvinceViewModel::RefreshOrganizationsPresent()
+{
+	const TArray<FOrganizationId> PresentIds = URtsPresence::CollectOrganizationsIn(ProvinceId, Departments, Buildings);
+
+	TArray<TObjectPtr<USelectableOrganizationViewModel>> NewRows;
+	NewRows.Reserve(PresentIds.Num());
+
+	for (const FOrganizationId Id : PresentIds)
+	{
+		TObjectPtr<USelectableOrganizationViewModel>& Entry = OrganizationRowCache.FindOrAdd(Id);
+		if (Entry == nullptr)
+		{
+			Entry = NewObject<USelectableOrganizationViewModel>(this);
+			Entry->OnClicked.AddDynamic(this, &UProvinceViewModel::HandleOrganizationRowClicked);
+		}
+
+		const FOrganizationInfo Info = Organizations ? Organizations->GetOrganizationInfo(Id) : FOrganizationInfo();
+		Entry->SetSource(Id, Info.OrganizationName, Info.Logo);
+		NewRows.Add(Entry);
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(OrganizationsPresent, NewRows);
+	UE_MVVM_SET_PROPERTY_VALUE(OrganizationsPresentCount, NewRows.Num());
 }
 
 void UProvinceViewModel::Unbind()
@@ -79,6 +168,24 @@ void UProvinceViewModel::Unbind()
 	{
 		Provinces->OnOwningNationChanged.RemoveAll(this);
 		Provinces->OnProvinceDestroyed.RemoveAll(this);
+	}
+
+	if (Departments)
+	{
+		Departments->OnDepartmentCreated.RemoveAll(this);
+		Departments->OnDepartmentDissolved.RemoveAll(this);
+		Departments->OnDepartmentSeatChanged.RemoveAll(this);
+	}
+
+	if (Buildings)
+	{
+		Buildings->OnBuildingAdded.RemoveAll(this);
+		Buildings->OnBuildingDestroyed.RemoveAll(this);
+	}
+
+	if (Characters)
+	{
+		Characters->OnCurrentProvinceChanged.RemoveAll(this);
 	}
 }
 

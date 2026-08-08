@@ -127,6 +127,10 @@ public:
     UFUNCTION(BlueprintCallable)
     void AddPosition(FCharacterId InCharacterId, FOrganizationId InAtOrganizationId, FRoleId InRoleId = FRoleId());
 
+    /** Removes the position(s) the character holds at InAtOrganizationId. No-op if it holds none. */
+    UFUNCTION(BlueprintCallable)
+    void RemovePosition(FCharacterId InCharacterId, FOrganizationId InAtOrganizationId);
+
     UFUNCTION(BlueprintCallable)
     void MoveCharacter(FCharacterId InCharacterId, FProvinceId NewCurrentProvinceId);
 

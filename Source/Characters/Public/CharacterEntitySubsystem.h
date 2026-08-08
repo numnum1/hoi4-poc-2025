@@ -78,6 +78,9 @@ public:
 	void MoveCharacter(FCharacterId InCharacterId, FProvinceId InNewProvinceId);
 	/** No-ops if the character already holds this exact (organization, role) pair. */
 	void AddPosition(FCharacterId InCharacterId, FOrganizationId InAtOrganizationId, FRoleId InRoleId);
+	/** Removes every position the character holds at InOrganizationId — a character never holds
+	 * more than one in practice, but this does not assume it. No-op if it holds none. */
+	void RemovePosition(FCharacterId InCharacterId, FOrganizationId InAtOrganizationId);
 
 	/**
 	 * Fired once per character id the hourly processor just touched. Not a UPROPERTY —

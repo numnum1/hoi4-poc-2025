@@ -119,22 +119,10 @@ FProvinceId UBuildings::GetProvince(const FBuildingId InBuildingId) const
 	return Entities ? Entities->GetProvince(InBuildingId) : FProvinceId();
 }
 
-EBuildingOwnerType UBuildings::GetOwnerType(const FBuildingId InBuildingId) const
-{
-	const UBuildingEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->GetOwnerType(InBuildingId) : EBuildingOwnerType::BOT_None;
-}
-
 FCharacterId UBuildings::GetOwnerCharacter(const FBuildingId InBuildingId) const
 {
 	const UBuildingEntitySubsystem* Entities = GetEntities();
 	return Entities ? Entities->GetOwnerCharacter(InBuildingId) : FCharacterId();
-}
-
-FOrganizationId UBuildings::GetOwnerOrganization(const FBuildingId InBuildingId) const
-{
-	const UBuildingEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->GetOwnerOrganization(InBuildingId) : FOrganizationId();
 }
 
 TArray<FBuildingId> UBuildings::CollectBuildingsInProvince(const FProvinceId InProvinceId) const
@@ -149,13 +137,7 @@ TArray<FBuildingId> UBuildings::CollectBuildingsOwnedByCharacter(const FCharacte
 	return Entities ? Entities->CollectBuildingsOwnedByCharacter(InOwnerId) : TArray<FBuildingId>();
 }
 
-TArray<FBuildingId> UBuildings::CollectBuildingsOwnedByOrganization(const FOrganizationId InOwnerId) const
-{
-	const UBuildingEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->CollectBuildingsOwnedByOrganization(InOwnerId) : TArray<FBuildingId>();
-}
-
-FBuildingId UBuildings::AddForCharacter(UBuildingType* InBuildingType, const FProvinceId InProvinceId, const FCharacterId InOwnerId)
+FBuildingId UBuildings::Add(UBuildingType* InBuildingType, const FProvinceId InProvinceId, const FCharacterId InOwnerId)
 {
 	UBuildingEntitySubsystem* Entities = GetEntities();
 	if (!Entities)
@@ -164,21 +146,7 @@ FBuildingId UBuildings::AddForCharacter(UBuildingType* InBuildingType, const FPr
 	}
 
 	const int32 TypeIndex = ResolveTypeIndex(InBuildingType);
-	const FBuildingId NewId = Entities->CreateBuildingForCharacter(InProvinceId, TypeIndex, InOwnerId);
-	OnBuildingAdded.Broadcast(NewId);
-	return NewId;
-}
-
-FBuildingId UBuildings::AddForOrganization(UBuildingType* InBuildingType, const FProvinceId InProvinceId, const FOrganizationId InOwnerId)
-{
-	UBuildingEntitySubsystem* Entities = GetEntities();
-	if (!Entities)
-	{
-		return FBuildingId();
-	}
-
-	const int32 TypeIndex = ResolveTypeIndex(InBuildingType);
-	const FBuildingId NewId = Entities->CreateBuildingForOrganization(InProvinceId, TypeIndex, InOwnerId);
+	const FBuildingId NewId = Entities->CreateBuilding(InProvinceId, TypeIndex, InOwnerId);
 	OnBuildingAdded.Broadcast(NewId);
 	return NewId;
 }
@@ -195,18 +163,6 @@ void UBuildings::SetCharacterOwner(const FBuildingId InBuildingId, const FCharac
 	OnBuildingOwnerChanged.Broadcast(InBuildingId);
 }
 
-void UBuildings::SetOrganizationOwner(const FBuildingId InBuildingId, const FOrganizationId InNewOwnerId)
-{
-	UBuildingEntitySubsystem* Entities = GetEntities();
-	if (!Entities)
-	{
-		return;
-	}
-
-	Entities->SetOrganizationOwner(InBuildingId, InNewOwnerId);
-	OnBuildingOwnerChanged.Broadcast(InBuildingId);
-}
-
 void UBuildings::Destroy(const FBuildingId InBuildingId)
 {
 	UBuildingEntitySubsystem* Entities = GetEntities();
@@ -215,7 +171,8 @@ void UBuildings::Destroy(const FBuildingId InBuildingId)
 		return;
 	}
 
-	// An organization's seat cannot be taken away from it. Enforced here rather than by leaving the
+	// A headquarters is indestructible for now — an organization would otherwise lose the seat of
+	// its root department with no way to get another. Enforced here rather than by leaving the
 	// button out of some widget, so it holds for console commands and future callers too.
 	const UBuildingType* Type = GetBuildingType(InBuildingId);
 	if (Entities->IsAlive(InBuildingId) && Type && Type->IsHeadquarters())
@@ -238,7 +195,7 @@ namespace
 	 * facade's queries/events without editor access; the spawned building's type stays null. */
 	static FAutoConsoleCommandWithWorldAndArgs GSpawnBuildingCommand(
 		TEXT("Rts.SpawnBuilding"),
-		TEXT("Rts.SpawnBuilding <ProvinceIdx> <Char|Org> <OwnerIdx> - spawns a building through UBuildings."),
+		TEXT("Rts.SpawnBuilding <ProvinceIdx> <OwnerCharacterIdx> - spawns a building through UBuildings."),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(
 			[](const TArray<FString>& Args, UWorld* World)
 			{
@@ -250,36 +207,22 @@ namespace
 					return;
 				}
 
-				if (Args.Num() < 3)
+				if (Args.Num() < 2)
 				{
-					UE_LOG(LogRtsBuildingsFacade, Warning, TEXT("Usage: Rts.SpawnBuilding <ProvinceIdx> <Char|Org> <OwnerIdx>"));
+					UE_LOG(LogRtsBuildingsFacade, Warning, TEXT("Usage: Rts.SpawnBuilding <ProvinceIdx> <OwnerCharacterIdx>"));
 					return;
 				}
 
 				const FProvinceId ProvinceId(FCString::Atoi(*Args[0]));
-				const int32 OwnerIdx = FCString::Atoi(*Args[2]);
+				const FCharacterId OwnerId(FCString::Atoi(*Args[1]));
 
-				FBuildingId NewId;
-				if (Args[1] == TEXT("Char"))
-				{
-					NewId = Buildings->AddForCharacter(nullptr, ProvinceId, FCharacterId(OwnerIdx));
-				}
-				else if (Args[1] == TEXT("Org"))
-				{
-					NewId = Buildings->AddForOrganization(nullptr, ProvinceId, FOrganizationId(OwnerIdx));
-				}
-				else
-				{
-					UE_LOG(LogRtsBuildingsFacade, Warning, TEXT("Owner kind must be 'Char' or 'Org', got '%s'"), *Args[1]);
-					return;
-				}
-
+				const FBuildingId NewId = Buildings->Add(nullptr, ProvinceId, OwnerId);
 				UE_LOG(LogRtsBuildingsFacade, Log, TEXT("Spawned building %d"), NewId.Value);
 			}));
 
 	static FAutoConsoleCommandWithWorldAndArgs GSetBuildingOwnerCommand(
 		TEXT("Rts.SetBuildingOwner"),
-		TEXT("Rts.SetBuildingOwner <BuildingIdx> <Char|Org> <OwnerIdx> - changes a building's owner through UBuildings."),
+		TEXT("Rts.SetBuildingOwner <BuildingIdx> <OwnerCharacterIdx> - changes a building's owner through UBuildings."),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(
 			[](const TArray<FString>& Args, UWorld* World)
 			{
@@ -291,28 +234,14 @@ namespace
 					return;
 				}
 
-				if (Args.Num() < 3)
+				if (Args.Num() < 2)
 				{
-					UE_LOG(LogRtsBuildingsFacade, Warning, TEXT("Usage: Rts.SetBuildingOwner <BuildingIdx> <Char|Org> <OwnerIdx>"));
+					UE_LOG(LogRtsBuildingsFacade, Warning, TEXT("Usage: Rts.SetBuildingOwner <BuildingIdx> <OwnerCharacterIdx>"));
 					return;
 				}
 
 				const FBuildingId BuildingId(FCString::Atoi(*Args[0]));
-				const int32 OwnerIdx = FCString::Atoi(*Args[2]);
-
-				if (Args[1] == TEXT("Char"))
-				{
-					Buildings->SetCharacterOwner(BuildingId, FCharacterId(OwnerIdx));
-				}
-				else if (Args[1] == TEXT("Org"))
-				{
-					Buildings->SetOrganizationOwner(BuildingId, FOrganizationId(OwnerIdx));
-				}
-				else
-				{
-					UE_LOG(LogRtsBuildingsFacade, Warning, TEXT("Owner kind must be 'Char' or 'Org', got '%s'"), *Args[1]);
-					return;
-				}
+				Buildings->SetCharacterOwner(BuildingId, FCharacterId(FCString::Atoi(*Args[1])));
 
 				UE_LOG(LogRtsBuildingsFacade, Log, TEXT("Building %d owner changed"), BuildingId.Value);
 			}));

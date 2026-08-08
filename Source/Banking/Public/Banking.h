@@ -75,6 +75,10 @@ public:
 	UFUNCTION(BlueprintPure)
 	int32 GetBalance(FBankAccountId InAccountId) const;
 
+	/** Which bank InAccountId is held at. Invalid if the account is not alive. */
+	UFUNCTION(BlueprintPure)
+	FBankId GetBank(FBankAccountId InAccountId) const;
+
 	/** Every account the character currently holds, across every bank. Empty if it has none. */
 	UFUNCTION(BlueprintPure)
 	TArray<FBankAccountId> GetAccountsForCharacter(FCharacterId InOwnerId) const;

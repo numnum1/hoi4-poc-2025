@@ -12,4 +12,7 @@ UENUM(BlueprintType)
 enum class EAction : uint8
 {
 	EA_FoundOrganization UMETA(DisplayName = "Found Organization"),
+	EA_JoinOrganization  UMETA(DisplayName = "Join Organization"),
+	EA_LeaveOrganization UMETA(DisplayName = "Leave Organization"),
+	EA_RecruitCharacter  UMETA(DisplayName = "Recruit Character"),
 };

@@ -44,9 +44,9 @@ public:
     /** Fired after an organization's entity is gone. Its display row (name, logo) stays around. */
     UPROPERTY(BlueprintAssignable)
     FOrganizationEvent OnOrganizationDissolved;
-    /** Fired after SetHeadquarters seated the organization in a different building. */
+    /** Fired after SetRootDepartment pointed the organization at a different root department. */
     UPROPERTY(BlueprintAssignable)
-    FOrganizationEvent OnHeadquartersChanged;
+    FOrganizationEvent OnRootDepartmentChanged;
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TArray<FOrganizationInfo> Infos;
@@ -70,10 +70,11 @@ public:
     UFUNCTION(BlueprintPure)
     bool IsOwnedBy(FOrganizationId InOrganizationId, FCharacterId InCharacterId) const;
 
-    /** The building the organization is seated in. Invalid for a scenario-authored one, which is
-     * created without a building — see FOrganizationHeadquartersFragment. */
+    /** The department the organization is made of; UDepartments::GetSeat turns that into the
+     * building it sits in. Invalid for a scenario-authored one, which is created without a
+     * department — see FOrganizationRootDepartmentFragment. */
     UFUNCTION(BlueprintPure)
-    FBuildingId GetHeadquarters(FOrganizationId InOrganizationId) const;
+    FDepartmentId GetRootDepartment(FOrganizationId InOrganizationId) const;
 
     UFUNCTION(BlueprintPure)
     FOrganizationAlignment GetAlignment(FOrganizationId InOrganizationId) const;
@@ -89,10 +90,11 @@ public:
     UFUNCTION(BlueprintCallable)
     FOrganizationId Add(const FOrganizationInfo& NewOrg, FCharacterId InFounderId);
 
-    /** Seats the organization in a building. Called right after Add by whoever founded it, once the
-     * building exists — the organization has to be there first for the building to belong to it. */
+    /** Points the organization at its root department. Called right after Add by whoever founded
+     * it, once the department exists — the department names the organization, so the organization
+     * has to be there first. */
     UFUNCTION(BlueprintCallable)
-    void SetHeadquarters(FOrganizationId InOrganizationId, FBuildingId InBuildingId);
+    void SetRootDepartment(FOrganizationId InOrganizationId, FDepartmentId InRootDepartmentId);
 
     UFUNCTION(BlueprintCallable)
     void PublishAlignment(FOrganizationId InOrganizationId, const TArray<float>& InAlignment);

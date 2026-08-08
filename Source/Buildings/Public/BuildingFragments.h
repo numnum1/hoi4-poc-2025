@@ -43,10 +43,12 @@ struct BUILDINGS_API FBuildingTypeFragment : public FMassFragment
 };
 
 /**
- * Presence, not a stored enum, is the owner type — exactly one of this and
- * FBuildingOrganizationOwnerFragment is ever added to a building entity. See
- * UBuildingEntitySubsystem::SetCharacterOwner/SetOrganizationOwner for the archetype move that
- * keeps that true.
+ * The character a building belongs to. Present on every building from creation on, so ownership is
+ * always a plain value write and never an archetype move.
+ *
+ * There is no organization counterpart: an organization owns no buildings. It has a root
+ * department, and a department is *seated* in a building rather than owning it — see
+ * FDepartmentSeatFragment. Whose building that is stays a separate question, answered here.
  */
 USTRUCT()
 struct BUILDINGS_API FBuildingCharacterOwnerFragment : public FMassFragment
@@ -55,15 +57,6 @@ struct BUILDINGS_API FBuildingCharacterOwnerFragment : public FMassFragment
 
 	UPROPERTY()
 	FCharacterId OwnerId;
-};
-
-USTRUCT()
-struct BUILDINGS_API FBuildingOrganizationOwnerFragment : public FMassFragment
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-	FOrganizationId OwnerId;
 };
 
 USTRUCT()

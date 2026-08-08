@@ -45,6 +45,10 @@ public:
 	UFUNCTION(BlueprintPure)
 	FRoleId GetLeadershipRole() const;
 
+	/** The first role authored with bIsDefaultMembership set, or an invalid id if none was authored. */
+	UFUNCTION(BlueprintPure)
+	FRoleId GetMembershipRole() const;
+
 	FORCEINLINE const TArray<FRoleInfo>& GetRoleInfos() const { return Values; }
 
 private:

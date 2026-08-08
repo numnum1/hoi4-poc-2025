@@ -6,10 +6,17 @@
 #include "MVVMViewModelBase.h"
 #include "ProvinceViewModel.generated.h"
 
+class UBuildings;
+class UCharacters;
+class UDepartments;
 class UEcology;
 class UNations;
+class UOrganizations;
 class UProvinces;
+class USelectableOrganizationViewModel;
 class USoundBase;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FProvinceOrganizationClicked, FOrganizationId, InOrganizationId);
 
 /**
  * A read-only C++ MVVM view model for a single province, addressed by the same FProvinceId
@@ -30,6 +37,12 @@ class RTSVIEWMODELS_API UProvinceViewModel : public UMVVMViewModelBase
 public:
 	UFUNCTION(BlueprintCallable, Category="Province Viewmodel")
 	void Initialize(FProvinceId InProvinceId);
+
+	/** One row in OrganizationsPresent was clicked. Re-broadcast rather than deciding anything here
+	 * — this view model has no notion of a "selected organization", that is UI-invented state that
+	 * belongs to whoever owns the screen this feeds. */
+	UPROPERTY(BlueprintAssignable, Category="Province Viewmodel|Presence")
+	FProvinceOrganizationClicked OnOrganizationClicked;
 
 protected:
 	//~ Identity ---------------------------------------------------------------------------------
@@ -82,6 +95,23 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel", meta=(AllowPrivateAccess))
 	int32 TimezoneOffset = 0;
 
+	//~ Who is here --------------------------------------------------------------------------------
+	// Derived through Departments/Buildings — Provinces itself is not allowed to know those modules.
+
+	/** One row per organization with at least one department seated in this province — see
+	 * URtsPresence::CollectOrganizationsIn. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel|Presence", meta=(AllowPrivateAccess))
+	TArray<TObjectPtr<USelectableOrganizationViewModel>> OrganizationsPresent;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel|Presence", meta=(AllowPrivateAccess))
+	int32 OrganizationsPresentCount = 0;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel|Presence", meta=(AllowPrivateAccess))
+	int32 BuildingCount = 0;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel|Presence", meta=(AllowPrivateAccess))
+	int32 CharacterCount = 0;
+
 public:
 	bool IsValid() const { return bIsValid; }
 	FProvinceId GetProvinceId() const { return ProvinceId; }
@@ -99,6 +129,11 @@ public:
 	FSlateBrush GetOwningNationFlag() const { return OwningNationFlag; }
 	int32 GetTimezoneOffset() const { return TimezoneOffset; }
 
+	const TArray<TObjectPtr<USelectableOrganizationViewModel>>& GetOrganizationsPresent() const { return OrganizationsPresent; }
+	int32 GetOrganizationsPresentCount() const { return OrganizationsPresentCount; }
+	int32 GetBuildingCount() const { return BuildingCount; }
+	int32 GetCharacterCount() const { return CharacterCount; }
+
 protected:
 	UFUNCTION(BlueprintNativeEvent, Category="Province Viewmodel")
 	void Refresh();
@@ -113,9 +148,44 @@ private:
 	UFUNCTION()
 	void HandleProvinceEvent(FProvinceId InProvinceId);
 
+	/** Bound to Departments'/Buildings' events unfiltered — none of them carry a province id, so
+	 * there is no cheaper check than re-deriving presence, same as UCharacters::OnCurrentProvinceChanged
+	 * below. */
+	UFUNCTION()
+	void HandlePresenceEvent(FDepartmentId InDepartmentId);
+
+	UFUNCTION()
+	void HandleBuildingEvent(FBuildingId InBuildingId);
+
+	UFUNCTION()
+	void HandleCharacterMoved(FCharacterId InCharacterId);
+
+	UFUNCTION()
+	void HandleOrganizationRowClicked(USelectableOrganizationViewModel* ClickedOrganization);
+
+	/** Rebuilds OrganizationsPresent from URtsPresence::CollectOrganizationsIn. */
+	void RefreshOrganizationsPresent();
+
 	UPROPERTY()
 	TObjectPtr<UProvinces> Provinces;
 
 	UPROPERTY()
 	TObjectPtr<UNations> Nations;
+
+	UPROPERTY()
+	TObjectPtr<UOrganizations> Organizations;
+
+	UPROPERTY()
+	TObjectPtr<UDepartments> Departments;
+
+	UPROPERTY()
+	TObjectPtr<UBuildings> Buildings;
+
+	UPROPERTY()
+	TObjectPtr<UCharacters> Characters;
+
+	/** Reused across refreshes so a rebuild that offers the same organizations keeps the same row
+	 * objects — same idea as UPlayerCharacterViewModel::ActionEntryCache. */
+	UPROPERTY()
+	TMap<FOrganizationId, TObjectPtr<USelectableOrganizationViewModel>> OrganizationRowCache;
 };

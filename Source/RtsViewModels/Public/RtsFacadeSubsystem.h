@@ -7,6 +7,7 @@
 class UBanking;
 class UBuildings;
 class UCharacters;
+class UDepartments;
 class UNations;
 class UOrganizations;
 class UProvinces;
@@ -41,6 +42,7 @@ public:
 	UProvinces* GetProvincesContainer();
 	UNations* GetNationsContainer();
 	UOrganizations* GetOrganizationsContainer();
+	UDepartments* GetDepartmentsContainer();
 	UBuildings* GetBuildingsContainer();
 	USchedules* GetSchedulesContainer();
 	URoles* GetRolesContainer();
@@ -68,6 +70,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UOrganizations> OrganizationsContainer;
+
+	UPROPERTY()
+	TObjectPtr<UDepartments> DepartmentsContainer;
 
 	UPROPERTY()
 	TObjectPtr<UBuildings> BuildingsContainer;

@@ -7,6 +7,7 @@
 class UBanking;
 class UBuildings;
 class UCharacters;
+class UDepartments;
 class UOrganizations;
 class URoles;
 
@@ -54,6 +55,12 @@ struct RTSVIEWMODELS_API FRtsActionContext
 
 	UPROPERTY(BlueprintReadOnly, Category="Action")
 	TObjectPtr<UOrganizations> Organizations;
+
+	/** Founding creates the organization's root department, and seating one is the only place the
+	 * building-space rule can be checked — it needs UBuildingType from Buildings and the space
+	 * already claimed from here, which no single domain module may know at once. */
+	UPROPERTY(BlueprintReadOnly, Category="Action")
+	TObjectPtr<UDepartments> Departments;
 
 	UPROPERTY(BlueprintReadOnly, Category="Action")
 	TObjectPtr<URoles> Roles;

@@ -6,8 +6,8 @@
 
 /**
  * Which kind of legal person owns resources. The value is never stored on anything persistent —
- * it exists only at this context/facade boundary, the same reason EBuildingOwnerType is not stored
- * on the entity either (see Buildings/Public/BuildingOwnerType.h).
+ * it exists only at this context/facade boundary, the same reason EBankAccountOwnerType is not
+ * stored on the entity either (see Banking/Public/BankAccountOwnerType.h).
  */
 UENUM(BlueprintType)
 enum class EResourceOwnerType : uint8

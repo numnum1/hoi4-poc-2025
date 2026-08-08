@@ -15,6 +15,8 @@ class UActionViewModel;
 class UBuildingKindViewModel;
 class UBuildingType;
 class UResourceViewModel;
+class USelectableCharacterViewModel;
+class USelectableOrganizationViewModel;
 class USelectablePositionViewModel;
 
 /**
@@ -93,6 +95,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void SelectHeadquartersType(UBuildingType* InBuildingType);
 
+	/** Which organization the join-organization modal is about to join. An invalid id means the
+	 * player has not picked one yet, which is what the input gate refuses on. */
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
+	void SelectJoinTarget(FOrganizationId InOrganizationId);
+
+	/** Which character the recruit modal is about to recruit. An invalid id means the player has
+	 * not picked one yet, which is what the input gate refuses on. */
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
+	void SelectRecruitTarget(FCharacterId InCharacterId);
+
 	/** Set from the world map click, and the only place a province is ever picked — see CLAUDE.md
 	 * on the world map being *the* province interaction.
 	 *
@@ -108,6 +120,12 @@ public:
 	 * either gate refuses — the widget's last pushed bCanConfirmModal is never trusted. */
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void ConfirmModal();
+
+	/** Opens PM_ViewOrganization for InOrganizationId. Bound in Blueprint from two places: a
+	 * province screen row (UProvinceViewModel::OnOrganizationClicked) and the player's own position
+	 * row — neither is a C++ selection change, both are "go look at this organization". */
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
+	void ViewOrganization(FOrganizationId InOrganizationId);
 
 protected:
 	//~ Widget state — invented by the UI, not derived from the simulation ------------------------
@@ -132,9 +150,30 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsFoundOrganizationModalOpen, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	bool bIsFoundOrganizationModalOpen = false;
 
+	/** Same idea as bIsFoundOrganizationModalOpen, for the join-organization modal. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsJoinOrganizationModalOpen, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	bool bIsJoinOrganizationModalOpen = false;
+
 	/** Same idea as bIsFoundOrganizationModalOpen, for the view-province modal. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsViewProvinceModalOpen, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	bool bIsViewProvinceModalOpen = false;
+
+	/** Same idea as bIsFoundOrganizationModalOpen, for the view-organization modal. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsViewOrganizationModalOpen, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	bool bIsViewOrganizationModalOpen = false;
+
+	/** Same idea as bIsFoundOrganizationModalOpen, for the recruit-character modal. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsRecruitCharacterModalOpen, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	bool bIsRecruitCharacterModalOpen = false;
+
+	/** The organization PM_ViewOrganization shows. Bound as a CreateInstance UOrganizationViewModel's
+	 * Initialize(FOrganizationId) destination in Blueprint — same shape as SelectedProvinceId. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	FOrganizationId SelectedOrganizationId;
+
+	/** SelectedOrganizationId as a plain int32, for widgets that cannot bind the id struct. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	int32 SelectedOrganizationIdValue = INDEX_NONE;
 
 	/** The province PM_ViewProvince shows. Bound as a CreateInstance UProvinceViewModel's
 	 * Initialize(FProvinceId) destination in Blueprint — this class holds only the id, never a
@@ -177,6 +216,44 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	TObjectPtr<UBuildingKindViewModel> SelectedHeadquartersType;
 
+	/** Which organization the join-organization modal will join, invalid until one is picked. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	FOrganizationId PendingJoinOrganizationId;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	int32 PendingJoinOrganizationIdValue = INDEX_NONE;
+
+	/** One row per organization present where the character currently stands, minus the ones it
+	 * already belongs to. Rebuilt whenever the modal opens or the character moves/joins/leaves. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	TArray<TObjectPtr<USelectableOrganizationViewModel>> JoinableOrganizations;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	int32 JoinableOrganizationCount = 0;
+
+	/** The picked row, or null while none is — same shape as SelectedHeadquartersType. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	TObjectPtr<USelectableOrganizationViewModel> SelectedJoinOrganization;
+
+	/** Which character the recruit modal will recruit, invalid until one is picked. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	FCharacterId PendingRecruitCharacterId;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	int32 PendingRecruitCharacterIdValue = INDEX_NONE;
+
+	/** One row per character standing where the acting position's organization is headquartered,
+	 * minus the ones who already hold a position there. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	TArray<TObjectPtr<USelectableCharacterViewModel>> RecruitableCharacters;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	int32 RecruitableCharacterCount = 0;
+
+	/** The picked row, or null while none is — same shape as SelectedHeadquartersType. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	TObjectPtr<USelectableCharacterViewModel> SelectedRecruitCharacter;
+
 	/** Empty while the current input is usable. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	FText ModalErrorText;
@@ -216,7 +293,12 @@ public:
 	int32 GetSelectablePositionCount() const { return SelectablePositionCount; }
 	EPlayerModal GetActiveModal() const { return ActiveModal; }
 	bool IsFoundOrganizationModalOpen() const { return bIsFoundOrganizationModalOpen; }
+	bool IsJoinOrganizationModalOpen() const { return bIsJoinOrganizationModalOpen; }
 	bool IsViewProvinceModalOpen() const { return bIsViewProvinceModalOpen; }
+	bool IsViewOrganizationModalOpen() const { return bIsViewOrganizationModalOpen; }
+	bool IsRecruitCharacterModalOpen() const { return bIsRecruitCharacterModalOpen; }
+	FOrganizationId GetSelectedOrganizationId() const { return SelectedOrganizationId; }
+	int32 GetSelectedOrganizationIdValue() const { return SelectedOrganizationIdValue; }
 	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
 	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
 	FText GetSelectedProvinceName() const { return SelectedProvinceName; }
@@ -226,6 +308,16 @@ public:
 	const TArray<TObjectPtr<UBuildingKindViewModel>>& GetHeadquartersTypes() const { return HeadquartersTypes; }
 	int32 GetHeadquartersTypeCount() const { return HeadquartersTypeCount; }
 	UBuildingKindViewModel* GetSelectedHeadquartersType() const { return SelectedHeadquartersType; }
+	FOrganizationId GetPendingJoinOrganizationId() const { return PendingJoinOrganizationId; }
+	int32 GetPendingJoinOrganizationIdValue() const { return PendingJoinOrganizationIdValue; }
+	const TArray<TObjectPtr<USelectableOrganizationViewModel>>& GetJoinableOrganizations() const { return JoinableOrganizations; }
+	int32 GetJoinableOrganizationCount() const { return JoinableOrganizationCount; }
+	USelectableOrganizationViewModel* GetSelectedJoinOrganization() const { return SelectedJoinOrganization; }
+	FCharacterId GetPendingRecruitCharacterId() const { return PendingRecruitCharacterId; }
+	int32 GetPendingRecruitCharacterIdValue() const { return PendingRecruitCharacterIdValue; }
+	const TArray<TObjectPtr<USelectableCharacterViewModel>>& GetRecruitableCharacters() const { return RecruitableCharacters; }
+	int32 GetRecruitableCharacterCount() const { return RecruitableCharacterCount; }
+	USelectableCharacterViewModel* GetSelectedRecruitCharacter() const { return SelectedRecruitCharacter; }
 	FText GetModalErrorText() const { return ModalErrorText; }
 	bool CanConfirmModal() const { return bCanConfirmModal; }
 	const TArray<TObjectPtr<UActionViewModel>>& GetActions() const { return Actions; }
@@ -268,6 +360,22 @@ private:
 	/** Rebuilds the headquarters rows and pushes each one's affordability. */
 	void RefreshHeadquartersTypes();
 
+	/** The one writer of PendingJoinOrganizationId/SelectedJoinOrganization, same reason
+	 * ApplyHeadquartersType is the one writer of the headquarters pick. */
+	void ApplyJoinTarget(FOrganizationId InOrganizationId);
+
+	/** Rebuilds JoinableOrganizations: organizations present where the character stands, minus
+	 * the ones it already belongs to. */
+	void RefreshJoinableOrganizations();
+
+	/** The one writer of PendingRecruitCharacterId/SelectedRecruitCharacter, same reason
+	 * ApplyJoinTarget is the one writer of the join pick. */
+	void ApplyRecruitTarget(FCharacterId InCharacterId);
+
+	/** Rebuilds RecruitableCharacters: characters standing where the acting position's organization
+	 * is headquartered, minus the ones who already hold a position there. */
+	void RefreshRecruitableCharacters();
+
 	/** What the played character can spend, read through URtsResources so the modal and the money
 	 * row can never disagree about what "the character's money" means. */
 	int32 GetCharacterFunds() const;
@@ -299,6 +407,22 @@ private:
 	UFUNCTION()
 	void HandleHeadquartersTypeClicked(UBuildingKindViewModel* ClickedType);
 
+	/** Same toggle shape as HandleHeadquartersTypeClicked, for the join-organization picker. */
+	UFUNCTION()
+	void HandleJoinableOrganizationClicked(USelectableOrganizationViewModel* ClickedOrganization);
+
+	/** Same toggle shape as HandleHeadquartersTypeClicked, for the recruit picker. */
+	UFUNCTION()
+	void HandleRecruitableCharacterClicked(USelectableCharacterViewModel* ClickedCharacter);
+
+	/** UBanking::OnBalanceChanged was going unheard here — the money row only ever refreshed by
+	 * accident, riding along on UCharacters::OnSimulated once an hour. Resolved/bound idempotently
+	 * from Refresh_Implementation, the same shape Initialize resolves the base class's facades. */
+	void BindBanking();
+
+	UFUNCTION()
+	void HandleBalanceChanged(FBankAccountId InAccountId);
+
 	UFUNCTION()
 	void HandleControlledCharacterChanged();
 
@@ -323,6 +447,18 @@ private:
 	/** Same idea, keyed by the UBuildingType asset. */
 	UPROPERTY()
 	TMap<TObjectPtr<UBuildingType>, TObjectPtr<UBuildingKindViewModel>> HeadquartersTypeCache;
+
+	/** Same idea, keyed by the organization id. */
+	UPROPERTY()
+	TMap<FOrganizationId, TObjectPtr<USelectableOrganizationViewModel>> JoinableOrganizationCache;
+
+	/** Same idea, keyed by the character id. */
+	UPROPERTY()
+	TMap<FCharacterId, TObjectPtr<USelectableCharacterViewModel>> RecruitableCharacterCache;
+
+	/** Resolved and bound once by BindBanking; unbound in BeginDestroy. */
+	UPROPERTY()
+	TObjectPtr<UBanking> Banking;
 
 	/** Which resource is the single expanded one, and whether that is even the case right now —
 	 * plain private state, not FieldNotify, because nothing binds to the id itself: only each row's

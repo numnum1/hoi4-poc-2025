@@ -151,6 +151,15 @@ void UCharacters::AddPosition(const FCharacterId InCharacterId, const FOrganizat
 	OnPositionChanged.Broadcast(InCharacterId);
 }
 
+void UCharacters::RemovePosition(const FCharacterId InCharacterId, const FOrganizationId InAtOrganizationId)
+{
+	UCharacterEntitySubsystem* Entities = GetEntities();
+	if (!Entities) return;
+
+	Entities->RemovePosition(InCharacterId, InAtOrganizationId);
+	OnPositionChanged.Broadcast(InCharacterId);
+}
+
 void UCharacters::MoveCharacter(const FCharacterId InCharacterId, const FProvinceId NewCurrentProvinceId)
 {
 	UCharacterEntitySubsystem* Entities = GetEntities();

@@ -55,8 +55,8 @@ public:
 	// --- read ---
 	/** The character this organization belongs to, or an invalid id if it has no owner. */
 	FCharacterId GetOwnerCharacter(FOrganizationId InOrganizationId) const;
-	/** The building the organization is seated in, or an invalid id if it has none. */
-	FBuildingId GetHeadquarters(FOrganizationId InOrganizationId) const;
+	/** The department the organization is made of, or an invalid id if it has none. */
+	FDepartmentId GetRootDepartment(FOrganizationId InOrganizationId) const;
 	bool IsAlignmentPublished(FOrganizationId InOrganizationId) const;
 	FOrganizationAlignment GetAlignment(FOrganizationId InOrganizationId) const;
 	TArray<FNationId> GetSettledNations(FOrganizationId InOrganizationId) const;
@@ -64,9 +64,9 @@ public:
 	TArray<FOrganizationId> CollectOrganizationsSettledIn(FNationId InNationId) const;
 
 	// --- write ---
-	/** Seats the organization in a building. Separate from CreateOrganization because the building
-	 * is created *for* this organization and so cannot exist before it does. */
-	void SetHeadquarters(FOrganizationId InOrganizationId, FBuildingId InBuildingId);
+	/** Points the organization at its root department. Separate from CreateOrganization because the
+	 * department is created *for* this organization and so cannot exist before it does. */
+	void SetRootDepartment(FOrganizationId InOrganizationId, FDepartmentId InRootDepartmentId);
 	void PublishAlignment(FOrganizationId InOrganizationId, const TArray<float>& InAlignment);
 	/** Returns false if that nation was already settled. */
 	bool SettleNation(FOrganizationId InOrganizationId, FNationId InNationId);

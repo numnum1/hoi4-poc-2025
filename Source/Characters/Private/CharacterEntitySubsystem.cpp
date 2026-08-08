@@ -365,6 +365,23 @@ void UCharacterEntitySubsystem::AddPosition(const FCharacterId InCharacterId, co
 	Positions.Add(NewPosition);
 }
 
+void UCharacterEntitySubsystem::RemovePosition(const FCharacterId InCharacterId, const FOrganizationId InAtOrganizationId)
+{
+	const FMassEntityHandle Entity = GetEntity(InCharacterId);
+	if (!ensureMsgf(Entity.IsValid(), TEXT("RemovePosition: character %d is not alive"), InCharacterId.Value))
+	{
+		return;
+	}
+
+	TArray<FPosition>& Positions =
+		FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FCharacterPositionsFragment>().Values;
+
+	Positions.RemoveAll([&](const FPosition& Existing)
+	{
+		return Existing.OrganizationId == InAtOrganizationId;
+	});
+}
+
 // -----------------------------------------------------------------------------
 // Debug
 // -----------------------------------------------------------------------------

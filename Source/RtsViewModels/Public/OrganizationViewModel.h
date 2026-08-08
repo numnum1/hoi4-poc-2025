@@ -6,8 +6,13 @@
 #include "MVVMViewModelBase.h"
 #include "OrganizationViewModel.generated.h"
 
+class UBanking;
 class UCharacters;
+class UDepartments;
+class UDepartmentViewModel;
+class UMemberViewModel;
 class UOrganizations;
+class URoles;
 
 /**
  * A read-only C++ MVVM view model for a single organization, addressed by the same
@@ -91,6 +96,35 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Nations", meta=(AllowPrivateAccess))
 	int32 SettledNationCount = 0;
 
+	//~ Members ----------------------------------------------------------------------------------
+	// Rows cached per character id, same shape UPlayerCharacterViewModel::ActionEntryCache uses.
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Members", meta=(AllowPrivateAccess))
+	TArray<TObjectPtr<UMemberViewModel>> Members;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Members", meta=(AllowPrivateAccess))
+	int32 MemberCount = 0;
+
+	/** The sum of the space every department claims — see URtsPresence::GetCapacity. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Members", meta=(AllowPrivateAccess))
+	int32 MemberCapacity = 0;
+
+	//~ Departments --------------------------------------------------------------------------------
+
+	/** One row per department the organization is made of, root first — see
+	 * UDepartmentEntitySubsystem::CollectDepartmentsOf. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Departments", meta=(AllowPrivateAccess))
+	TArray<TObjectPtr<UDepartmentViewModel>> Departments;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Departments", meta=(AllowPrivateAccess))
+	int32 DepartmentCount = 0;
+
+	//~ Banking ----------------------------------------------------------------------------------
+
+	/** The organization's account balance, 0 if it has no account — see UBanking::GetBalance. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Banking", meta=(AllowPrivateAccess))
+	int32 Balance = 0;
+
 public:
 	bool IsValid() const { return bIsValid; }
 	FOrganizationId GetOrganizationId() const { return OrganizationId; }
@@ -111,6 +145,15 @@ public:
 	const TArray<int32>& GetSettledNationIdValues() const { return SettledNationIdValues; }
 	int32 GetSettledNationCount() const { return SettledNationCount; }
 
+	const TArray<TObjectPtr<UMemberViewModel>>& GetMembers() const { return Members; }
+	int32 GetMemberCount() const { return MemberCount; }
+	int32 GetMemberCapacity() const { return MemberCapacity; }
+
+	const TArray<TObjectPtr<UDepartmentViewModel>>& GetDepartments() const { return Departments; }
+	int32 GetDepartmentCount() const { return DepartmentCount; }
+
+	int32 GetBalance() const { return Balance; }
+
 protected:
 	UFUNCTION(BlueprintCallable, Category="Organization Viewmodel")
 	void Initialize(FOrganizationId InOrganizationId);
@@ -128,9 +171,40 @@ private:
 	UFUNCTION()
 	void HandleOrganizationEvent(FOrganizationId InOrganizationId);
 
+	/** Bound to UCharacters::OnPositionChanged unfiltered — it carries the character's id, not the
+	 * organization's, so there is no cheaper check than re-deriving the member list. */
+	UFUNCTION()
+	void HandleMemberEvent(FCharacterId InCharacterId);
+
+	/** Bound to UDepartments::OnDepartmentCreated/OnDepartmentDissolved, same unfiltered reasoning. */
+	UFUNCTION()
+	void HandleDepartmentEvent(FDepartmentId InDepartmentId);
+
+	/** Bound to UBanking::OnBalanceChanged, same unfiltered reasoning — it carries the account id,
+	 * not the organization's. */
+	UFUNCTION()
+	void HandleBalanceChanged(FBankAccountId InAccountId);
+
 	UPROPERTY()
 	TObjectPtr<UOrganizations> Organizations;
 
 	UPROPERTY()
 	TObjectPtr<UCharacters> Characters;
+
+	UPROPERTY()
+	TObjectPtr<UDepartments> DepartmentsFacade;
+
+	UPROPERTY()
+	TObjectPtr<URoles> Roles;
+
+	UPROPERTY()
+	TObjectPtr<UBanking> Banking;
+
+	/** Reused across refreshes so a rebuild that offers the same members keeps the same row objects. */
+	UPROPERTY()
+	TMap<FCharacterId, TObjectPtr<UMemberViewModel>> MemberCache;
+
+	/** Same idea, keyed by department id. */
+	UPROPERTY()
+	TMap<FDepartmentId, TObjectPtr<UDepartmentViewModel>> DepartmentCache;
 };

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingOwnerType.h"
 #include "RtsIds.h"
 #include "Mass/EntityHandle.h"
 #include "MassEntityQuery.h"
@@ -11,8 +10,6 @@
 class UMassEntitySubsystem;
 struct FMassEntityManager;
 
-namespace UE::Mass { struct FEntityBuilder; }
-
 /**
  * Owns the building entities and bridges them to the stable FBuildingId.
  *
@@ -21,10 +18,9 @@ namespace UE::Mass { struct FEntityBuilder; }
  * to an actual UBuildingType* to the facade (UBuildings), which is the one holding the UObject
  * pointers.
  *
- * Ownership is not a stored enum: exactly one of FBuildingCharacterOwnerFragment /
- * FBuildingOrganizationOwnerFragment is present on an entity, and GetOwnerType reads that back
- * from fragment presence. SetCharacterOwner/SetOrganizationOwner move the entity to the other
- * archetype when the owner kind changes.
+ * A building always belongs to a character. Organizations do not own buildings: an organization
+ * has a root department, and a department is seated in a building somebody else owns — see
+ * FDepartmentSeatFragment. That is why there is one owner fragment here and no owner-kind enum.
  */
 UCLASS()
 class BUILDINGS_API UBuildingEntitySubsystem : public UWorldSubsystem
@@ -38,10 +34,7 @@ public:
 
 	/** Spawns one building entity owned by a character and returns the id it claims. Ids are
 	 * never reused. */
-	FBuildingId CreateBuildingForCharacter(FProvinceId InProvinceId, int32 InTypeIndex, FCharacterId InOwnerId);
-
-	/** Spawns one building entity owned by an organization and returns the id it claims. */
-	FBuildingId CreateBuildingForOrganization(FProvinceId InProvinceId, int32 InTypeIndex, FOrganizationId InOwnerId);
+	FBuildingId CreateBuilding(FProvinceId InProvinceId, int32 InTypeIndex, FCharacterId InOwnerId);
 
 	/** Destroys the entity. The id's slot stays reserved and reports not-alive from then on. */
 	void DestroyBuilding(FBuildingId InBuildingId);
@@ -62,25 +55,17 @@ public:
 	// --- read ---
 	FProvinceId GetProvince(FBuildingId InBuildingId) const;
 	int32 GetTypeIndex(FBuildingId InBuildingId) const;
-	/** Derived from which owner fragment is present. BOT_None if InBuildingId is not alive. */
-	EBuildingOwnerType GetOwnerType(FBuildingId InBuildingId) const;
-	/** Valid iff GetOwnerType() == BOT_Character. */
+	/** The character the building belongs to, or an invalid id if InBuildingId is not alive. */
 	FCharacterId GetOwnerCharacter(FBuildingId InBuildingId) const;
-	/** Valid iff GetOwnerType() == BOT_Organization. */
-	FOrganizationId GetOwnerOrganization(FBuildingId InBuildingId) const;
 
 	/** Every building currently standing in InProvinceId. */
 	TArray<FBuildingId> CollectBuildingsInProvince(FProvinceId InProvinceId) const;
 	/** Every building currently owned by InOwnerId. */
 	TArray<FBuildingId> CollectBuildingsOwnedByCharacter(FCharacterId InOwnerId) const;
-	/** Every building currently owned by InOwnerId. */
-	TArray<FBuildingId> CollectBuildingsOwnedByOrganization(FOrganizationId InOwnerId) const;
 
-	/** Repoints the character owner fragment. Moves the entity's archetype if it was previously
-	 * organization-owned; a pure value write if it was already character-owned. */
+	/** Hands the building to a different character. A plain value write — every building has the
+	 * owner fragment from creation on, so there is no archetype move. */
 	void SetCharacterOwner(FBuildingId InBuildingId, FCharacterId InNewOwnerId);
-	/** Repoints the organization owner fragment. See SetCharacterOwner. */
-	void SetOrganizationOwner(FBuildingId InBuildingId, FOrganizationId InNewOwnerId);
 
 	/** Logs one building's fragments. Backs the Rts.DumpBuildings console command. */
 	void LogBuilding(FBuildingId InBuildingId) const;
@@ -98,14 +83,9 @@ private:
 	/** Ids currently alive, in creation order. */
 	TArray<FBuildingId> AliveIds;
 
-	/** Shared entity-creation core: stamps the common fragments onto whatever the caller already
-	 * added to InOutBuilder (the owner fragment), commits, and registers the id. */
-	FBuildingId CreateBuilding(FProvinceId InProvinceId, int32 InTypeIndex, UE::Mass::FEntityBuilder& InOutBuilder);
-
 	/** Standalone chunk-iteration queries. Not tied to a processor — see Initialize for how they
 	 * are bound. Mutable: running a query updates internal archetype caches even though the
 	 * calling methods are const. */
 	mutable FMassEntityQuery LocationQuery;
 	mutable FMassEntityQuery CharacterOwnerQuery;
-	mutable FMassEntityQuery OrganizationOwnerQuery;
 };

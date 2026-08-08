@@ -5,7 +5,11 @@
 #include "PlayedCharacterView.generated.h"
 
 class UFoundOrganizationModalWidget;
+class UJoinOrganizationModalWidget;
+class UOrganizationDetailWidget;
 class UPlayerCharacterViewModel;
+class UProvinceDetailWidget;
+class URecruitCharacterModalWidget;
 
 /**
  * The root widget for the character the player is currently playing. Owns the single
@@ -39,4 +43,20 @@ private:
 	 * (or for a derived view that never needs it). Pushed to as soon as both exist. */
 	UPROPERTY(BlueprintReadOnly, Transient, meta=(BindWidgetOptional, AllowPrivateAccess))
 	TObjectPtr<UFoundOrganizationModalWidget> FoundOrganizationModal;
+
+	/** Same optionality reasoning as FoundOrganizationModal. */
+	UPROPERTY(BlueprintReadOnly, Transient, meta=(BindWidgetOptional, AllowPrivateAccess))
+	TObjectPtr<UJoinOrganizationModalWidget> JoinOrganizationModal;
+
+	/** Same optionality reasoning as FoundOrganizationModal. */
+	UPROPERTY(BlueprintReadOnly, Transient, meta=(BindWidgetOptional, AllowPrivateAccess))
+	TObjectPtr<UProvinceDetailWidget> ProvinceDetail;
+
+	/** Same optionality reasoning as FoundOrganizationModal. */
+	UPROPERTY(BlueprintReadOnly, Transient, meta=(BindWidgetOptional, AllowPrivateAccess))
+	TObjectPtr<UOrganizationDetailWidget> OrganizationDetail;
+
+	/** Same optionality reasoning as FoundOrganizationModal. */
+	UPROPERTY(BlueprintReadOnly, Transient, meta=(BindWidgetOptional, AllowPrivateAccess))
+	TObjectPtr<URecruitCharacterModalWidget> RecruitCharacterModal;
 };

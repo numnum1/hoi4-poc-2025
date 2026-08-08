@@ -40,8 +40,10 @@ struct BANKING_API FBankAccountBalanceFragment : public FMassFragment
 /**
  * Ownership is not a stored enum: exactly one of FBankAccountCharacterOwnerFragment /
  * FBankAccountOrganizationOwnerFragment is present on an entity, and
- * UBankAccountEntitySubsystem::GetOwnerType reads that back from fragment presence — the same
- * pattern as FBuildingCharacterOwnerFragment / FBuildingOrganizationOwnerFragment.
+ * UBankAccountEntitySubsystem::GetOwnerType reads that back from fragment presence.
+ *
+ * Unlike buildings, accounts really do have two owner kinds: an organization holds money of its
+ * own, but it owns no buildings — see FBuildingCharacterOwnerFragment.
  */
 USTRUCT()
 struct BANKING_API FBankAccountCharacterOwnerFragment : public FMassFragment

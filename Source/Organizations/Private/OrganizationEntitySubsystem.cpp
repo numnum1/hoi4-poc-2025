@@ -53,14 +53,14 @@ FOrganizationId UOrganizationEntitySubsystem::CreateOrganization(const FCharacte
 	OwnerFragment.OwnerId = InOwnerId;
 
 	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
-	// The headquarters starts out invalid and is filled in by SetHeadquarters: the building has to
-	// be created for this organization, so the id it needs cannot exist before this call returns.
+	// The root department starts out invalid and is filled in by SetRootDepartment: it has to be
+	// created for this organization, so the id it needs cannot exist before this call returns.
 	Builder.Add<FOrganizationTag>()
 	       .Add<FOrganizationIndexFragment>(IndexFragment)
 	       .Add<FOrganizationOwnerFragment>(OwnerFragment)
 	       .Add<FOrganizationAlignmentFragment>()
 	       .Add<FOrganizationSettledNationsFragment>()
-	       .Add<FOrganizationHeadquartersFragment>();
+	       .Add<FOrganizationRootDepartmentFragment>();
 
 	EntityByIndex.Add(Builder.Commit());
 	AliveIds.Add(NewId);
@@ -116,28 +116,28 @@ FCharacterId UOrganizationEntitySubsystem::GetOwnerCharacter(const FOrganization
 		.GetFragmentData<FOrganizationOwnerFragment>().OwnerId;
 }
 
-FBuildingId UOrganizationEntitySubsystem::GetHeadquarters(const FOrganizationId InOrganizationId) const
+FDepartmentId UOrganizationEntitySubsystem::GetRootDepartment(const FOrganizationId InOrganizationId) const
 {
 	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
 	if (!Entity.IsValid())
 	{
-		LogInvalidRead(InOrganizationId, TEXT("GetHeadquarters"));
-		return FBuildingId();
+		LogInvalidRead(InOrganizationId, TEXT("GetRootDepartment"));
+		return FDepartmentId();
 	}
 	return FMassEntityView(GetEntityManager(), Entity)
-		.GetFragmentData<FOrganizationHeadquartersFragment>().BuildingId;
+		.GetFragmentData<FOrganizationRootDepartmentFragment>().RootDepartmentId;
 }
 
-void UOrganizationEntitySubsystem::SetHeadquarters(const FOrganizationId InOrganizationId, const FBuildingId InBuildingId)
+void UOrganizationEntitySubsystem::SetRootDepartment(const FOrganizationId InOrganizationId, const FDepartmentId InRootDepartmentId)
 {
 	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
-	if (!ensureMsgf(Entity.IsValid(), TEXT("SetHeadquarters: organization %d is not alive"), InOrganizationId.Value))
+	if (!ensureMsgf(Entity.IsValid(), TEXT("SetRootDepartment: organization %d is not alive"), InOrganizationId.Value))
 	{
 		return;
 	}
 
 	FMassEntityView(GetEntityManager(), Entity)
-		.GetFragmentData<FOrganizationHeadquartersFragment>().BuildingId = InBuildingId;
+		.GetFragmentData<FOrganizationRootDepartmentFragment>().RootDepartmentId = InRootDepartmentId;
 }
 
 bool UOrganizationEntitySubsystem::IsAlignmentPublished(const FOrganizationId InOrganizationId) const
@@ -258,11 +258,11 @@ void UOrganizationEntitySubsystem::LogOrganization(const FOrganizationId InOrgan
 	const FOrganizationOwnerFragment& Owner = View.GetFragmentData<FOrganizationOwnerFragment>();
 	const FOrganizationAlignmentFragment& Alignment = View.GetFragmentData<FOrganizationAlignmentFragment>();
 	const FOrganizationSettledNationsFragment& Settled = View.GetFragmentData<FOrganizationSettledNationsFragment>();
-	const FOrganizationHeadquartersFragment& Headquarters = View.GetFragmentData<FOrganizationHeadquartersFragment>();
+	const FOrganizationRootDepartmentFragment& Root = View.GetFragmentData<FOrganizationRootDepartmentFragment>();
 
-	UE_LOG(LogRtsOrganizations, Log, TEXT("[%d] Owner=%d Published=%d Branches=%d SettledNations=%d Headquarters=%d"),
+	UE_LOG(LogRtsOrganizations, Log, TEXT("[%d] Owner=%d Published=%d Branches=%d SettledNations=%d RootDepartment=%d"),
 		InOrganizationId.Value, Owner.OwnerId.Value, IsAlignmentPublished(InOrganizationId) ? 1 : 0,
-		Alignment.Branches.Num(), Settled.Values.Num(), Headquarters.BuildingId.Value);
+		Alignment.Branches.Num(), Settled.Values.Num(), Root.RootDepartmentId.Value);
 }
 
 static FAutoConsoleCommandWithWorldAndArgs GDumpOrganizationsCommand(

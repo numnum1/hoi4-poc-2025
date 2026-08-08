@@ -39,6 +39,9 @@ public class RtsUI : ModuleRules
                 // for the modal's site label; resolved via UProvinces in the .cpp only, not
                 // exposed on the header
                 "Provinces",
+                // RefreshJoinableOrganizations reads UOrganizations::GetOrganizationInfo directly
+                // to name each joinable row's organization
+                "Organizations",
                 // MakeContext hands UBanking to URtsActions so founding can be paid for
                 "Banking",
                 // UPlayerCharacterViewModel derives from UMVVMViewModelBase (via UCharacterViewModel);

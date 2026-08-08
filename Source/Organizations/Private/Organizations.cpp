@@ -54,10 +54,10 @@ bool UOrganizations::IsOwnedBy(const FOrganizationId InOrganizationId, const FCh
 	return InCharacterId.IsValid() && GetOwnerCharacter(InOrganizationId) == InCharacterId;
 }
 
-FBuildingId UOrganizations::GetHeadquarters(const FOrganizationId InOrganizationId) const
+FDepartmentId UOrganizations::GetRootDepartment(const FOrganizationId InOrganizationId) const
 {
 	const UOrganizationEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->GetHeadquarters(InOrganizationId) : FBuildingId();
+	return Entities ? Entities->GetRootDepartment(InOrganizationId) : FDepartmentId();
 }
 
 FOrganizationAlignment UOrganizations::GetAlignment(const FOrganizationId InOrganizationId) const
@@ -95,7 +95,7 @@ FOrganizationId UOrganizations::Add(const FOrganizationInfo& NewOrg, const FChar
 	return NewId;
 }
 
-void UOrganizations::SetHeadquarters(const FOrganizationId InOrganizationId, const FBuildingId InBuildingId)
+void UOrganizations::SetRootDepartment(const FOrganizationId InOrganizationId, const FDepartmentId InRootDepartmentId)
 {
 	UOrganizationEntitySubsystem* Entities = GetEntities();
 	if (Entities == nullptr)
@@ -103,8 +103,8 @@ void UOrganizations::SetHeadquarters(const FOrganizationId InOrganizationId, con
 		return;
 	}
 
-	Entities->SetHeadquarters(InOrganizationId, InBuildingId);
-	OnHeadquartersChanged.Broadcast(InOrganizationId);
+	Entities->SetRootDepartment(InOrganizationId, InRootDepartmentId);
+	OnRootDepartmentChanged.Broadcast(InOrganizationId);
 }
 
 void UOrganizations::PublishAlignment(const FOrganizationId InOrganizationId, const TArray<float>& InAlignment)

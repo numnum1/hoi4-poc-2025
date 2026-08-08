@@ -29,8 +29,13 @@ private:
 	/** Whether founding an organization should hand the founder this role. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	bool bIsLeadership;
+
+	/** Whether joining an organization should hand the new member this role. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
+	bool bIsDefaultMembership;
 public:
 	FORCEINLINE const FText& GetRoleName() const { return RoleName; }
 	FORCEINLINE int32 GetPermissions() const { return Permissions; }
 	FORCEINLINE bool IsLeadership() const { return bIsLeadership; }
+	FORCEINLINE bool IsDefaultMembership() const { return bIsDefaultMembership; }
 };

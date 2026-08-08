@@ -6,6 +6,7 @@
 
 class UBanking;
 class UCharacters;
+class UDepartments;
 class UOrganizations;
 
 /**
@@ -33,4 +34,8 @@ struct RTSVIEWMODELS_API FRtsResourceContext
 	/** RT_Money reads its balance off this — see URtsResources::GetAmount. */
 	UPROPERTY(BlueprintReadOnly, Category="Resource")
 	TObjectPtr<UBanking> Banking;
+
+	/** RT_Manpower reads capacity (URtsPresence::GetCapacity) off this — see URtsResources::GetAmount. */
+	UPROPERTY(BlueprintReadOnly, Category="Resource")
+	TObjectPtr<UDepartments> Departments;
 };

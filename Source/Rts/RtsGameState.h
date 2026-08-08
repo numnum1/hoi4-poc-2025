@@ -9,6 +9,7 @@
 #include "RtsGameState.generated.h"
 
 class UOrganizations;
+class UDepartments;
 class UBanking;
 class UBuildings;
 class UTime;
@@ -28,6 +29,10 @@ class RTS_API ARtsGameState : public AGameStateBase
 	GENERATED_BODY()
 public:
 	ARtsGameState();
+
+protected:
+	virtual void BeginPlay() override;
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UCharacters* CharactersContainer;
@@ -42,6 +47,8 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UOrganizations* OrganizationsContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UDepartments* DepartmentsContainer;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	URoles* RolesContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UBanking* BankingContainer;
@@ -51,7 +58,16 @@ private:
 	USchedules* SchedulesContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UTime* Time;
-	
+
+	/** Accumulates Time->OnHourElapsed until a full day has passed, then runs URtsEconomy::SettleDay
+	 * — the same role UCharacterEntitySubsystem::BindToTime plays for the hourly character sim, one
+	 * level up because this crosses domains (Departments/Characters/Banking) and so cannot live in
+	 * any single domain module. */
+	UFUNCTION()
+	void HandleHourElapsed(int32 InHoursElapsed);
+
+	int32 HoursIntoCurrentDay = 0;
+
 public:
 	FORCEINLINE UCharacters* GetCharactersContainer() { return CharactersContainer; }
 	FORCEINLINE UNations* GetNationsContainer() { return NationsContainer; }
@@ -59,6 +75,7 @@ public:
 	FORCEINLINE URaces* GetRacesContainer() { return RacesContainer; }
 	FORCEINLINE UBuildings* GetBuildingsContainer() const { return BuildingsContainer; }
 	FORCEINLINE UOrganizations* GetOrganizationsContainer() const { return OrganizationsContainer; }
+	FORCEINLINE UDepartments* GetDepartmentsContainer() const { return DepartmentsContainer; }
 	FORCEINLINE URoles* GetRoles() const { return RolesContainer; }
 	FORCEINLINE UBanking* GetBankingContainer() const { return BankingContainer; }
 

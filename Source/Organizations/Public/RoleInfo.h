@@ -25,4 +25,8 @@ struct ORGANIZATIONS_API FRoleInfo
 	/** Whether founding an organization should hand the founder this role. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsLeadership = false;
+
+	/** Whether joining an organization should hand the new member this role. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsDefaultMembership = false;
 };

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingOwnerType.h"
 #include "RtsIds.h"
 #include "Components/ActorComponent.h"
 #include "Modules/ModuleManager.h"
@@ -28,9 +27,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildingsEvent, FBuildingId, InBuil
  * UBuildingCatalogSettings on first use, and the change events the view models bind to. Every
  * accessor takes the same FBuildingId every other building API uses.
  *
- * Ownership has no single "the owner" value at this layer either — AddForCharacter/
- * AddForOrganization and the two Collect* queries mirror the entity side's two mutually
- * exclusive owner fragments, translated to EBuildingOwnerType only for GetOwnerType.
+ * A building always belongs to a character. Organizations do not own buildings — they have a root
+ * department, and a department is seated in a building rather than owning it. "Which buildings does
+ * this organization use" is therefore a question for UDepartments, not for this component.
  */
 UCLASS(ClassGroup=(Map), meta=(BlueprintSpawnableComponent))
 class BUILDINGS_API UBuildings : public UActorComponent
@@ -44,7 +43,7 @@ public:
 	/** Fired after a building's entity is gone. */
 	UPROPERTY(BlueprintAssignable)
 	FBuildingsEvent OnBuildingDestroyed;
-	/** Fired after SetCharacterOwner/SetOrganizationOwner changed who a building belongs to. */
+	/** Fired after SetCharacterOwner changed who a building belongs to. */
 	UPROPERTY(BlueprintAssignable)
 	FBuildingsEvent OnBuildingOwnerChanged;
 
@@ -70,16 +69,9 @@ public:
 	UFUNCTION(BlueprintPure)
 	FProvinceId GetProvince(FBuildingId InBuildingId) const;
 
-	UFUNCTION(BlueprintPure)
-	EBuildingOwnerType GetOwnerType(FBuildingId InBuildingId) const;
-
-	/** Valid iff GetOwnerType() == BOT_Character. */
+	/** The character the building belongs to. */
 	UFUNCTION(BlueprintPure)
 	FCharacterId GetOwnerCharacter(FBuildingId InBuildingId) const;
-
-	/** Valid iff GetOwnerType() == BOT_Organization. */
-	UFUNCTION(BlueprintPure)
-	FOrganizationId GetOwnerOrganization(FBuildingId InBuildingId) const;
 
 	UFUNCTION(BlueprintPure)
 	TArray<FBuildingId> CollectBuildingsInProvince(FProvinceId InProvinceId) const;
@@ -87,20 +79,13 @@ public:
 	UFUNCTION(BlueprintPure)
 	TArray<FBuildingId> CollectBuildingsOwnedByCharacter(FCharacterId InOwnerId) const;
 
-	UFUNCTION(BlueprintPure)
-	TArray<FBuildingId> CollectBuildingsOwnedByOrganization(FOrganizationId InOwnerId) const;
-
+	/** Puts up a building for InOwnerId. Whoever pays for it owns it — including the headquarters a
+	 * character founds an organization in, which stays theirs. */
 	UFUNCTION(BlueprintCallable)
-	FBuildingId AddForCharacter(UBuildingType* InBuildingType, FProvinceId InProvinceId, FCharacterId InOwnerId);
-
-	UFUNCTION(BlueprintCallable)
-	FBuildingId AddForOrganization(UBuildingType* InBuildingType, FProvinceId InProvinceId, FOrganizationId InOwnerId);
+	FBuildingId Add(UBuildingType* InBuildingType, FProvinceId InProvinceId, FCharacterId InOwnerId);
 
 	UFUNCTION(BlueprintCallable)
 	void SetCharacterOwner(FBuildingId InBuildingId, FCharacterId InNewOwnerId);
-
-	UFUNCTION(BlueprintCallable)
-	void SetOrganizationOwner(FBuildingId InBuildingId, FOrganizationId InNewOwnerId);
 
 	/** Does nothing for a headquarters — see UBuildingType::IsHeadquarters. The rule lives here
 	 * rather than in the UI so it holds for every caller, not just for the one that has no button. */

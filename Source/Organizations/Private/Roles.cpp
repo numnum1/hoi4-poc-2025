@@ -41,3 +41,15 @@ FRoleId URoles::GetLeadershipRole() const
 	}
 	return FRoleId();
 }
+
+FRoleId URoles::GetMembershipRole() const
+{
+	for (int32 Index = 0; Index < Values.Num(); ++Index)
+	{
+		if (Values[Index].bIsDefaultMembership)
+		{
+			return FRoleId(Index);
+		}
+	}
+	return FRoleId();
+}

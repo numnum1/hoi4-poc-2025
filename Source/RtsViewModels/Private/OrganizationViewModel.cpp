@@ -1,18 +1,30 @@
 #include "OrganizationViewModel.h"
 
+#include "Banking.h"
 #include "CharacterInfo.h"
 #include "Characters.h"
+#include "Departments.h"
+#include "DepartmentViewModel.h"
+#include "MemberViewModel.h"
 #include "Organizations.h"
+#include "Roles.h"
 #include "RtsFacadeSubsystem.h"
+#include "RtsPresence.h"
 
 void UOrganizationViewModel::Initialize(const FOrganizationId InOrganizationId)
 {
 	UOrganizations* NewOrganizations = nullptr;
 	UCharacters* NewCharacters = nullptr;
+	UDepartments* NewDepartments = nullptr;
+	URoles* NewRoles = nullptr;
+	UBanking* NewBanking = nullptr;
 	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
 	{
 		NewOrganizations = Facades->GetOrganizationsContainer();
 		NewCharacters = Facades->GetCharactersContainer();
+		NewDepartments = Facades->GetDepartmentsContainer();
+		NewRoles = Facades->GetRolesContainer();
+		NewBanking = Facades->GetBankingContainer();
 	}
 
 	if (Organizations == NewOrganizations && OrganizationId == InOrganizationId)
@@ -24,6 +36,9 @@ void UOrganizationViewModel::Initialize(const FOrganizationId InOrganizationId)
 
 	Organizations = NewOrganizations;
 	Characters = NewCharacters;
+	DepartmentsFacade = NewDepartments;
+	Roles = NewRoles;
+	Banking = NewBanking;
 
 	OrganizationId = InOrganizationId;
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(OrganizationId);
@@ -36,6 +51,22 @@ void UOrganizationViewModel::Initialize(const FOrganizationId InOrganizationId)
 		Organizations->OnOrganizationDissolved.AddDynamic(this, &UOrganizationViewModel::HandleOrganizationEvent);
 	}
 
+	if (Characters)
+	{
+		Characters->OnPositionChanged.AddDynamic(this, &UOrganizationViewModel::HandleMemberEvent);
+	}
+
+	if (DepartmentsFacade)
+	{
+		DepartmentsFacade->OnDepartmentCreated.AddDynamic(this, &UOrganizationViewModel::HandleDepartmentEvent);
+		DepartmentsFacade->OnDepartmentDissolved.AddDynamic(this, &UOrganizationViewModel::HandleDepartmentEvent);
+	}
+
+	if (Banking)
+	{
+		Banking->OnBalanceChanged.AddDynamic(this, &UOrganizationViewModel::HandleBalanceChanged);
+	}
+
 	Refresh();
 }
 
@@ -45,6 +76,21 @@ void UOrganizationViewModel::HandleOrganizationEvent(const FOrganizationId InOrg
 	{
 		Refresh();
 	}
+}
+
+void UOrganizationViewModel::HandleMemberEvent(const FCharacterId InCharacterId)
+{
+	Refresh();
+}
+
+void UOrganizationViewModel::HandleDepartmentEvent(const FDepartmentId InDepartmentId)
+{
+	Refresh();
+}
+
+void UOrganizationViewModel::HandleBalanceChanged(const FBankAccountId InAccountId)
+{
+	Refresh();
 }
 
 void UOrganizationViewModel::Refresh_Implementation()
@@ -83,6 +129,68 @@ void UOrganizationViewModel::Refresh_Implementation()
 	UE_MVVM_SET_PROPERTY_VALUE(SettledNationIds, NewSettledNationIds);
 	UE_MVVM_SET_PROPERTY_VALUE(SettledNationIdValues, NewSettledNationValues);
 	UE_MVVM_SET_PROPERTY_VALUE(SettledNationCount, NewSettledNationIds.Num());
+
+	// --- Members ---
+
+	const TArray<FCharacterId> MemberIds = URtsPresence::CollectMembers(OrganizationId, Characters);
+
+	TArray<TObjectPtr<UMemberViewModel>> NewMembers;
+	NewMembers.Reserve(MemberIds.Num());
+
+	for (const FCharacterId MemberId : MemberIds)
+	{
+		TObjectPtr<UMemberViewModel>& Entry = MemberCache.FindOrAdd(MemberId);
+		if (Entry == nullptr)
+		{
+			Entry = NewObject<UMemberViewModel>(this);
+		}
+
+		const FCharacterDisplayInfo Display = Characters->GetDisplayInfo(MemberId);
+
+		FText MemberRoleName = FText::GetEmpty();
+		for (const FPosition& Position : Characters->GetPositions(MemberId))
+		{
+			if (Position.OrganizationId == OrganizationId)
+			{
+				MemberRoleName = Roles ? Roles->GetRoleName(Position.RoleId) : FText::GetEmpty();
+				break;
+			}
+		}
+
+		Entry->SetSource(MemberId, Display.CharacterName, Display.Portrait, MemberRoleName);
+		NewMembers.Add(Entry);
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(Members, NewMembers);
+	UE_MVVM_SET_PROPERTY_VALUE(MemberCount, NewMembers.Num());
+	UE_MVVM_SET_PROPERTY_VALUE(MemberCapacity, URtsPresence::GetCapacity(OrganizationId, DepartmentsFacade));
+
+	// --- Departments ---
+
+	const TArray<FDepartmentId> DepartmentIds = DepartmentsFacade ? DepartmentsFacade->CollectDepartmentsOf(OrganizationId) : TArray<FDepartmentId>();
+
+	TArray<TObjectPtr<UDepartmentViewModel>> NewDepartments;
+	NewDepartments.Reserve(DepartmentIds.Num());
+
+	for (const FDepartmentId DeptId : DepartmentIds)
+	{
+		TObjectPtr<UDepartmentViewModel>& Entry = DepartmentCache.FindOrAdd(DeptId);
+		if (Entry == nullptr)
+		{
+			Entry = NewObject<UDepartmentViewModel>(this);
+		}
+
+		Entry->SetSource(DeptId);
+		NewDepartments.Add(Entry);
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(Departments, NewDepartments);
+	UE_MVVM_SET_PROPERTY_VALUE(DepartmentCount, NewDepartments.Num());
+
+	// --- Banking ---
+
+	const FBankAccountId AccountId = Banking ? Banking->FindAccountForOrganization(OrganizationId) : FBankAccountId();
+	UE_MVVM_SET_PROPERTY_VALUE(Balance, Banking ? Banking->GetBalance(AccountId) : 0);
 }
 
 float UOrganizationViewModel::GetAlignmentBranch(const int32 InIndex) const
@@ -102,6 +210,22 @@ void UOrganizationViewModel::Unbind()
 		Organizations->OnNationSettled.RemoveAll(this);
 		Organizations->OnAlignmentPublished.RemoveAll(this);
 		Organizations->OnOrganizationDissolved.RemoveAll(this);
+	}
+
+	if (Characters)
+	{
+		Characters->OnPositionChanged.RemoveAll(this);
+	}
+
+	if (DepartmentsFacade)
+	{
+		DepartmentsFacade->OnDepartmentCreated.RemoveAll(this);
+		DepartmentsFacade->OnDepartmentDissolved.RemoveAll(this);
+	}
+
+	if (Banking)
+	{
+		Banking->OnBalanceChanged.RemoveAll(this);
 	}
 }
 

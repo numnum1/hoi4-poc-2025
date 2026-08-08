@@ -3,6 +3,7 @@
 #include "Banking.h"
 #include "Buildings.h"
 #include "Characters.h"
+#include "Departments.h"
 #include "Nations.h"
 #include "Organizations.h"
 #include "Provinces.h"
@@ -47,6 +48,7 @@ UCharacters* URtsFacadeSubsystem::GetCharactersContainer() { return ResolveConta
 UProvinces* URtsFacadeSubsystem::GetProvincesContainer() { return ResolveContainer(ProvincesContainer); }
 UNations* URtsFacadeSubsystem::GetNationsContainer() { return ResolveContainer(NationsContainer); }
 UOrganizations* URtsFacadeSubsystem::GetOrganizationsContainer() { return ResolveContainer(OrganizationsContainer); }
+UDepartments* URtsFacadeSubsystem::GetDepartmentsContainer() { return ResolveContainer(DepartmentsContainer); }
 UBuildings* URtsFacadeSubsystem::GetBuildingsContainer() { return ResolveContainer(BuildingsContainer); }
 USchedules* URtsFacadeSubsystem::GetSchedulesContainer() { return ResolveContainer(SchedulesContainer); }
 URoles* URtsFacadeSubsystem::GetRolesContainer() { return ResolveContainer(RolesContainer); }
@@ -59,6 +61,7 @@ void URtsFacadeSubsystem::Deinitialize()
 	ProvincesContainer = nullptr;
 	NationsContainer = nullptr;
 	OrganizationsContainer = nullptr;
+	DepartmentsContainer = nullptr;
 	BuildingsContainer = nullptr;
 	SchedulesContainer = nullptr;
 	RolesContainer = nullptr;

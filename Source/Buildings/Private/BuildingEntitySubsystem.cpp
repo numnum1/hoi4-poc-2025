@@ -29,11 +29,6 @@ void UBuildingEntitySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	CharacterOwnerQuery.AddTagRequirement<FBuildingTag>(EMassFragmentPresence::All);
 	CharacterOwnerQuery.AddRequirement<FBuildingIndexFragment>(EMassFragmentAccess::ReadOnly);
 	CharacterOwnerQuery.AddRequirement<FBuildingCharacterOwnerFragment>(EMassFragmentAccess::ReadOnly);
-
-	OrganizationOwnerQuery = FMassEntityQuery(GetEntityManager().AsShared());
-	OrganizationOwnerQuery.AddTagRequirement<FBuildingTag>(EMassFragmentPresence::All);
-	OrganizationOwnerQuery.AddRequirement<FBuildingIndexFragment>(EMassFragmentAccess::ReadOnly);
-	OrganizationOwnerQuery.AddRequirement<FBuildingOrganizationOwnerFragment>(EMassFragmentAccess::ReadOnly);
 }
 
 void UBuildingEntitySubsystem::Deinitialize()
@@ -51,7 +46,8 @@ FMassEntityManager& UBuildingEntitySubsystem::GetEntityManager() const
 	return EntitySubsystem->GetMutableEntityManager();
 }
 
-FBuildingId UBuildingEntitySubsystem::CreateBuilding(const FProvinceId InProvinceId, const int32 InTypeIndex, UE::Mass::FEntityBuilder& InOutBuilder)
+FBuildingId UBuildingEntitySubsystem::CreateBuilding(const FProvinceId InProvinceId, const int32 InTypeIndex,
+                                                     const FCharacterId InOwnerId)
 {
 	const FBuildingId NewId(EntityByIndex.Num());
 
@@ -65,36 +61,19 @@ FBuildingId UBuildingEntitySubsystem::CreateBuilding(const FProvinceId InProvinc
 	FBuildingTypeFragment TypeFragment;
 	TypeFragment.TypeIndex = InTypeIndex;
 
-	InOutBuilder.Add<FBuildingTag>()
-	            .Add<FBuildingIndexFragment>(IndexFragment)
-	            .Add<FBuildingLocationFragment>(LocationFragment)
-	            .Add<FBuildingTypeFragment>(TypeFragment);
-
-	EntityByIndex.Add(InOutBuilder.Commit());
-	AliveIds.Add(NewId);
-	return NewId;
-}
-
-FBuildingId UBuildingEntitySubsystem::CreateBuildingForCharacter(const FProvinceId InProvinceId, const int32 InTypeIndex,
-                                                                 const FCharacterId InOwnerId)
-{
 	FBuildingCharacterOwnerFragment OwnerFragment;
 	OwnerFragment.OwnerId = InOwnerId;
 
 	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
-	Builder.Add<FBuildingCharacterOwnerFragment>(OwnerFragment);
-	return CreateBuilding(InProvinceId, InTypeIndex, Builder);
-}
+	Builder.Add<FBuildingTag>()
+	       .Add<FBuildingIndexFragment>(IndexFragment)
+	       .Add<FBuildingLocationFragment>(LocationFragment)
+	       .Add<FBuildingTypeFragment>(TypeFragment)
+	       .Add<FBuildingCharacterOwnerFragment>(OwnerFragment);
 
-FBuildingId UBuildingEntitySubsystem::CreateBuildingForOrganization(const FProvinceId InProvinceId, const int32 InTypeIndex,
-                                                                    const FOrganizationId InOwnerId)
-{
-	FBuildingOrganizationOwnerFragment OwnerFragment;
-	OwnerFragment.OwnerId = InOwnerId;
-
-	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
-	Builder.Add<FBuildingOrganizationOwnerFragment>(OwnerFragment);
-	return CreateBuilding(InProvinceId, InTypeIndex, Builder);
+	EntityByIndex.Add(Builder.Commit());
+	AliveIds.Add(NewId);
+	return NewId;
 }
 
 void UBuildingEntitySubsystem::DestroyBuilding(const FBuildingId InBuildingId)
@@ -134,26 +113,6 @@ int32 UBuildingEntitySubsystem::GetTypeIndex(const FBuildingId InBuildingId) con
 	return FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FBuildingTypeFragment>().TypeIndex;
 }
 
-EBuildingOwnerType UBuildingEntitySubsystem::GetOwnerType(const FBuildingId InBuildingId) const
-{
-	const FMassEntityHandle Entity = GetEntity(InBuildingId);
-	if (!Entity.IsValid())
-	{
-		return EBuildingOwnerType::BOT_None;
-	}
-
-	const FMassEntityView View(GetEntityManager(), Entity);
-	if (View.HasFragment<FBuildingCharacterOwnerFragment>())
-	{
-		return EBuildingOwnerType::BOT_Character;
-	}
-	if (View.HasFragment<FBuildingOrganizationOwnerFragment>())
-	{
-		return EBuildingOwnerType::BOT_Organization;
-	}
-	return EBuildingOwnerType::BOT_None;
-}
-
 FCharacterId UBuildingEntitySubsystem::GetOwnerCharacter(const FBuildingId InBuildingId) const
 {
 	const FMassEntityHandle Entity = GetEntity(InBuildingId);
@@ -162,22 +121,7 @@ FCharacterId UBuildingEntitySubsystem::GetOwnerCharacter(const FBuildingId InBui
 		return FCharacterId();
 	}
 
-	const FBuildingCharacterOwnerFragment* OwnerFragment =
-		FMassEntityView(GetEntityManager(), Entity).GetFragmentDataPtr<FBuildingCharacterOwnerFragment>();
-	return OwnerFragment ? OwnerFragment->OwnerId : FCharacterId();
-}
-
-FOrganizationId UBuildingEntitySubsystem::GetOwnerOrganization(const FBuildingId InBuildingId) const
-{
-	const FMassEntityHandle Entity = GetEntity(InBuildingId);
-	if (!Entity.IsValid())
-	{
-		return FOrganizationId();
-	}
-
-	const FBuildingOrganizationOwnerFragment* OwnerFragment =
-		FMassEntityView(GetEntityManager(), Entity).GetFragmentDataPtr<FBuildingOrganizationOwnerFragment>();
-	return OwnerFragment ? OwnerFragment->OwnerId : FOrganizationId();
+	return FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FBuildingCharacterOwnerFragment>().OwnerId;
 }
 
 TArray<FBuildingId> UBuildingEntitySubsystem::CollectBuildingsInProvince(const FProvinceId InProvinceId) const
@@ -224,28 +168,6 @@ TArray<FBuildingId> UBuildingEntitySubsystem::CollectBuildingsOwnedByCharacter(c
 	return Result;
 }
 
-TArray<FBuildingId> UBuildingEntitySubsystem::CollectBuildingsOwnedByOrganization(const FOrganizationId InOwnerId) const
-{
-	TArray<FBuildingId> Result;
-
-	FMassExecutionContext Context(GetEntityManager());
-	OrganizationOwnerQuery.ForEachEntityChunk(Context, [&Result, InOwnerId](FMassExecutionContext& Ctx)
-	{
-		const TConstArrayView<FBuildingIndexFragment> Ids = Ctx.GetFragmentView<FBuildingIndexFragment>();
-		const TConstArrayView<FBuildingOrganizationOwnerFragment> Owners = Ctx.GetFragmentView<FBuildingOrganizationOwnerFragment>();
-
-		for (int32 EntityIt = 0; EntityIt < Ctx.GetNumEntities(); ++EntityIt)
-		{
-			if (Owners[EntityIt].OwnerId == InOwnerId)
-			{
-				Result.Add(Ids[EntityIt].Id);
-			}
-		}
-	});
-
-	return Result;
-}
-
 // -----------------------------------------------------------------------------
 // Ownership transfer
 // -----------------------------------------------------------------------------
@@ -258,38 +180,7 @@ void UBuildingEntitySubsystem::SetCharacterOwner(const FBuildingId InBuildingId,
 		return;
 	}
 
-	const FMassEntityView View(GetEntityManager(), Entity);
-	if (FBuildingCharacterOwnerFragment* Existing = View.GetFragmentDataPtr<FBuildingCharacterOwnerFragment>())
-	{
-		// Already character-owned — a value write, no archetype move.
-		Existing->OwnerId = InNewOwnerId;
-		return;
-	}
-
-	GetEntityManager().RemoveFragmentFromEntity(Entity, FBuildingOrganizationOwnerFragment::StaticStruct());
-	GetEntityManager().AddFragmentToEntity(Entity, FBuildingCharacterOwnerFragment::StaticStruct());
 	FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FBuildingCharacterOwnerFragment>().OwnerId = InNewOwnerId;
-}
-
-void UBuildingEntitySubsystem::SetOrganizationOwner(const FBuildingId InBuildingId, const FOrganizationId InNewOwnerId)
-{
-	const FMassEntityHandle Entity = GetEntity(InBuildingId);
-	if (!ensureMsgf(Entity.IsValid(), TEXT("SetOrganizationOwner: building %d is not alive"), InBuildingId.Value))
-	{
-		return;
-	}
-
-	const FMassEntityView View(GetEntityManager(), Entity);
-	if (FBuildingOrganizationOwnerFragment* Existing = View.GetFragmentDataPtr<FBuildingOrganizationOwnerFragment>())
-	{
-		// Already organization-owned — a value write, no archetype move.
-		Existing->OwnerId = InNewOwnerId;
-		return;
-	}
-
-	GetEntityManager().RemoveFragmentFromEntity(Entity, FBuildingCharacterOwnerFragment::StaticStruct());
-	GetEntityManager().AddFragmentToEntity(Entity, FBuildingOrganizationOwnerFragment::StaticStruct());
-	FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FBuildingOrganizationOwnerFragment>().OwnerId = InNewOwnerId;
 }
 
 // -----------------------------------------------------------------------------
@@ -309,21 +200,10 @@ void UBuildingEntitySubsystem::LogBuilding(const FBuildingId InBuildingId) const
 	const FBuildingLocationFragment& Location = View.GetFragmentData<FBuildingLocationFragment>();
 	const FBuildingTypeFragment& Type = View.GetFragmentData<FBuildingTypeFragment>();
 
-	FString OwnerDescription = TEXT("None");
-	switch (GetOwnerType(InBuildingId))
-	{
-	case EBuildingOwnerType::BOT_Character:
-		OwnerDescription = FString::Printf(TEXT("Character %d"), GetOwnerCharacter(InBuildingId).Value);
-		break;
-	case EBuildingOwnerType::BOT_Organization:
-		OwnerDescription = FString::Printf(TEXT("Organization %d"), GetOwnerOrganization(InBuildingId).Value);
-		break;
-	default:
-		break;
-	}
+	const FBuildingCharacterOwnerFragment& Owner = View.GetFragmentData<FBuildingCharacterOwnerFragment>();
 
-	UE_LOG(LogRtsBuildings, Log, TEXT("[%d] Province=%d TypeIndex=%d Owner=%s"),
-		InBuildingId.Value, Location.ProvinceId.Value, Type.TypeIndex, *OwnerDescription);
+	UE_LOG(LogRtsBuildings, Log, TEXT("[%d] Province=%d TypeIndex=%d OwnerCharacter=%d"),
+		InBuildingId.Value, Location.ProvinceId.Value, Type.TypeIndex, Owner.OwnerId.Value);
 }
 
 static FAutoConsoleCommandWithWorldAndArgs GDumpBuildingsCommand(

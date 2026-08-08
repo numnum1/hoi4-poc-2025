@@ -69,22 +69,25 @@ struct ORGANIZATIONS_API FOrganizationSettledNationsFragment : public FMassFragm
 };
 
 /**
- * The building the organization is seated in — and, with it, the only thing that says what kind of
- * organization this is. There is no organization type: an organization is a party because its
- * headquarters is a party office, which is a fact about the world rather than a label somebody
- * picked. See URtsActions::EA_FoundOrganization for how the two are created together.
+ * The department the organization is made of — every other department hangs below this one.
  *
- * An FBuildingId, not an FMassEntityHandle — the id is the reference that survives a session, and
- * holding it here costs Organizations no dependency on Buildings (both ids live in RtsCore).
- * Invalid for a scenario-authored organization, which is founded without a building.
+ * The organization deliberately does not point at a building. It points at a department, and the
+ * department points at the building it is seated in; the building itself belongs to a character.
+ * Skipping that middle step is what the old headquarters field did, and it stopped working once a
+ * building could host several departments at once.
+ *
+ * What kind of organization this is falls out of what its departments do (their
+ * EBuildingFunction), which is why there is still no type field anywhere. See
+ * URtsActions::EA_FoundOrganization for how organization, building and root department are created
+ * in one go. Invalid for a scenario-authored organization, which is founded without a department.
  */
 USTRUCT()
-struct ORGANIZATIONS_API FOrganizationHeadquartersFragment : public FMassFragment
+struct ORGANIZATIONS_API FOrganizationRootDepartmentFragment : public FMassFragment
 {
 	GENERATED_BODY()
 
 	UPROPERTY()
-	FBuildingId BuildingId;
+	FDepartmentId RootDepartmentId;
 };
 
 // Both hold open-ended arrays, so neither is a flat POD. Mass wants that said out loud.

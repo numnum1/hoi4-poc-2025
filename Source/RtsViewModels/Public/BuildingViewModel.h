@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingOwnerType.h"
 #include "RtsIds.h"
 #include "MVVMViewModelBase.h"
 #include "BuildingViewModel.generated.h"
@@ -16,9 +15,9 @@ class UBuildingType;
  * resolves UBuildings from URtsFacadeSubsystem, binds directly to its events (filtered to this
  * id), and refreshes flat FieldNotify properties on every change.
  *
- * Ownership is taken apart into one property per member — UMG binds single values, not structs.
- * Only one of OwnerCharacterId/OwnerOrganizationId is meaningful; bIsOwnedByCharacter and
- * bIsOwnedByOrganization exist so a widget can switch on it without an enum comparison node.
+ * A building always belongs to a character, so there is one owner and no owner-kind switch. An
+ * organization is never the owner — it has a root department, and a department is only seated in a
+ * building; "which organizations sit here" is a UDepartments question, not one for this model.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
 class RTSVIEWMODELS_API UBuildingViewModel : public UMVVMViewModelBase
@@ -56,27 +55,10 @@ protected:
 	//~ Owner --------------------------------------------------------------------------------------
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel|Owner", meta=(AllowPrivateAccess))
-	EBuildingOwnerType OwnerType = EBuildingOwnerType::BOT_None;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsOwnedByCharacter, Category="Building Viewmodel|Owner", meta=(AllowPrivateAccess))
-	bool bIsOwnedByCharacter = false;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsOwnedByOrganization, Category="Building Viewmodel|Owner", meta=(AllowPrivateAccess))
-	bool bIsOwnedByOrganization = false;
-
-	/** Valid iff OwnerType == BOT_Character. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel|Owner", meta=(AllowPrivateAccess))
 	FCharacterId OwnerCharacterId;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel|Owner", meta=(AllowPrivateAccess))
 	int32 OwnerCharacterIdValue = INDEX_NONE;
-
-	/** Valid iff OwnerType == BOT_Organization. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel|Owner", meta=(AllowPrivateAccess))
-	FOrganizationId OwnerOrganizationId;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Viewmodel|Owner", meta=(AllowPrivateAccess))
-	int32 OwnerOrganizationIdValue = INDEX_NONE;
 
 public:
 	bool IsValid() const { return bIsValid; }
@@ -87,13 +69,8 @@ public:
 	FProvinceId GetProvinceId() const { return ProvinceId; }
 	int32 GetProvinceIdValue() const { return ProvinceIdValue; }
 
-	EBuildingOwnerType GetOwnerType() const { return OwnerType; }
-	bool IsOwnedByCharacter() const { return bIsOwnedByCharacter; }
-	bool IsOwnedByOrganization() const { return bIsOwnedByOrganization; }
 	FCharacterId GetOwnerCharacterId() const { return OwnerCharacterId; }
 	int32 GetOwnerCharacterIdValue() const { return OwnerCharacterIdValue; }
-	FOrganizationId GetOwnerOrganizationId() const { return OwnerOrganizationId; }
-	int32 GetOwnerOrganizationIdValue() const { return OwnerOrganizationIdValue; }
 
 protected:
 	UFUNCTION(BlueprintNativeEvent, Category="Building Viewmodel")

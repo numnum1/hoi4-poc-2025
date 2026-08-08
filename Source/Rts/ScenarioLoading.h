@@ -328,6 +328,7 @@ namespace ScenarioLoader
 			Info.RoleName = Role->GetRoleName();
 			Info.Permissions = Role->GetPermissions();
 			Info.bIsLeadership = Role->IsLeadership();
+			Info.bIsDefaultMembership = Role->IsDefaultMembership();
 			Out.Add(MoveTemp(Info));
 		}
 

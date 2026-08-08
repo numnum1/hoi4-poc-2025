@@ -56,18 +56,9 @@ void UBuildingViewModel::Refresh_Implementation()
 	UE_MVVM_SET_PROPERTY_VALUE(ProvinceId, NewProvinceId);
 	UE_MVVM_SET_PROPERTY_VALUE(ProvinceIdValue, NewProvinceId.Value);
 
-	const EBuildingOwnerType NewOwnerType = Buildings->GetOwnerType(BuildingId);
-	UE_MVVM_SET_PROPERTY_VALUE(OwnerType, NewOwnerType);
-	UE_MVVM_SET_PROPERTY_VALUE(bIsOwnedByCharacter, NewOwnerType == EBuildingOwnerType::BOT_Character);
-	UE_MVVM_SET_PROPERTY_VALUE(bIsOwnedByOrganization, NewOwnerType == EBuildingOwnerType::BOT_Organization);
-
-	const FCharacterId NewOwnerCharacterId = NewOwnerType == EBuildingOwnerType::BOT_Character ? Buildings->GetOwnerCharacter(BuildingId) : FCharacterId();
+	const FCharacterId NewOwnerCharacterId = Buildings->GetOwnerCharacter(BuildingId);
 	UE_MVVM_SET_PROPERTY_VALUE(OwnerCharacterId, NewOwnerCharacterId);
 	UE_MVVM_SET_PROPERTY_VALUE(OwnerCharacterIdValue, NewOwnerCharacterId.Value);
-
-	const FOrganizationId NewOwnerOrganizationId = NewOwnerType == EBuildingOwnerType::BOT_Organization ? Buildings->GetOwnerOrganization(BuildingId) : FOrganizationId();
-	UE_MVVM_SET_PROPERTY_VALUE(OwnerOrganizationId, NewOwnerOrganizationId);
-	UE_MVVM_SET_PROPERTY_VALUE(OwnerOrganizationIdValue, NewOwnerOrganizationId.Value);
 }
 
 void UBuildingViewModel::Unbind()

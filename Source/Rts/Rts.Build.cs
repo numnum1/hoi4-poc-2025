@@ -10,7 +10,11 @@ public class Rts : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "RtsCore", "Buildings", "Characters", "Nations", "Provinces", "Organizations", "Banking", "Races", "Schedules", "Scenario", "Time" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[] {
+			// ARtsGameState::HandleHourElapsed calls URtsEconomy::SettleDay once per elapsed game
+			// day, with the facades it already owns — not exposed on the header, so this stays private.
+			"RtsViewModels"
+		});
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

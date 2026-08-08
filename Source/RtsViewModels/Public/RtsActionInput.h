@@ -33,4 +33,14 @@ struct RTSVIEWMODELS_API FRtsActionInput
 	/** EA_FoundOrganization: where that headquarters goes, set by clicking the world map. */
 	UPROPERTY(BlueprintReadWrite, Category="Action")
 	FProvinceId HeadquartersProvinceId;
+
+	/** EA_JoinOrganization: which organization to join. Invalid until the player has picked one,
+	 * same refusal shape as HeadquartersType. */
+	UPROPERTY(BlueprintReadWrite, Category="Action")
+	FOrganizationId TargetOrganizationId;
+
+	/** EA_RecruitCharacter: which character to recruit. Invalid until the player has picked one,
+	 * same refusal shape as TargetOrganizationId. */
+	UPROPERTY(BlueprintReadWrite, Category="Action")
+	FCharacterId TargetCharacterId;
 };
