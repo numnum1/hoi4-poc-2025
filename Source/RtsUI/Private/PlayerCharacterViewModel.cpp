@@ -2,7 +2,6 @@
 
 #include "ActionViewModel.h"
 #include "Banking.h"
-#include "BuildingKindViewModel.h"
 #include "BuildingType.h"
 #include "Buildings.h"
 #include "CharacterInfo.h"
@@ -141,9 +140,9 @@ void UPlayerCharacterViewModel::OpenModal(const EPlayerModal InModal)
 
 	// Whatever the last modal collected is not this one's starting point. The province is not reset
 	// with it: that is where the player is looking on the map, not something this modal collected —
-	// and starting the form on the province they were just inspecting is the useful default.
-	UE_MVVM_SET_PROPERTY_VALUE(PendingOrganizationName, FText::GetEmpty());
-	ApplyHeadquartersType(nullptr);
+	// and starting the form on the province they were just inspecting is the useful default. The
+	// found-organization form resets itself (see UFoundOrganizationModalWidgetViewModel::ResetForm),
+	// there being no state of its own left here to clear.
 	ApplyJoinTarget(FOrganizationId());
 	ApplyRecruitTarget(FCharacterId());
 }
@@ -151,12 +150,6 @@ void UPlayerCharacterViewModel::OpenModal(const EPlayerModal InModal)
 void UPlayerCharacterViewModel::CloseModal()
 {
 	OpenModal(EPlayerModal::PM_None);
-}
-
-void UPlayerCharacterViewModel::SetPendingOrganizationName(const FText& InName)
-{
-	UE_MVVM_SET_PROPERTY_VALUE(PendingOrganizationName, InName);
-	RefreshModalValidation();
 }
 
 void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
@@ -170,10 +163,11 @@ void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
 
 	// While the player is filling in the found-organization form, a map click is that form's site
 	// field. Opening the province modal over it would throw the half-filled form away, so the
-	// selection lands and nothing else moves.
+	// selection lands and nothing else moves — the values just written above (bound as
+	// SetSelectedProvinceId/SetSelectedProvinceName on the modal's own view model) are all that form
+	// needs to see the pick.
 	if (ActiveModal == EPlayerModal::PM_FoundOrganization)
 	{
-		RefreshModalValidation();
 		return;
 	}
 
@@ -227,12 +221,31 @@ void UPlayerCharacterViewModel::ConfirmModal()
 	CloseModal();
 }
 
+void UPlayerCharacterViewModel::HandleFoundOrganizationConfirmed(const FText& InOrganizationName, UBuildingType* InHeadquartersType, const FProvinceId InProvinceId)
+{
+	// Re-run both gates on exactly what the form reported rather than trusting its own bIsValid —
+	// the same rule ConfirmModal follows for the other two modals.
+	const FRtsActionContext Context = MakeContext();
+
+	FRtsActionInput Input;
+	Input.OrganizationName = InOrganizationName;
+	Input.HeadquartersType = InHeadquartersType;
+	Input.HeadquartersProvinceId = InProvinceId;
+
+	if (!URtsActions::GetBlockedReason(EAction::EA_FoundOrganization, Context).IsEmpty()
+		|| !URtsActions::GetInvalidInputReason(EAction::EA_FoundOrganization, Context, Input).IsEmpty())
+	{
+		return;
+	}
+
+	URtsActions::ExecuteAction(EAction::EA_FoundOrganization, Context, Input);
+	CloseModal();
+}
+
 EAction UPlayerCharacterViewModel::GetModalAction() const
 {
 	switch (ActiveModal)
 	{
-	case EPlayerModal::PM_FoundOrganization:
-		return EAction::EA_FoundOrganization;
 	case EPlayerModal::PM_JoinOrganization:
 		return EAction::EA_JoinOrganization;
 	case EPlayerModal::PM_RecruitCharacter:
@@ -240,47 +253,19 @@ EAction UPlayerCharacterViewModel::GetModalAction() const
 	default:
 		break;
 	}
-	return EAction::EA_FoundOrganization;
+	return EAction::EA_JoinOrganization;
 }
 
 bool UPlayerCharacterViewModel::IsActionModal(const EPlayerModal InModal) const
 {
 	switch (InModal)
 	{
-	case EPlayerModal::PM_FoundOrganization:
 	case EPlayerModal::PM_JoinOrganization:
 	case EPlayerModal::PM_RecruitCharacter:
 		return true;
 	default:
 		return false;
 	}
-}
-
-void UPlayerCharacterViewModel::SelectHeadquartersType(UBuildingType* InBuildingType)
-{
-	ApplyHeadquartersType(InBuildingType);
-}
-
-void UPlayerCharacterViewModel::ApplyHeadquartersType(UBuildingType* InBuildingType)
-{
-	UE_MVVM_SET_PROPERTY_VALUE(PendingHeadquartersType, InBuildingType);
-	UE_MVVM_SET_PROPERTY_VALUE(PendingCost, InBuildingType ? InBuildingType->GetBuildCost() : 0);
-
-	// Everything else about the pick — which row is highlighted, what the gate says — is derived
-	// from the value just written, by the refresh below.
-	RefreshModalValidation();
-}
-
-void UPlayerCharacterViewModel::HandleHeadquartersTypeClicked(UBuildingKindViewModel* ClickedType)
-{
-	if (ClickedType == nullptr)
-	{
-		return;
-	}
-
-	// Clicking the picked row unpicks it, exactly as clicking the selected position row does.
-	UBuildingType* ClickedBuildingType = ClickedType->GetBuildingType();
-	ApplyHeadquartersType(ClickedBuildingType == PendingHeadquartersType ? nullptr : ClickedBuildingType);
 }
 
 void UPlayerCharacterViewModel::SelectJoinTarget(const FOrganizationId InOrganizationId)
@@ -305,7 +290,7 @@ void UPlayerCharacterViewModel::HandleJoinableOrganizationClicked(USelectableOrg
 		return;
 	}
 
-	// Clicking the picked row unpicks it, same toggle shape as HandleHeadquartersTypeClicked.
+	// Clicking the picked row unpicks it, exactly as clicking the selected position row does.
 	const FOrganizationId ClickedId = ClickedOrganization->GetOrganizationId();
 	ApplyJoinTarget(ClickedId == PendingJoinOrganizationId ? FOrganizationId() : ClickedId);
 }
@@ -332,62 +317,9 @@ void UPlayerCharacterViewModel::HandleRecruitableCharacterClicked(USelectableCha
 		return;
 	}
 
-	// Clicking the picked row unpicks it, same toggle shape as HandleHeadquartersTypeClicked.
+	// Clicking the picked row unpicks it, same toggle shape as HandleJoinableOrganizationClicked.
 	const FCharacterId ClickedId = ClickedCharacter->GetCharacterId();
 	ApplyRecruitTarget(ClickedId == PendingRecruitCharacterId ? FCharacterId() : ClickedId);
-}
-
-int32 UPlayerCharacterViewModel::GetCharacterFunds() const
-{
-	FRtsResourceContext Context;
-	Context.Characters = Characters;
-	Context.Organizations = Organizations;
-	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
-	{
-		Context.Banking = Facades->GetBankingContainer();
-	}
-
-	// Deliberately the character rather than MakeResourceContext's owner: founding is paid for by
-	// the player themselves, whatever they happen to be acting as at the moment.
-	Context.Owner = FResourceOwner::ForCharacter(GetCharacterId());
-	return URtsResources::GetAmount(EResourceType::RT_Money, EResourceDetail::RD_Total, Context);
-}
-
-void UPlayerCharacterViewModel::RefreshHeadquartersTypes()
-{
-	const int32 Funds = GetCharacterFunds();
-
-	UBuildings* BuildingsContainer = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetBuildingsContainer() : nullptr;
-	const TArray<UBuildingType*> Catalogue = BuildingsContainer ? BuildingsContainer->GetHeadquarterBuildingTypes() : TArray<UBuildingType*>();
-
-	TArray<TObjectPtr<UBuildingKindViewModel>> NewTypes;
-	UBuildingKindViewModel* NewSelectedType = nullptr;
-
-	for (UBuildingType* BuildingType : Catalogue)
-	{
-		TObjectPtr<UBuildingKindViewModel>& Entry = HeadquartersTypeCache.FindOrAdd(BuildingType);
-		if (Entry == nullptr)
-		{
-			Entry = NewObject<UBuildingKindViewModel>(this);
-			Entry->OnClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleHeadquartersTypeClicked);
-		}
-
-		Entry->SetSource(BuildingType);
-		Entry->SetAffordable(Funds >= (BuildingType ? BuildingType->GetBuildCost() : 0));
-
-		const bool bIsPicked = BuildingType == PendingHeadquartersType;
-		Entry->SetSelected(bIsPicked);
-		if (bIsPicked)
-		{
-			NewSelectedType = Entry;
-		}
-
-		NewTypes.Add(Entry);
-	}
-
-	UE_MVVM_SET_PROPERTY_VALUE(HeadquartersTypes, NewTypes);
-	UE_MVVM_SET_PROPERTY_VALUE(HeadquartersTypeCount, NewTypes.Num());
-	UE_MVVM_SET_PROPERTY_VALUE(SelectedHeadquartersType, NewSelectedType);
 }
 
 void UPlayerCharacterViewModel::RefreshJoinableOrganizations()
@@ -400,8 +332,10 @@ void UPlayerCharacterViewModel::RefreshJoinableOrganizations()
 		BuildingsContainer = Facades->GetBuildingsContainer();
 	}
 
-	const FProvinceId CurrentProvinceId = Characters ? Characters->GetCurrentProvince(GetCharacterId()) : FProvinceId();
-	const TArray<FOrganizationId> PresentIds = URtsPresence::CollectOrganizationsIn(CurrentProvinceId, DepartmentsContainer, BuildingsContainer);
+	// Not named CurrentProvinceId: UCharacterViewModel already has a protected field of that name,
+	// and this project builds with shadow-variable warnings as errors.
+	const FProvinceId CharacterProvinceId = Characters ? Characters->GetCurrentProvince(GetCharacterId()) : FProvinceId();
+	const TArray<FOrganizationId> PresentIds = URtsPresence::CollectOrganizationsIn(CharacterProvinceId, DepartmentsContainer, BuildingsContainer);
 
 	TArray<TObjectPtr<USelectableOrganizationViewModel>> NewRows;
 	USelectableOrganizationViewModel* NewSelectedRow = nullptr;
@@ -520,7 +454,6 @@ void UPlayerCharacterViewModel::RefreshModalValidation()
 {
 	// The rows carry prices and affordability, both of which move with the character's money — so
 	// they are re-derived wherever the gate is, not only when the modal opens.
-	RefreshHeadquartersTypes();
 	RefreshJoinableOrganizations();
 	RefreshRecruitableCharacters();
 
@@ -550,12 +483,9 @@ void UPlayerCharacterViewModel::RefreshModalValidation()
 
 FRtsActionInput UPlayerCharacterViewModel::MakeInput() const
 {
+	// Covers only the join/recruit modals now — the found-organization form builds its own
+	// FRtsActionInput in HandleFoundOrganizationConfirmed from what it collected itself.
 	FRtsActionInput Input;
-	Input.OrganizationName = PendingOrganizationName;
-	Input.HeadquartersType = PendingHeadquartersType;
-	// The map selection *is* the site — there is no second "pending province" to keep in step with
-	// what the player clicked.
-	Input.HeadquartersProvinceId = SelectedProvinceId;
 	Input.TargetOrganizationId = PendingJoinOrganizationId;
 	Input.TargetCharacterId = PendingRecruitCharacterId;
 	return Input;
@@ -777,7 +707,7 @@ void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAct
 	{
 	case EAction::EA_FoundOrganization:
 		// Clicking the action again while its modal is already open closes it, the same toggle shape
-		// HandlePositionClicked and HandleHeadquartersTypeClicked use for their own selections.
+		// HandlePositionClicked uses for its own selection.
 		if (ActiveModal == EPlayerModal::PM_FoundOrganization)
 		{
 			CloseModal();

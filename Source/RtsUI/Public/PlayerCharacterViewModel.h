@@ -12,7 +12,6 @@
 
 class ARtsPlayer;
 class UActionViewModel;
-class UBuildingKindViewModel;
 class UBuildingType;
 class UResourceViewModel;
 class USelectableCharacterViewModel;
@@ -33,19 +32,20 @@ class USelectablePositionViewModel;
  * back up through HandlePositionClicked. Clicking the selected row clears the selection: the player
  * drops back to acting as themselves and no row is selected any more.
  *
- * The found-organization modal's state sits here for the same reason: what the player has typed,
- * which headquarters they picked and which province they clicked are things the UI invented, and
- * the organization that comes out of them is what URtsActions makes of it. Note that there is no
- * organization type anywhere — an organization is a party because its headquarters is a party
- * office (a UBuildingType asset with bIsHeadquarters set), so picking the building *is* picking
- * what is being founded.
+ * The found-organization modal is the exception to "this class owns the widget state": its form
+ * (typed name, headquarters pick, live validation) lives entirely in its own component,
+ * UFoundOrganizationModalWidgetViewModel — a "smart form" CreateInstance view model the widget's
+ * Blueprint spawns itself, never pushed into or read from here. This class only reports the one
+ * thing that form cannot invent itself (SelectedProvinceId/SelectedProvinceName, picked on the world
+ * map) and reacts once, in HandleFoundOrganizationConfirmed, to what the form collected. Note that
+ * there is no organization type anywhere — an organization is a party because its headquarters is a
+ * party office (a UBuildingType asset with bIsHeadquarters set), so picking the building *is*
+ * picking what is being founded.
  *
- * The modal's own widget binds to its own component, UFoundOrganizationModalWidgetViewModel — a
- * CreateInstance view model the widget's Blueprint spawns itself, not something this class creates
- * or pushes into. The properties below stay the source of truth (ApplyHeadquartersType/MakeInput/
- * ConfirmModal all read them directly); getting them onto the modal's component is Blueprint
- * binding work (one-way Function bindings for the display-only ones, a Two Way Function binding
- * for PendingOrganizationName/SetPendingOrganizationName), not something this class does.
+ * The join- and recruit-organization modals are not "smart forms" the same way — they only ever
+ * pick one row out of a list this class already builds (JoinableOrganizations/RecruitableCharacters),
+ * so their pending selection and validation stay here (PendingJoinOrganizationId/MakeInput/
+ * ConfirmModal), pushed onto their own modal widgets by one-way Function bindings same as before.
  *
  * The action list lives here rather than in a view model of its own precisely because it is a
  * function of that selection: the scope an action is offered for *is* SelectedPositionIndex, so a
@@ -86,15 +86,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void CloseModal();
 
-	/** Controlled input: the modal's text box pushes every edit here, and gets validation back. */
-	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
-	void SetPendingOrganizationName(const FText& InName);
-
-	/** Which headquarters the found-organization modal is about to put up. Null means the player
-	 * has not picked one yet, which is what the input gate refuses on. */
-	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
-	void SelectHeadquartersType(UBuildingType* InBuildingType);
-
 	/** Which organization the join-organization modal is about to join. An invalid id means the
 	 * player has not picked one yet, which is what the input gate refuses on. */
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
@@ -120,6 +111,14 @@ public:
 	 * either gate refuses — the widget's last pushed bCanConfirmModal is never trusted. */
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void ConfirmModal();
+
+	/** Bound (Event binding) to UFoundOrganizationModalWidgetViewModel::OnConfirmClicked — the
+	 * found-organization modal is a "smart form" that collects and validates its own input (name,
+	 * headquarters, province) and reports it here only once, instead of mirroring every keystroke and
+	 * pick into this class the way the join/recruit modals still do. The values carried are still not
+	 * trusted: the gate runs again here exactly as ConfirmModal re-runs it for the other two modals. */
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
+	void HandleFoundOrganizationConfirmed(const FText& InOrganizationName, UBuildingType* InHeadquartersType, FProvinceId InProvinceId);
 
 	/** Opens PM_ViewOrganization for InOrganizationId. Bound in Blueprint from two places: a
 	 * province screen row (UProvinceViewModel::OnOrganizationClicked) and the player's own position
@@ -190,32 +189,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	FText SelectedProvinceName;
 
-	/** What the player has typed into the found-organization modal so far. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
-	FText PendingOrganizationName;
-
-	/** Which headquarters the found-organization modal will put up, null until one is picked. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
-	TObjectPtr<UBuildingType> PendingHeadquartersType;
-
-	/** What founding currently costs — the picked headquarters' build cost, 0 while none is picked. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
-	int32 PendingCost = 0;
-
-	/** One row per headquarters type the player can found in. Rebuilt whenever the modal opens or
-	 * the character's money changes, so the price tags and their affordability stay honest. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
-	TArray<TObjectPtr<UBuildingKindViewModel>> HeadquartersTypes;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
-	int32 HeadquartersTypeCount = 0;
-
-	/** The picked row, or null while none is — the same state PendingHeadquartersType holds, as the
-	 * object a widget can bind a highlight against. Written only in ApplyHeadquartersType, so the
-	 * two cannot disagree. Same shape as SelectedPosition. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
-	TObjectPtr<UBuildingKindViewModel> SelectedHeadquartersType;
-
 	/** Which organization the join-organization modal will join, invalid until one is picked. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	FOrganizationId PendingJoinOrganizationId;
@@ -231,7 +204,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	int32 JoinableOrganizationCount = 0;
 
-	/** The picked row, or null while none is — same shape as SelectedHeadquartersType. */
+	/** The picked row, or null while none is — same shape as SelectedPosition. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	TObjectPtr<USelectableOrganizationViewModel> SelectedJoinOrganization;
 
@@ -250,7 +223,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	int32 RecruitableCharacterCount = 0;
 
-	/** The picked row, or null while none is — same shape as SelectedHeadquartersType. */
+	/** The picked row, or null while none is — same shape as SelectedJoinOrganization. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	TObjectPtr<USelectableCharacterViewModel> SelectedRecruitCharacter;
 
@@ -302,12 +275,6 @@ public:
 	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
 	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
 	FText GetSelectedProvinceName() const { return SelectedProvinceName; }
-	FText GetPendingOrganizationName() const { return PendingOrganizationName; }
-	UBuildingType* GetPendingHeadquartersType() const { return PendingHeadquartersType; }
-	int32 GetPendingCost() const { return PendingCost; }
-	const TArray<TObjectPtr<UBuildingKindViewModel>>& GetHeadquartersTypes() const { return HeadquartersTypes; }
-	int32 GetHeadquartersTypeCount() const { return HeadquartersTypeCount; }
-	UBuildingKindViewModel* GetSelectedHeadquartersType() const { return SelectedHeadquartersType; }
 	FOrganizationId GetPendingJoinOrganizationId() const { return PendingJoinOrganizationId; }
 	int32 GetPendingJoinOrganizationIdValue() const { return PendingJoinOrganizationIdValue; }
 	const TArray<TObjectPtr<USelectableOrganizationViewModel>>& GetJoinableOrganizations() const { return JoinableOrganizations; }
@@ -353,15 +320,8 @@ private:
 	 * acting as self. Refreshes the action list, which is a function of exactly this. */
 	void ApplySelection(int32 InPositionIndex);
 
-	/** The one writer of PendingHeadquartersType/PendingCost/SelectedHeadquartersType, for the same
-	 * reason ApplySelection is the one writer of the position selection. */
-	void ApplyHeadquartersType(UBuildingType* InBuildingType);
-
-	/** Rebuilds the headquarters rows and pushes each one's affordability. */
-	void RefreshHeadquartersTypes();
-
 	/** The one writer of PendingJoinOrganizationId/SelectedJoinOrganization, same reason
-	 * ApplyHeadquartersType is the one writer of the headquarters pick. */
+	 * ApplySelection is the one writer of the position selection. */
 	void ApplyJoinTarget(FOrganizationId InOrganizationId);
 
 	/** Rebuilds JoinableOrganizations: organizations present where the character stands, minus
@@ -375,10 +335,6 @@ private:
 	/** Rebuilds RecruitableCharacters: characters standing where the acting position's organization
 	 * is headquartered, minus the ones who already hold a position there. */
 	void RefreshRecruitableCharacters();
-
-	/** What the played character can spend, read through URtsResources so the modal and the money
-	 * row can never disagree about what "the character's money" means. */
-	int32 GetCharacterFunds() const;
 
 	void RefreshSelectablePositions();
 
@@ -405,13 +361,9 @@ private:
 
 	/** Clicking the picked row unpicks it, the same way HandlePositionClicked clears a selection. */
 	UFUNCTION()
-	void HandleHeadquartersTypeClicked(UBuildingKindViewModel* ClickedType);
-
-	/** Same toggle shape as HandleHeadquartersTypeClicked, for the join-organization picker. */
-	UFUNCTION()
 	void HandleJoinableOrganizationClicked(USelectableOrganizationViewModel* ClickedOrganization);
 
-	/** Same toggle shape as HandleHeadquartersTypeClicked, for the recruit picker. */
+	/** Same toggle shape as HandleJoinableOrganizationClicked, for the recruit picker. */
 	UFUNCTION()
 	void HandleRecruitableCharacterClicked(USelectableCharacterViewModel* ClickedCharacter);
 
@@ -443,10 +395,6 @@ private:
 	 * same resources keeps the same row objects. */
 	UPROPERTY()
 	TMap<EResourceType, TObjectPtr<UResourceViewModel>> ResourceEntryCache;
-
-	/** Same idea, keyed by the UBuildingType asset. */
-	UPROPERTY()
-	TMap<TObjectPtr<UBuildingType>, TObjectPtr<UBuildingKindViewModel>> HeadquartersTypeCache;
 
 	/** Same idea, keyed by the organization id. */
 	UPROPERTY()
