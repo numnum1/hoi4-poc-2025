@@ -18,13 +18,11 @@ class UWorldMapWidget;
  * ProvinceIdTexture/ProvinceMapData are the same ProvID texture and Color<->Name DataTable
  * (FProvinceMapDataGame rows) already authored for BloodAnvil's LUT shading — set them on the
  * Blueprint subclass placed in the level. UWorldMapWidget is the one interface into the rest of the
- * game this class knows about: it forwards a resolved click there and nothing else, same as
- * URtsPresence/URtsActions never resolve a facade subsystem themselves — the widget decides what a
- * selection means (its own UWorldMapViewModel state, and forwarding into
- * UPlayerCharacterViewModel).
+ * game this class knows about: it forwards a resolved click there and nothing else — this module
+ * does not know RtsUI/UPlayerCharacterViewModel, see UWorldMapWidget's class comment.
  */
 UCLASS()
-class RTSUI_API ARtsWorldMap : public ABA_Map
+class WORLDMAP_API ARtsWorldMap : public ABA_Map
 {
 	GENERATED_BODY()
 

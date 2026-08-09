@@ -1,11 +1,11 @@
-#include "WorldMap/RtsWorldMap.h"
+#include "RtsWorldMap.h"
 
 #include "BA_DataFunctions.h"
 #include "Engine/DataTable.h"
 #include "Engine/Texture2D.h"
 #include "Provinces.h"
 #include "RtsFacadeSubsystem.h"
-#include "WorldMap/WorldMapWidget.h"
+#include "WorldMapWidget.h"
 
 void ARtsWorldMap::SetWorldMapWidget(UWorldMapWidget* InWidget)
 {

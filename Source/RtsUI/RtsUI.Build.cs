@@ -17,10 +17,7 @@ public class RtsUI : ModuleRules
                 "RtsViewModels",
                 // UBuildingType is a property on UPlayerCharacterViewModel's header: the
                 // headquarters the found-organization modal is collecting.
-                "Buildings",
-                // ARtsWorldMap derives from ABA_Map (BloodAnvil plugin) — the base class needs the
-                // full type in the header, not just a forward declare.
-                "BloodAnvil"
+                "Buildings"
             }
         );
 
@@ -49,10 +46,7 @@ public class RtsUI : ModuleRules
                 "Banking",
                 // UPlayerCharacterViewModel derives from UMVVMViewModelBase (via UCharacterViewModel);
                 // the base class's generated FieldNotify machinery needs this linked directly here too.
-                "ModelViewViewModel",
-                // UWorldMapWidget owns a UWorldMapViewModel; only the .cpp needs the full type, the
-                // header forward-declares it
-                "WorldMap"
+                "ModelViewViewModel"
             }
         );
     }

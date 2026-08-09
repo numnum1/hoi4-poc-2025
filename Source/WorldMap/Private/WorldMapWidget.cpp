@@ -1,6 +1,5 @@
-#include "WorldMap/WorldMapWidget.h"
+#include "WorldMapWidget.h"
 
-#include "PlayedCharacterView/PlayerCharacterViewModel.h"
 #include "WorldMapViewModel.h"
 
 void UWorldMapWidget::NativeOnInitialized()
@@ -13,20 +12,10 @@ void UWorldMapWidget::NativeOnInitialized()
 	}
 }
 
-void UWorldMapWidget::SetPlayerViewModel(UPlayerCharacterViewModel* InPlayerViewModel)
-{
-	PlayerViewModel = InPlayerViewModel;
-}
-
 void UWorldMapWidget::HandleProvinceClicked(const FProvinceId InProvinceId)
 {
 	if (WorldMapViewModel)
 	{
 		WorldMapViewModel->SelectProvince(InProvinceId);
-	}
-
-	if (PlayerViewModel)
-	{
-		PlayerViewModel->SelectProvince(InProvinceId);
 	}
 }
