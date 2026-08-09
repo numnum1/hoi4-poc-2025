@@ -6,6 +6,7 @@
 #include "PlayedCharacterView/PlayerCharacterViewModel.h"
 #include "ProvinceDetail/ProvinceDetailWidget.h"
 #include "RecruitCharacterModal/RecruitCharacterModalWidget.h"
+#include "WorldMap/WorldMapWidget.h"
 
 void UPlayedCharacterView::NativeOnInitialized()
 {
@@ -40,5 +41,10 @@ void UPlayedCharacterView::NativeOnInitialized()
 	if (RecruitCharacterModal)
 	{
 		RecruitCharacterModal->SetPlayerViewModel(PlayerViewModel);
+	}
+
+	if (WorldMap)
+	{
+		WorldMap->SetPlayerViewModel(PlayerViewModel);
 	}
 }

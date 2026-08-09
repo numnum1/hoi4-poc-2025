@@ -1,9 +1,11 @@
 #include "FoundOrganizationModal/FoundOrganizationModalWidgetViewModel.h"
 
+#include "Actions/RtsActions.h"
 #include "Banking.h"
 #include "Buildings.h"
 #include "Buildings/BuildingKindViewModel.h"
 #include "BuildingType.h"
+#include "Provinces.h"
 #include "RtsFacadeSubsystem.h"
 
 #define LOCTEXT_NAMESPACE "FoundOrganizationModalWidgetViewModel"
@@ -14,6 +16,7 @@ void UFoundOrganizationModalWidgetViewModel::Initialize(const FCharacterId InCha
 
 	URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this);
 	Buildings = Facades ? Facades->GetBuildingsContainer() : nullptr;
+	Provinces = Facades ? Facades->GetProvincesContainer() : nullptr;
 
 	UBanking* NewBanking = Facades ? Facades->GetBankingContainer() : nullptr;
 	if (Banking != NewBanking)
@@ -121,7 +124,7 @@ void UFoundOrganizationModalWidgetViewModel::Revalidate()
 		{
 			Reason = LOCTEXT("NoBuildingFunction", "This building offers no function to seat a department in.");
 		}
-		else if (!SelectedProvinceId.IsValid())
+		else if (!URtsActions::CanFoundHeadquartersIn(SelectedProvinceId, Provinces))
 		{
 			Reason = LOCTEXT("NoProvince", "Click a province on the map to place the headquarters.");
 		}

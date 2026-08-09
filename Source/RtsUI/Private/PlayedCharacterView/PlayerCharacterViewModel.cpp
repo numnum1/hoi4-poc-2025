@@ -507,6 +507,7 @@ FRtsActionContext UPlayerCharacterViewModel::MakeContext() const
 		Context.Buildings = Facades->GetBuildingsContainer();
 		Context.Departments = Facades->GetDepartmentsContainer();
 		Context.Banking = Facades->GetBankingContainer();
+		Context.Provinces = Facades->GetProvincesContainer();
 	}
 
 	if (!bIsActingAsSelf)

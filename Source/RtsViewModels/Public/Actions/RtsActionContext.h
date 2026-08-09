@@ -9,6 +9,7 @@ class UBuildings;
 class UCharacters;
 class UDepartments;
 class UOrganizations;
+class UProvinces;
 class URoles;
 
 /** Which role the acting character plays for this action: themselves, or one of their positions. */
@@ -72,4 +73,10 @@ struct RTSVIEWMODELS_API FRtsActionContext
 
 	UPROPERTY(BlueprintReadOnly, Category="Action")
 	TObjectPtr<UBanking> Banking;
+
+	/** Founding checks the site province still exists before putting a building up there — also
+	 * where the WeltMap's green/red founding-site preview reads from, see
+	 * URtsActions::CanFoundHeadquartersIn. */
+	UPROPERTY(BlueprintReadOnly, Category="Action")
+	TObjectPtr<UProvinces> Provinces;
 };

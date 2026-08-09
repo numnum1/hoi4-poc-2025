@@ -15,14 +15,15 @@ void UFoundOrganizationModalWidget::SetFormViewModel(UFoundOrganizationModalWidg
 
 void UFoundOrganizationModalWidget::Confirm()
 {
-	if (PlayerViewModel == nullptr || FormViewModel == nullptr)
+	if (FormViewModel == nullptr)
 	{
 		return;
 	}
 
-	// Reported as-is, without checking the form's IsValid first: the handler re-runs both gates on
-	// exactly these values anyway, and a second gate here would be a copy to keep in sync.
-	PlayerViewModel->HandleFoundOrganizationConfirmed(
+	// Reported as-is, without checking the form's IsValid first: whoever handles OnConfirmed
+	// re-runs both gates on exactly these values anyway, and a second gate here would be a copy to
+	// keep in sync.
+	OnConfirmed.Broadcast(
 		FormViewModel->GetOrganizationName(),
 		FormViewModel->GetPendingHeadquartersType(),
 		FormViewModel->GetSelectedProvinceId());
@@ -30,10 +31,5 @@ void UFoundOrganizationModalWidget::Confirm()
 
 void UFoundOrganizationModalWidget::Cancel()
 {
-	if (PlayerViewModel == nullptr)
-	{
-		return;
-	}
-
-	PlayerViewModel->CloseModal();
+	OnCancelled.Broadcast();
 }

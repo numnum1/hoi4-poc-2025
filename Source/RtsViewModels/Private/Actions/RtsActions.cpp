@@ -8,6 +8,7 @@
 #include "OrganizationInfo.h"
 #include "Organizations.h"
 #include "Presence/RtsPresence.h"
+#include "Provinces.h"
 #include "Roles.h"
 
 #define LOCTEXT_NAMESPACE "RtsActions"
@@ -265,7 +266,7 @@ FText URtsActions::GetInvalidInputReason(const EAction InAction, const FRtsActio
 			return LOCTEXT("NoBuildingFunction", "This building offers no function to seat a department in.");
 		}
 
-		if (!InInput.HeadquartersProvinceId.IsValid())
+		if (!CanFoundHeadquartersIn(InInput.HeadquartersProvinceId, InContext.Provinces))
 		{
 			return LOCTEXT("NoProvince", "Click a province on the map to place the headquarters.");
 		}
@@ -451,6 +452,11 @@ void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext&
 		return;
 	}
 	}
+}
+
+bool URtsActions::CanFoundHeadquartersIn(const FProvinceId InProvinceId, UProvinces* InProvinces)
+{
+	return InProvinces && InProvinces->IsAlive(InProvinceId);
 }
 
 #undef LOCTEXT_NAMESPACE

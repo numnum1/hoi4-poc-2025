@@ -10,6 +10,7 @@ class UOrganizationDetailWidget;
 class UPlayerCharacterViewModel;
 class UProvinceDetailWidget;
 class URecruitCharacterModalWidget;
+class UWorldMapWidget;
 
 /**
  * The root widget for the character the player is currently playing. Owns the single
@@ -59,4 +60,8 @@ private:
 	/** Same optionality reasoning as FoundOrganizationModal. */
 	UPROPERTY(BlueprintReadOnly, Transient, meta=(BindWidgetOptional, AllowPrivateAccess))
 	TObjectPtr<URecruitCharacterModalWidget> RecruitCharacterModal;
+
+	/** Same optionality reasoning as FoundOrganizationModal. */
+	UPROPERTY(BlueprintReadOnly, Transient, meta=(BindWidgetOptional, AllowPrivateAccess))
+	TObjectPtr<UWorldMapWidget> WorldMap;
 };

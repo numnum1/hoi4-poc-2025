@@ -8,6 +8,8 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "RtsActions.generated.h"
 
+class UProvinces;
+
 /**
  * The action catalogue, hardcoded as a set of small switches over EAction rather than a lookup
  * table or a UObject subclass per action. GetActionsForSelf/GetActionsForPosition decide which
@@ -64,4 +66,14 @@ public:
 	static FText GetInvalidInputReason(EAction InAction, const FRtsActionContext& InContext, const FRtsActionInput& InInput);
 
 	static void ExecuteAction(EAction InAction, const FRtsActionContext& InContext, const FRtsActionInput& InInput);
+
+	/**
+	 * Whether a headquarters could be founded in InProvinceId right now — the province-specific
+	 * slice of GetInvalidInputReason(EA_FoundOrganization), pulled out so the WeltMap can color
+	 * provinces green/red while the player picks a founding site without duplicating the rule.
+	 * Today that is only "does the province still exist"; province-specific founding restrictions
+	 * (nation ownership, terrain, ...) get added here once they exist, not into the map's Blueprint.
+	 */
+	UFUNCTION(BlueprintPure, Category="Rts Actions")
+	static bool CanFoundHeadquartersIn(FProvinceId InProvinceId, UProvinces* InProvinces);
 };

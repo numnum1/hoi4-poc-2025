@@ -9,6 +9,7 @@ class UBanking;
 class UBuildingKindViewModel;
 class UBuildings;
 class UBuildingType;
+class UProvinces;
 
 /**
  * The found-organization modal's own component, in exactly the sense the "ViewModels sind
@@ -143,6 +144,12 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UBuildings> Buildings;
+
+	/** Resolved by Initialize, read by Revalidate to mirror
+	 * URtsActions::CanFoundHeadquartersIn — a province the world map picked can go dead while the
+	 * modal is still open. */
+	UPROPERTY()
+	TObjectPtr<UProvinces> Provinces;
 
 	/** Resolved by Initialize, bound to for live affordability; unbound in BeginDestroy. */
 	UPROPERTY()
