@@ -116,13 +116,11 @@ void UTimezoneViewModel::Refresh_Implementation()
 void UTimezoneViewModel::CallOnFastForwardClicked()
 {
 	SetSpeed(FastForwardTimeSpeed);
-	OnFastForwardClicked.Broadcast();
 }
 
 void UTimezoneViewModel::CallOnNormalSpeedClicked()
 {
 	SetSpeed(NormalTimeSpeed);
-	OnNormalSpeedClicked.Broadcast();
 }
 
 void UTimezoneViewModel::SetSpeed(const int32 InSpeed)

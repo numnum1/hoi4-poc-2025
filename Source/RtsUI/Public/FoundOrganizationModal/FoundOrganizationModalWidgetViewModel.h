@@ -27,11 +27,14 @@ class UBuildingType;
  * compute the acting character's funds; the province is the one input it cannot invent itself (it is
  * picked on the world map, see CLAUDE.md), so that alone is still pushed in from the parent.
  *
- * OnConfirmClicked reports everything the form collected as parameters, once. Nothing here ever
- * writes into UPlayerCharacterViewModel — the parent's handler builds an FRtsActionContext, re-runs
- * URtsActions::GetBlockedReason/GetInvalidInputReason on exactly what the event carried (this form's
- * own IsValid is UX feedback, not the authority — the same "never trust the last pushed state" rule
- * every other click handler in this codebase follows), and only then executes.
+ * There is deliberately no dispatcher here — a CreateInstance view model has no owner to report to,
+ * see "Callbacks gibt es nur auf Manual-ViewModels" in CLAUDE.md. The confirm button calls
+ * UFoundOrganizationModalWidget::Confirm instead, which reads the collected values off the getters
+ * below and hands them to UPlayerCharacterViewModel::HandleFoundOrganizationConfirmed. Nothing here
+ * ever writes into UPlayerCharacterViewModel, and this form's own IsValid is UX feedback rather than
+ * the authority: that handler re-runs URtsActions::GetBlockedReason/GetInvalidInputReason on exactly
+ * the values it was given — the same "never trust the last pushed state" rule every other click
+ * handler in this codebase follows.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
 class RTSUI_API UFoundOrganizationModalWidgetViewModel : public UMVVMViewModelBase
@@ -63,22 +66,6 @@ public:
 	 * visible again. */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
 	void ResetForm();
-
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnConfirmClicked, FText, OrganizationName, UBuildingType*, HeadquartersType, FProvinceId, ProvinceId);
-	UPROPERTY(BlueprintAssignable, Category="Found Organization Modal")
-	FOnConfirmClicked OnConfirmClicked;
-
-	/** Bind the confirm button's OnClicked to this. Re-checks IsValid before broadcasting — the form
-	 * does not trust its own last-pushed bIsValid any more than a parent would trust a child's. */
-	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
-	void CallOnConfirmClicked();
-
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCancelClicked);
-	UPROPERTY(BlueprintAssignable, Category="Found Organization Modal")
-	FOnCancelClicked OnCancelClicked;
-
-	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
-	void CallOnCancelClicked();
 
 protected:
 	virtual void BeginDestroy() override;
@@ -122,9 +109,16 @@ public:
 	FText GetModalErrorText() const { return ModalErrorText; }
 	bool IsValid() const { return bIsValid; }
 
+	/** The collected result, read by UFoundOrganizationModalWidget::Confirm when the button is
+	 * clicked — the form reports what it has, it does not act on it. Not FieldNotify properties:
+	 * nothing displays the raw picks, the rows and PendingCost above already show them. */
+	UBuildingType* GetPendingHeadquartersType() const { return PendingHeadquartersType; }
+	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
+
 private:
-	/** The one writer of PendingHeadquartersType-equivalent state here (SelectedHeadquartersType),
-	 * same reason UPlayerCharacterViewModel::ApplyHeadquartersType is the one writer there. */
+	/** The one writer of PendingHeadquartersType (and, through the refresh below, of the row
+	 * highlight and PendingCost derived from it), so the pick and what is shown cannot disagree —
+	 * same reason UPlayerCharacterViewModel::ApplySelection is the one writer of its selection. */
 	void ApplyHeadquartersType(UBuildingType* InBuildingType);
 
 	/** Rebuilds HeadquartersTypes with current affordability and re-derives PendingCost/validity. */

@@ -4,6 +4,7 @@
 #include "Blueprint/UserWidget.h"
 #include "FoundOrganizationModalWidget.generated.h"
 
+class UFoundOrganizationModalWidgetViewModel;
 class UPlayerCharacterViewModel;
 
 /**en 
@@ -23,12 +24,16 @@ class UPlayerCharacterViewModel;
  * modal view model's Initialize (so it can resolve its own facades and funds), and one-way Function
  * bindings from GetSelectedProvinceId/GetSelectedProvinceName onto SetSelectedProvinceId/
  * SetSelectedProvinceName (the province is picked on the world map, not typed into this form).
- * Cancel is wired (Event binding) straight to UPlayerCharacterViewModel::CloseModal; Confirm is wired
- * to UPlayerCharacterViewModel::HandleFoundOrganizationConfirmed, which receives everything the form
- * collected as event parameters and re-validates it through URtsActions before running anything —
- * the form's own validation is UX feedback, not the authority. The Blueprint should also call the
- * modal view model's ResetForm() whenever the modal becomes visible again, since the form does not
- * reset itself.
+ *
+ * The buttons run through this class rather than through a dispatcher on the form: a CreateInstance
+ * view model has no owner to report to, so it gets none (see "Callbacks gibt es nur auf
+ * Manual-ViewModels" in CLAUDE.md). The Blueprint calls SetFormViewModel once with the view model
+ * its MVVM panel spawned, then wires Confirm/Cancel below straight onto the two buttons. Confirm
+ * reads the collected values off the form and hands them to
+ * UPlayerCharacterViewModel::HandleFoundOrganizationConfirmed, which re-validates them through
+ * URtsActions before running anything — the form's own validation is UX feedback, not the authority.
+ * The Blueprint should also call the form's ResetForm() whenever the modal becomes visible again,
+ * since the form does not reset itself.
  */
 UCLASS(Abstract)
 class RTSUI_API UFoundOrganizationModalWidget : public UUserWidget
@@ -43,7 +48,27 @@ public:
 	UFUNCTION(BlueprintPure, Category="Found Organization Modal")
 	UPlayerCharacterViewModel* GetPlayerViewModel() const { return PlayerViewModel; }
 
+	/** Pushed in by the Blueprint once, with the form view model its own MVVM panel spawned. C++
+	 * cannot reach that instance otherwise, and Confirm below has to read what it collected. */
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void SetFormViewModel(UFoundOrganizationModalWidgetViewModel* InFormViewModel);
+
+	UFUNCTION(BlueprintPure, Category="Found Organization Modal")
+	UFoundOrganizationModalWidgetViewModel* GetFormViewModel() const { return FormViewModel; }
+
+	/** Bind the confirm button's OnClicked to this. Reports what the form collected upwards; the
+	 * decision whether it may run is made there, not here. */
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void Confirm();
+
+	/** Bind the cancel button's OnClicked to this. */
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void Cancel();
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UPlayerCharacterViewModel> PlayerViewModel;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UFoundOrganizationModalWidgetViewModel> FormViewModel;
 };

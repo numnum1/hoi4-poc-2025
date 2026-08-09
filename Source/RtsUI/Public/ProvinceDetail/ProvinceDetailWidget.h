@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "RtsIds.h"
 #include "ProvinceDetailWidget.generated.h"
 
 class UPlayerCharacterViewModel;
@@ -18,6 +19,12 @@ class UPlayerCharacterViewModel;
  * pattern UTimezoneViewModel uses. What this class pushes in (SetPlayerViewModel) is only that
  * source: a Property Path the Blueprint's destination binding reads from, exactly like
  * UFoundOrganizationModalWidget::SetPlayerViewModel.
+ *
+ * It is also the way a click gets *out* of that view model. UProvinceViewModel lives in
+ * RtsViewModels and may not know UPlayerCharacterViewModel, and being CreateInstance it has no
+ * dispatcher to report through either (see "Callbacks gibt es nur auf Manual-ViewModels" in
+ * CLAUDE.md). This class holds both sides, so an organization row's Blueprint calls
+ * ViewOrganization() below and the decision stays in C++.
  */
 UCLASS(Abstract)
 class RTSUI_API UProvinceDetailWidget : public UUserWidget
@@ -31,6 +38,11 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Province Detail")
 	UPlayerCharacterViewModel* GetPlayerViewModel() const { return PlayerViewModel; }
+
+	/** Bind an organization row's click to this, passing that row's OrganizationId. Opens the
+	 * organization screen for it — the played character view model owns that state and decides. */
+	UFUNCTION(BlueprintCallable, Category="Province Detail")
+	void ViewOrganization(FOrganizationId InOrganizationId);
 
 private:
 	UPROPERTY(Transient)

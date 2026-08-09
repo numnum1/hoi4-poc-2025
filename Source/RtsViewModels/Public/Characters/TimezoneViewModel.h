@@ -28,10 +28,12 @@ class UTime;
  * This is a CreateInstance view model, not a child object hanging off UPlayerCharacterViewModel:
  * the widget blueprint declares its own entry for it and drives Initialize from a binding on the
  * played character's id. Nothing owns it, so the speed buttons are answered here — the two
- * CallOn... functions set UTime's speed and broadcast the matching dispatcher for anything else
- * that wants to react (a click sound, a highlight elsewhere). The new speed still comes back
- * through UTime::OnSpeedChanged rather than being written into Speed directly, so what is
- * displayed is always what the clock actually runs at.
+ * CallOn... functions set UTime's speed and that is the whole of it. There is deliberately no
+ * dispatcher alongside them: a CreateInstance view model has no owner to report to, and anything
+ * else that wants to know the speed binds Speed/bIsFastForward below. See "Callbacks gibt es nur
+ * auf Manual-ViewModels" in CLAUDE.md. The new speed still comes back through UTime::OnSpeedChanged
+ * rather than being written into Speed directly, so what is displayed is always what the clock
+ * actually runs at.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
 class RTSVIEWMODELS_API UTimezoneViewModel : public UMVVMViewModelBase
@@ -39,18 +41,9 @@ class RTSVIEWMODELS_API UTimezoneViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTimeSpeedRequested);
-
-	/** Fired after the speed was actually switched, for anything that wants to react to the click.
-	 * Bind the button's OnClicked to CallOnFastForwardClicked() below, not to this. */
-	UPROPERTY(BlueprintAssignable, Category="Timezone Viewmodel|Speed")
-	FOnTimeSpeedRequested OnFastForwardClicked;
-
-	UPROPERTY(BlueprintAssignable, Category="Timezone Viewmodel|Speed")
-	FOnTimeSpeedRequested OnNormalSpeedClicked;
-
-	/** Bind the fast-forward button's OnClicked to this. Runs the clock fast, then broadcasts
-	 * OnFastForwardClicked. What "fast" is stays hardcoded — see "Keine Erweiterbarkeit". */
+	/** Bind the fast-forward button's OnClicked to this. What "fast" is stays hardcoded — see
+	 * "Keine Erweiterbarkeit". Keeps its CallOn... name because the Timezone widget's Blueprint
+	 * binds it by name; it no longer broadcasts anything. */
 	UFUNCTION(BlueprintCallable, Category="Timezone Viewmodel|Speed")
 	void CallOnFastForwardClicked();
 

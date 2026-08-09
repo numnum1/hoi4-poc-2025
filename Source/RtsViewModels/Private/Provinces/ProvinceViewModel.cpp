@@ -98,14 +98,6 @@ void UProvinceViewModel::HandleCharacterMoved(const FCharacterId InCharacterId)
 	Refresh();
 }
 
-void UProvinceViewModel::HandleOrganizationRowClicked(USelectableOrganizationViewModel* ClickedOrganization)
-{
-	if (ClickedOrganization)
-	{
-		OnOrganizationClicked.Broadcast(ClickedOrganization->GetOrganizationId());
-	}
-}
-
 void UProvinceViewModel::Refresh_Implementation()
 {
 	if (Provinces == nullptr)
@@ -146,11 +138,13 @@ void UProvinceViewModel::RefreshOrganizationsPresent()
 
 	for (const FOrganizationId Id : PresentIds)
 	{
+		// No OnClicked binding here: this module cannot know what clicking a row should do (that is
+		// UPlayerCharacterViewModel's business, in RtsUI). The row widget reports its click to
+		// UProvinceDetailWidget::ViewOrganization instead.
 		TObjectPtr<USelectableOrganizationViewModel>& Entry = OrganizationRowCache.FindOrAdd(Id);
 		if (Entry == nullptr)
 		{
 			Entry = NewObject<USelectableOrganizationViewModel>(this);
-			Entry->OnClicked.AddDynamic(this, &UProvinceViewModel::HandleOrganizationRowClicked);
 		}
 
 		const FOrganizationInfo Info = Organizations ? Organizations->GetOrganizationInfo(Id) : FOrganizationInfo();

@@ -172,22 +172,6 @@ void UFoundOrganizationModalWidgetViewModel::HandleBalanceChanged(const FBankAcc
 	RefreshHeadquartersTypes();
 }
 
-void UFoundOrganizationModalWidgetViewModel::CallOnConfirmClicked()
-{
-	Revalidate();
-	if (!bIsValid)
-	{
-		return;
-	}
-
-	OnConfirmClicked.Broadcast(OrganizationName, PendingHeadquartersType, SelectedProvinceId);
-}
-
-void UFoundOrganizationModalWidgetViewModel::CallOnCancelClicked()
-{
-	OnCancelClicked.Broadcast();
-}
-
 void UFoundOrganizationModalWidgetViewModel::BeginDestroy()
 {
 	if (Banking)

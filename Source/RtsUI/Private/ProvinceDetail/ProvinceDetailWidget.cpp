@@ -6,3 +6,13 @@ void UProvinceDetailWidget::SetPlayerViewModel(UPlayerCharacterViewModel* InPlay
 {
 	PlayerViewModel = InPlayerViewModel;
 }
+
+void UProvinceDetailWidget::ViewOrganization(const FOrganizationId InOrganizationId)
+{
+	if (PlayerViewModel == nullptr || !InOrganizationId.IsValid())
+	{
+		return;
+	}
+
+	PlayerViewModel->ViewOrganization(InOrganizationId);
+}

@@ -16,8 +16,6 @@ class UProvinces;
 class USelectableOrganizationViewModel;
 class USoundBase;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FProvinceOrganizationClicked, FOrganizationId, InOrganizationId);
-
 /**
  * A read-only C++ MVVM view model for a single province, addressed by the same FProvinceId
  * every other province API uses. See UCharacterViewModel for the pattern this follows:
@@ -37,12 +35,6 @@ class RTSVIEWMODELS_API UProvinceViewModel : public UMVVMViewModelBase
 public:
 	UFUNCTION(BlueprintCallable, Category="Province Viewmodel")
 	void Initialize(FProvinceId InProvinceId);
-
-	/** One row in OrganizationsPresent was clicked. Re-broadcast rather than deciding anything here
-	 * — this view model has no notion of a "selected organization", that is UI-invented state that
-	 * belongs to whoever owns the screen this feeds. */
-	UPROPERTY(BlueprintAssignable, Category="Province Viewmodel|Presence")
-	FProvinceOrganizationClicked OnOrganizationClicked;
 
 protected:
 	//~ Identity ---------------------------------------------------------------------------------
@@ -99,7 +91,10 @@ protected:
 	// Derived through Departments/Buildings — Provinces itself is not allowed to know those modules.
 
 	/** One row per organization with at least one department seated in this province — see
-	 * URtsPresence::CollectOrganizationsIn. */
+	 * URtsPresence::CollectOrganizationsIn. Display only from this view model's side: what a click on
+	 * a row means (opening the organization screen) is UI-invented state this module is not allowed to
+	 * know, so the row widget reports the click to UProvinceDetailWidget::ViewOrganization in RtsUI
+	 * instead of this class re-broadcasting it. See "Callbacks gibt es nur auf Manual-ViewModels". */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel|Presence", meta=(AllowPrivateAccess))
 	TArray<TObjectPtr<USelectableOrganizationViewModel>> OrganizationsPresent;
 
@@ -159,9 +154,6 @@ private:
 
 	UFUNCTION()
 	void HandleCharacterMoved(FCharacterId InCharacterId);
-
-	UFUNCTION()
-	void HandleOrganizationRowClicked(USelectableOrganizationViewModel* ClickedOrganization);
 
 	/** Rebuilds OrganizationsPresent from URtsPresence::CollectOrganizationsIn. */
 	void RefreshOrganizationsPresent();

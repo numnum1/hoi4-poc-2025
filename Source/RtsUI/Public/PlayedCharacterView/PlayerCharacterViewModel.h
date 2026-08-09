@@ -112,17 +112,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void ConfirmModal();
 
-	/** Bound (Event binding) to UFoundOrganizationModalWidgetViewModel::OnConfirmClicked — the
-	 * found-organization modal is a "smart form" that collects and validates its own input (name,
-	 * headquarters, province) and reports it here only once, instead of mirroring every keystroke and
-	 * pick into this class the way the join/recruit modals still do. The values carried are still not
-	 * trusted: the gate runs again here exactly as ConfirmModal re-runs it for the other two modals. */
+	/** Called by UFoundOrganizationModalWidget::Confirm — the found-organization modal is a "smart
+	 * form" that collects and validates its own input (name, headquarters, province) and reports it
+	 * here only once, instead of mirroring every keystroke and pick into this class the way the
+	 * join/recruit modals still do. The values handed over are still not trusted: the gate runs again
+	 * here exactly as ConfirmModal re-runs it for the other two modals. */
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void HandleFoundOrganizationConfirmed(const FText& InOrganizationName, UBuildingType* InHeadquartersType, FProvinceId InProvinceId);
 
-	/** Opens PM_ViewOrganization for InOrganizationId. Bound in Blueprint from two places: a
-	 * province screen row (UProvinceViewModel::OnOrganizationClicked) and the player's own position
-	 * row — neither is a C++ selection change, both are "go look at this organization". */
+	/** Opens PM_ViewOrganization for InOrganizationId. Reached from two places, neither of them a C++
+	 * selection change: a province screen row (through UProvinceDetailWidget::ViewOrganization) and
+	 * the player's own position row — both mean "go look at this organization". */
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void ViewOrganization(FOrganizationId InOrganizationId);
 
