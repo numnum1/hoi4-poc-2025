@@ -70,10 +70,11 @@ public:
 	/**
 	 * Whether a headquarters could be founded in InProvinceId right now — the province-specific
 	 * slice of GetInvalidInputReason(EA_FoundOrganization), pulled out so the WeltMap can color
-	 * provinces green/red while the player picks a founding site without duplicating the rule.
-	 * Today that is only "does the province still exist"; province-specific founding restrictions
-	 * (nation ownership, terrain, ...) get added here once they exist, not into the map's Blueprint.
+	 * provinces by founding eligibility while the player picks a site without duplicating the
+	 * rule. Checks that the province still exists and belongs to nobody or to InActingNationId —
+	 * further province-specific founding restrictions (terrain, ...) get added here once they
+	 * exist, not into the map's Blueprint.
 	 */
 	UFUNCTION(BlueprintPure, Category="Rts Actions")
-	static bool CanFoundHeadquartersIn(FProvinceId InProvinceId, UProvinces* InProvinces);
+	static bool CanFoundHeadquartersIn(FProvinceId InProvinceId, UProvinces* InProvinces, FNationId InActingNationId);
 };

@@ -46,7 +46,11 @@ public class RtsUI : ModuleRules
                 "Banking",
                 // UPlayerCharacterViewModel derives from UMVVMViewModelBase (via UCharacterViewModel);
                 // the base class's generated FieldNotify machinery needs this linked directly here too.
-                "ModelViewViewModel"
+                "ModelViewViewModel",
+                // UFoundOrganizationModalWidgetViewModel colors the WeltMap by founding eligibility
+                // through ARtsWorldMap::GetRtsWorldMap/SetProvinceOverlayColors, resolved in the .cpp
+                // only. Does not create a cycle: WorldMap does not depend on RtsUI.
+                "WorldMap"
             }
         );
     }

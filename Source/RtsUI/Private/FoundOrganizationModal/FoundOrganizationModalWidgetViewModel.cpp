@@ -5,8 +5,10 @@
 #include "Buildings.h"
 #include "Buildings/BuildingKindViewModel.h"
 #include "BuildingType.h"
+#include "Characters.h"
 #include "Provinces.h"
 #include "RtsFacadeSubsystem.h"
+#include "RtsWorldMap.h"
 
 #define LOCTEXT_NAMESPACE "FoundOrganizationModalWidgetViewModel"
 
@@ -17,6 +19,7 @@ void UFoundOrganizationModalWidgetViewModel::Initialize(const FCharacterId InCha
 	URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this);
 	Buildings = Facades ? Facades->GetBuildingsContainer() : nullptr;
 	Provinces = Facades ? Facades->GetProvincesContainer() : nullptr;
+	Characters = Facades ? Facades->GetCharactersContainer() : nullptr;
 
 	UBanking* NewBanking = Facades ? Facades->GetBankingContainer() : nullptr;
 	if (Banking != NewBanking)
@@ -40,6 +43,14 @@ void UFoundOrganizationModalWidgetViewModel::Initialize(const FCharacterId InCha
 void UFoundOrganizationModalWidgetViewModel::SetSelectedProvinceId(const FProvinceId InSelectedProvinceId)
 {
 	SelectedProvinceId = InSelectedProvinceId;
+
+	// A valid click is the player picking a site off the overlay — its job is done. An invalid one
+	// (clicking off any province) leaves it up so they can keep looking.
+	if (InSelectedProvinceId.IsValid())
+	{
+		ClearProvinceOverlay();
+	}
+
 	Revalidate();
 }
 
@@ -64,6 +75,17 @@ void UFoundOrganizationModalWidgetViewModel::ApplyHeadquartersType(UBuildingType
 {
 	PendingHeadquartersType = InBuildingType;
 	RefreshHeadquartersTypes();
+
+	// Picking a type is what the overlay is for — unpicking it (toggling the row off) has nothing
+	// left to preview a site for.
+	if (PendingHeadquartersType)
+	{
+		RefreshProvinceOverlay();
+	}
+	else
+	{
+		ClearProvinceOverlay();
+	}
 }
 
 void UFoundOrganizationModalWidgetViewModel::RefreshHeadquartersTypes()
@@ -124,7 +146,7 @@ void UFoundOrganizationModalWidgetViewModel::Revalidate()
 		{
 			Reason = LOCTEXT("NoBuildingFunction", "This building offers no function to seat a department in.");
 		}
-		else if (!URtsActions::CanFoundHeadquartersIn(SelectedProvinceId, Provinces))
+		else if (!URtsActions::CanFoundHeadquartersIn(SelectedProvinceId, Provinces, GetActingNationId()))
 		{
 			Reason = LOCTEXT("NoProvince", "Click a province on the map to place the headquarters.");
 		}
@@ -137,6 +159,72 @@ void UFoundOrganizationModalWidgetViewModel::Revalidate()
 
 	UE_MVVM_SET_PROPERTY_VALUE(ModalErrorText, Reason);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsValid, Reason.IsEmpty());
+}
+
+FNationId UFoundOrganizationModalWidgetViewModel::GetActingNationId() const
+{
+	const FProvinceId ActorProvinceId = Characters ? Characters->GetCurrentProvince(CharacterId) : FProvinceId();
+	return Provinces && ActorProvinceId.IsValid() ? Provinces->GetOwningNation(ActorProvinceId) : FNationId();
+}
+
+void UFoundOrganizationModalWidgetViewModel::RefreshProvinceOverlay() const
+{
+	ARtsWorldMap* WorldMap = ARtsWorldMap::GetRtsWorldMap(this);
+	if (WorldMap == nullptr || Provinces == nullptr)
+	{
+		return;
+	}
+
+	const FNationId ActingNationId = GetActingNationId();
+
+	TMap<FProvinceId, FColor> Colors;
+	for (int32 Index = 0; Index < Provinces->Num(); ++Index)
+	{
+		const FProvinceId CandidateId(Index);
+		if (!Provinces->IsAlive(CandidateId))
+		{
+			continue;
+		}
+
+		const FNationId OwningNation = Provinces->GetOwningNation(CandidateId);
+		if (OwningNation.IsValid() && OwningNation != ActingNationId)
+		{
+			Colors.Add(CandidateId, FColor(128, 128, 128));
+			continue;
+		}
+
+		if (!URtsActions::CanFoundHeadquartersIn(CandidateId, Provinces, ActingNationId))
+		{
+			Colors.Add(CandidateId, FColor::Red);
+			continue;
+		}
+
+		bool bAlreadyHasType = false;
+		if (Buildings && PendingHeadquartersType)
+		{
+			for (const FBuildingId ExistingId : Buildings->CollectBuildingsInProvince(CandidateId))
+			{
+				if (Buildings->GetBuildingType(ExistingId) == PendingHeadquartersType
+					&& Buildings->GetOwnerCharacter(ExistingId) == CharacterId)
+				{
+					bAlreadyHasType = true;
+					break;
+				}
+			}
+		}
+
+		Colors.Add(CandidateId, bAlreadyHasType ? FColor::Blue : FColor::Green);
+	}
+
+	WorldMap->SetProvinceOverlayColors(Colors);
+}
+
+void UFoundOrganizationModalWidgetViewModel::ClearProvinceOverlay() const
+{
+	if (ARtsWorldMap* WorldMap = ARtsWorldMap::GetRtsWorldMap(this))
+	{
+		WorldMap->ClearProvinceOverlayColors();
+	}
 }
 
 int32 UFoundOrganizationModalWidgetViewModel::GetCharacterFunds() const

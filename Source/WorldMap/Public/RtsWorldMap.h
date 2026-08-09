@@ -49,9 +49,32 @@ public:
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SelectProvinceAt(FVector2D InUV);
 
+	/** Colors every province in InColors and clears every other one, via the plugin's LUT shading
+	 * (WriteToLUTs). This class only knows how to turn a province->color map into a LUT write —
+	 * what the color means is entirely up to the caller (see
+	 * UFoundOrganizationModalWidgetViewModel for the current one, coloring by founding
+	 * eligibility). Reuses the Primary LUT channel; nothing else writes to it yet. */
+	UFUNCTION(BlueprintCallable, Category="World Map")
+	void SetProvinceOverlayColors(const TMap<FProvinceId, FColor>& InColors);
+
+	UFUNCTION(BlueprintCallable, Category="World Map")
+	void ClearProvinceOverlayColors();
+
+	/** ABA_Map::GetMap cast to this game's subclass, so a caller outside WorldMap (RtsUI) can reach
+	 * the map without depending on the BloodAnvil plugin itself. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="World Map", meta=(WorldContext="WorldContextObject"))
+	static ARtsWorldMap* GetRtsWorldMap(const UObject* WorldContextObject);
+
 private:
 	FProvinceId ResolveProvinceAt(FVector2D InUV) const;
 
+	/** Builds ProvinceIdToColorRG on first use — the inverse of ResolveProvinceAt's linear scan,
+	 * cheap to keep around since ProvinceMapData never changes after it is authored. */
+	void EnsureProvinceColorLookup();
+
 	UPROPERTY(Transient)
 	TObjectPtr<UWorldMapWidget> WorldMapWidget;
+
+	/** FProvinceId -> the ProvID pixel color WriteToLUTs keys its rows on. */
+	TMap<FProvinceId, FColorRG> ProvinceIdToColorRG;
 };

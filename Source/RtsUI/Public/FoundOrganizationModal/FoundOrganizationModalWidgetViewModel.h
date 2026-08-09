@@ -9,6 +9,7 @@ class UBanking;
 class UBuildingKindViewModel;
 class UBuildings;
 class UBuildingType;
+class UCharacters;
 class UProvinces;
 
 /**
@@ -128,6 +129,20 @@ private:
 	/** Re-derives ModalErrorText/bIsValid from the local state, in the order the player fills it in. */
 	void Revalidate();
 
+	/** The acting character's own nation — whatever nation owns the province they currently stand
+	 * in, the same derivation UCharacterViewModel::CurrentNationId makes for display. Needed so
+	 * CanFoundHeadquartersIn can refuse a site owned by someone else. */
+	FNationId GetActingNationId() const;
+
+	/** Colors every alive province by founding eligibility for PendingHeadquartersType: grey
+	 * (another nation's territory), red (CanFoundHeadquartersIn refuses for another reason), blue
+	 * (the character already has one here), green (eligible and free). Called once a headquarters
+	 * type is picked, so the player can see where they may found while looking for a site on the
+	 * WeltMap; cleared once they click a province (SetSelectedProvinceId) or unpick the type. */
+	void RefreshProvinceOverlay() const;
+
+	void ClearProvinceOverlay() const;
+
 	int32 GetCharacterFunds() const;
 
 	UFUNCTION()
@@ -144,6 +159,10 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UBuildings> Buildings;
+
+	/** Resolved by Initialize, read only by GetActingNationId. */
+	UPROPERTY()
+	TObjectPtr<UCharacters> Characters;
 
 	/** Resolved by Initialize, read by Revalidate to mirror
 	 * URtsActions::CanFoundHeadquartersIn — a province the world map picked can go dead while the

@@ -20,6 +20,69 @@ void ARtsWorldMap::SelectProvinceAt(const FVector2D InUV)
 	}
 }
 
+void ARtsWorldMap::SetProvinceOverlayColors(const TMap<FProvinceId, FColor>& InColors)
+{
+	EnsureProvinceColorLookup();
+
+	TArray<FDataLUT> DataLUT;
+	DataLUT.Reserve(InColors.Num());
+
+	for (const TPair<FProvinceId, FColor>& Entry : InColors)
+	{
+		const FColorRG* LookupId = ProvinceIdToColorRG.Find(Entry.Key);
+		if (LookupId == nullptr)
+		{
+			continue;
+		}
+
+		FDataLUT Row;
+		Row.ID = *LookupId;
+		Row.Primary = Entry.Value;
+		DataLUT.Add(Row);
+	}
+
+	WriteToLUTs(DataLUT, /*ClearLUTs=*/true, /*UpdateNational=*/false);
+}
+
+void ARtsWorldMap::ClearProvinceOverlayColors()
+{
+	WriteToLUTs(TArray<FDataLUT>(), /*ClearLUTs=*/true, /*UpdateNational=*/false);
+}
+
+ARtsWorldMap* ARtsWorldMap::GetRtsWorldMap(const UObject* WorldContextObject)
+{
+	return Cast<ARtsWorldMap>(GetMap(WorldContextObject));
+}
+
+void ARtsWorldMap::EnsureProvinceColorLookup()
+{
+	if (ProvinceIdToColorRG.Num() > 0 || ProvinceMapData == nullptr)
+	{
+		return;
+	}
+
+	UProvinces* Provinces = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
+	if (Provinces == nullptr)
+	{
+		return;
+	}
+
+	for (const TPair<FName, uint8*>& Row : ProvinceMapData->GetRowMap())
+	{
+		const FProvinceMapDataGame* MapData = reinterpret_cast<FProvinceMapDataGame*>(Row.Value);
+		if (MapData == nullptr)
+		{
+			continue;
+		}
+
+		const FProvinceId Id = Provinces->FindByMapId(MapData->Name);
+		if (Id.IsValid())
+		{
+			ProvinceIdToColorRG.Add(Id, MapData->Color);
+		}
+	}
+}
+
 FProvinceId ARtsWorldMap::ResolveProvinceAt(const FVector2D InUV) const
 {
 	if (ProvinceIdTexture == nullptr || ProvinceMapData == nullptr)

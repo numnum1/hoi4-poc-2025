@@ -266,7 +266,12 @@ FText URtsActions::GetInvalidInputReason(const EAction InAction, const FRtsActio
 			return LOCTEXT("NoBuildingFunction", "This building offers no function to seat a department in.");
 		}
 
-		if (!CanFoundHeadquartersIn(InInput.HeadquartersProvinceId, InContext.Provinces))
+		// The acting character's own nation is whatever nation owns the province they currently
+		// stand in — the same derivation UCharacterViewModel::CurrentNationId makes for display.
+		const FProvinceId ActorProvinceId = InContext.Characters ? InContext.Characters->GetCurrentProvince(InContext.ActorId) : FProvinceId();
+		const FNationId ActingNationId = InContext.Provinces && ActorProvinceId.IsValid() ? InContext.Provinces->GetOwningNation(ActorProvinceId) : FNationId();
+
+		if (!CanFoundHeadquartersIn(InInput.HeadquartersProvinceId, InContext.Provinces, ActingNationId))
 		{
 			return LOCTEXT("NoProvince", "Click a province on the map to place the headquarters.");
 		}
@@ -454,9 +459,15 @@ void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext&
 	}
 }
 
-bool URtsActions::CanFoundHeadquartersIn(const FProvinceId InProvinceId, UProvinces* InProvinces)
+bool URtsActions::CanFoundHeadquartersIn(const FProvinceId InProvinceId, UProvinces* InProvinces, const FNationId InActingNationId)
 {
-	return InProvinces && InProvinces->IsAlive(InProvinceId);
+	if (!InProvinces || !InProvinces->IsAlive(InProvinceId))
+	{
+		return false;
+	}
+
+	const FNationId OwningNation = InProvinces->GetOwningNation(InProvinceId);
+	return !OwningNation.IsValid() || OwningNation == InActingNationId;
 }
 
 #undef LOCTEXT_NAMESPACE
