@@ -4,7 +4,7 @@
 #include "Engine/DataTable.h"
 #include "Engine/Texture2D.h"
 #include "Provinces.h"
-#include "RtsFacadeSubsystem.h"
+#include "RtsGameStateComponent.h"
 #include "WorldMapWidget.h"
 
 void ARtsWorldMap::SetWorldMapWidget(UWorldMapWidget* InWidget)
@@ -83,7 +83,7 @@ void ARtsWorldMap::EnsureProvinceColorLookup()
 		return;
 	}
 
-	UProvinces* Provinces = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
+	UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
 	if (Provinces == nullptr)
 	{
 		return;
@@ -136,6 +136,6 @@ FProvinceId ARtsWorldMap::ResolveProvinceAt(const FVector2D InUV) const
 		return FProvinceId();
 	}
 
-	UProvinces* Provinces = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
+	UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
 	return Provinces ? Provinces->FindByMapId(ProvinceMapId) : FProvinceId();
 }

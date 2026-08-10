@@ -28,13 +28,11 @@ public class WorldMap : ModuleRules
 				"CoreUObject",
 				"Engine",
 				// ARtsWorldMap::ResolveProvinceAt resolves the clicked province by name via
-				// UProvinces::FindByMapId
-				"Provinces",
-				// Only to resolve URtsFacadeSubsystem::Get in RtsWorldMap.cpp; not exposed on any
-				// header. WorldMap does not depend on RtsUI: see UWorldMapWidget's class comment for
-				// why the connection to UPlayerCharacterViewModel is a Blueprint binding, not a
-				// C++ dependency in either direction.
-				"RtsViewModels"
+				// UProvinces::FindByMapId. Resolved off the game state via FindRtsGameStateComponent
+				// (RtsCore), not a dependency on RtsUI or Rts: see UWorldMapWidget's class comment for
+				// why the connection to UPlayerCharacterViewModel is a Blueprint binding, not a C++
+				// dependency in either direction.
+				"Provinces"
 			}
 		);
 	}

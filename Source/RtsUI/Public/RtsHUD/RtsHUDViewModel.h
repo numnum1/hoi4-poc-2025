@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
+#include "PlayedCharacterView/PlayerCharacterViewModel.h"
 #include "RtsHUDViewModel.generated.h"
 
 /**
@@ -15,13 +16,32 @@ class RTSUI_API URtsHUDViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 public:
 	URtsHUDViewModel();
+
+	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
+	void SetControlledCharacterId(FCharacterId InControlledCharacterId);
+
+	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
+	void SetActiveModal(EPlayerModal InActiveModal);
+
+	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
+	void SetSelectedPositionIndex(int32 InSelectedPositionIndex);
+
 private:
+	// PlayedCharacterByThePlayer
+	// TODO: Make this computed
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FCharacterId ControlledCharacterId;
 
+	// Modal selected in the playedCharacterView
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	EPlayerModal ActiveModal;
 
+	// Position selected in the playedCharacterView
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
-	TObjectPtr<USelectablePositionViewModel> SelectedPosition;
+	int32 SelectedPositionIndex;
+
+public:
+	FCharacterId GetControlledCharacterId() const { return ControlledCharacterId; }
+	EPlayerModal GetActiveModal() const { return ActiveModal; }
+	int32 GetSelectedPositionIndex() const { return SelectedPositionIndex; }
 };

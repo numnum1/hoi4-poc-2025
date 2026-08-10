@@ -19,7 +19,7 @@
 #include "Provinces.h"
 #include "Resources/ResourceViewModel.h"
 #include "Resources/RtsResources.h"
-#include "RtsFacadeSubsystem.h"
+#include "RtsGameStateComponent.h"
 #include "RtsPlayer.h"
 
 void UPlayerCharacterViewModel::InitializeForPlayer()
@@ -154,7 +154,7 @@ void UPlayerCharacterViewModel::CloseModal()
 
 void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
 {
-	UProvinces* ProvincesContainer = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetProvincesContainer() : nullptr;
+	UProvinces* ProvincesContainer = FindRtsGameStateComponent<UProvinces>(this);
 
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceId, InProvinceId);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceIdValue, InProvinceId.Value);
@@ -324,13 +324,8 @@ void UPlayerCharacterViewModel::HandleRecruitableCharacterClicked(USelectableCha
 
 void UPlayerCharacterViewModel::RefreshJoinableOrganizations()
 {
-	UDepartments* DepartmentsContainer = nullptr;
-	UBuildings* BuildingsContainer = nullptr;
-	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
-	{
-		DepartmentsContainer = Facades->GetDepartmentsContainer();
-		BuildingsContainer = Facades->GetBuildingsContainer();
-	}
+	UDepartments* DepartmentsContainer = FindRtsGameStateComponent<UDepartments>(this);
+	UBuildings* BuildingsContainer = FindRtsGameStateComponent<UBuildings>(this);
 
 	// Not named CurrentProvinceId: UCharacterViewModel already has a protected field of that name,
 	// and this project builds with shadow-variable warnings as errors.
@@ -396,13 +391,8 @@ void UPlayerCharacterViewModel::RefreshRecruitableCharacters()
 	const UPositionViewModel* ActingPosition = GetPositions().IsValidIndex(SelectedPositionIndex) ? GetPositions()[SelectedPositionIndex].Get() : nullptr;
 	const FOrganizationId ActingOrganizationId = ActingPosition ? ActingPosition->GetOrganizationId() : FOrganizationId();
 
-	UDepartments* DepartmentsContainer = nullptr;
-	UBuildings* BuildingsContainer = nullptr;
-	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
-	{
-		DepartmentsContainer = Facades->GetDepartmentsContainer();
-		BuildingsContainer = Facades->GetBuildingsContainer();
-	}
+	UDepartments* DepartmentsContainer = FindRtsGameStateComponent<UDepartments>(this);
+	UBuildings* BuildingsContainer = FindRtsGameStateComponent<UBuildings>(this);
 
 	const FProvinceId SeatProvinceId = URtsPresence::FindSeatProvince(ActingOrganizationId, Organizations, DepartmentsContainer, BuildingsContainer);
 	const TArray<FCharacterId> CandidateIds = SeatProvinceId.IsValid() ? Characters->CollectCharactersInProvince(SeatProvinceId) : TArray<FCharacterId>();
@@ -502,13 +492,10 @@ FRtsActionContext UPlayerCharacterViewModel::MakeContext() const
 
 	// Not inherited from UCharacterViewModel like the three above — resolved here, the same way
 	// MakeResourceContext resolves Banking.
-	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
-	{
-		Context.Buildings = Facades->GetBuildingsContainer();
-		Context.Departments = Facades->GetDepartmentsContainer();
-		Context.Banking = Facades->GetBankingContainer();
-		Context.Provinces = Facades->GetProvincesContainer();
-	}
+	Context.Buildings = FindRtsGameStateComponent<UBuildings>(this);
+	Context.Departments = FindRtsGameStateComponent<UDepartments>(this);
+	Context.Banking = FindRtsGameStateComponent<UBanking>(this);
+	Context.Provinces = FindRtsGameStateComponent<UProvinces>(this);
 
 	if (!bIsActingAsSelf)
 	{
@@ -528,12 +515,9 @@ FRtsResourceContext UPlayerCharacterViewModel::MakeResourceContext() const
 	Context.Characters = Characters;
 	Context.Organizations = Organizations;
 	// Not inherited from UCharacterViewModel like Characters/Organizations are, so it is resolved
-	// here directly — the same call URtsFacadeSubsystem::Get every other facade lookup goes through.
-	if (URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this))
-	{
-		Context.Banking = Facades->GetBankingContainer();
-		Context.Departments = Facades->GetDepartmentsContainer();
-	}
+	// here directly — the same call every other facade lookup goes through.
+	Context.Banking = FindRtsGameStateComponent<UBanking>(this);
+	Context.Departments = FindRtsGameStateComponent<UDepartments>(this);
 
 	if (bIsActingAsSelf)
 	{
@@ -703,7 +687,7 @@ void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAct
 
 	// Actions that need input from the player open their modal instead of running; ConfirmModal
 	// finishes the job. Which modal that is stays here rather than in URtsActions, because
-	// EPlayerModal is UI state RtsViewModels is not allowed to know about.
+	// EPlayerModal is UI-invented state a pure-derivation view model is not allowed to know about.
 	switch (ActionType)
 	{
 	case EAction::EA_FoundOrganization:
@@ -752,7 +736,7 @@ void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAct
 
 void UPlayerCharacterViewModel::BindBanking()
 {
-	UBanking* NewBanking = URtsFacadeSubsystem::Get(this) ? URtsFacadeSubsystem::Get(this)->GetBankingContainer() : nullptr;
+	UBanking* NewBanking = FindRtsGameStateComponent<UBanking>(this);
 	if (Banking == NewBanking)
 	{
 		return;

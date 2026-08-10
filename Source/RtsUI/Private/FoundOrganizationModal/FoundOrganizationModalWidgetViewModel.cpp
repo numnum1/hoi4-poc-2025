@@ -7,7 +7,7 @@
 #include "BuildingType.h"
 #include "Characters.h"
 #include "Provinces.h"
-#include "RtsFacadeSubsystem.h"
+#include "RtsGameStateComponent.h"
 #include "RtsWorldMap.h"
 
 #define LOCTEXT_NAMESPACE "FoundOrganizationModalWidgetViewModel"
@@ -16,12 +16,11 @@ void UFoundOrganizationModalWidgetViewModel::Initialize(const FCharacterId InCha
 {
 	CharacterId = InCharacterId;
 
-	URtsFacadeSubsystem* Facades = URtsFacadeSubsystem::Get(this);
-	Buildings = Facades ? Facades->GetBuildingsContainer() : nullptr;
-	Provinces = Facades ? Facades->GetProvincesContainer() : nullptr;
-	Characters = Facades ? Facades->GetCharactersContainer() : nullptr;
+	Buildings = FindRtsGameStateComponent<UBuildings>(this);
+	Provinces = FindRtsGameStateComponent<UProvinces>(this);
+	Characters = FindRtsGameStateComponent<UCharacters>(this);
 
-	UBanking* NewBanking = Facades ? Facades->GetBankingContainer() : nullptr;
+	UBanking* NewBanking = FindRtsGameStateComponent<UBanking>(this);
 	if (Banking != NewBanking)
 	{
 		if (Banking)

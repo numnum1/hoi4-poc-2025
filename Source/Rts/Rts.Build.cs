@@ -13,7 +13,7 @@ public class Rts : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			// ARtsGameState::HandleHourElapsed calls URtsEconomy::SettleDay once per elapsed game
 			// day, with the facades it already owns — not exposed on the header, so this stays private.
-			"RtsViewModels"
+			"RtsUI"
 		});
 
 		// Uncomment if you are using Slate UI

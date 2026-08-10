@@ -24,8 +24,8 @@ class USelectablePositionViewModel;
  *
  * Everything UCharacterViewModel already exposes (name, portrait, abilities, positions, ...) is
  * inherited unchanged — this class adds only what the simulation has no notion of and the UI has
- * to invent itself. That is the line between RtsViewModels and RtsUI: a value derived from the
- * simulation belongs on the base class in RtsViewModels, a value the UI made up (a selection, a
+ * to invent itself. That is the line this class draws: a value derived from the simulation
+ * belongs on the base class UCharacterViewModel, a value the UI made up (a selection, a
  * confirmation dialog's open/closed state, ...) belongs here.
  *
  * The picker the player selects with is SelectablePositions — one lean row per position, clicked

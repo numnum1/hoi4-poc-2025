@@ -1,0 +1,46 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "RtsIds.h"
+#include "RtsActionInput.generated.h"
+
+class UBuildingType;
+
+/**
+ * What an action needs from the player on top of FRtsActionContext — the values a modal collects
+ * before the action runs. One flat struct covering the handful of actions that ask for input,
+ * rather than a type per action; the same reason EAction is a single enum.
+ *
+ * Like the context, this is a claim rather than a fact: URtsActions::GetInvalidInputReason
+ * re-validates it, and UPlayerCharacterViewModel::ConfirmModal runs that check again on confirm
+ * instead of trusting whatever was last pushed into the widget.
+ */
+USTRUCT(BlueprintType)
+struct RTSUI_API FRtsActionInput
+{
+	GENERATED_BODY()
+
+	/** EA_FoundOrganization: the name the player typed for the new organization. */
+	UPROPERTY(BlueprintReadWrite, Category="Action")
+	FText OrganizationName;
+
+	/** EA_FoundOrganization: which headquarters to put up. This is the whole of what the new
+	 * organization *is* — there is no separate organization type to pick. Null until the player
+	 * has chosen one; URtsActions::GetInvalidInputReason refuses on that, same as on an empty name. */
+	UPROPERTY(BlueprintReadWrite, Category="Action")
+	TObjectPtr<UBuildingType> HeadquartersType;
+
+	/** EA_FoundOrganization: where that headquarters goes, set by clicking the world map. */
+	UPROPERTY(BlueprintReadWrite, Category="Action")
+	FProvinceId HeadquartersProvinceId;
+
+	/** EA_JoinOrganization: which organization to join. Invalid until the player has picked one,
+	 * same refusal shape as HeadquartersType. */
+	UPROPERTY(BlueprintReadWrite, Category="Action")
+	FOrganizationId TargetOrganizationId;
+
+	/** EA_RecruitCharacter: which character to recruit. Invalid until the player has picked one,
+	 * same refusal shape as TargetOrganizationId. */
+	UPROPERTY(BlueprintReadWrite, Category="Action")
+	FCharacterId TargetCharacterId;
+};

@@ -11,13 +11,17 @@ public class RtsUI : ModuleRules
             {
                 "Core",
                 "RtsCore",
-                // UPlayerCharacterViewModel derives from UCharacterViewModel and reaches its
-                // facades (Characters/Organizations/Roles) through the base class's protected
-                // members — the same reason RtsViewModels needs its facades.
-                "RtsViewModels",
+                // Several view models here read one or more facades directly and some hand data
+                // back across domain boundaries (a character view model shows the owning nation's
+                // name, and so on) — this module is the only place allowed to know all of them at
+                // once. RtsActions.h/PositionViewModel.h include Characters.h on their own public
+                // header, so this needs to be public, not just private.
+                "Characters",
                 // UBuildingType is a property on UPlayerCharacterViewModel's header: the
                 // headquarters the found-organization modal is collecting.
-                "Buildings"
+                "Buildings",
+                // The view models derive from UMVVMViewModelBase on their public headers.
+                "ModelViewViewModel"
             }
         );
 
@@ -33,20 +37,24 @@ public class RtsUI : ModuleRules
                 "UMG",
                 // Only to resolve ARtsPlayer in the .cpp; the header forward-declares it.
                 "RtsPlayer",
-                // FCharacterId/FRtsActionContext plumbing needs the facade types directly
-                "Characters",
                 // SelectProvince plays the province's InspectionSound and reads the province name
                 // for the modal's site label; resolved via UProvinces in the .cpp only, not
                 // exposed on the header
                 "Provinces",
+                // NationViewModel/ProvinceViewModel read UNations for the owning nation's name
+                "Nations",
                 // RefreshJoinableOrganizations reads UOrganizations::GetOrganizationInfo directly
                 // to name each joinable row's organization
                 "Organizations",
                 // MakeContext hands UBanking to URtsActions so founding can be paid for
                 "Banking",
-                // UPlayerCharacterViewModel derives from UMVVMViewModelBase (via UCharacterViewModel);
-                // the base class's generated FieldNotify machinery needs this linked directly here too.
-                "ModelViewViewModel",
+                // UScheduleViewModel reads USchedules directly
+                "Schedules",
+                // UTimezoneViewModel shows the clock, resolved off the game state like any other
+                // component there.
+                "Time",
+                // UProvinceViewModel passes UEcology* through
+                "Ecology",
                 // UFoundOrganizationModalWidgetViewModel colors the WeltMap by founding eligibility
                 // through ARtsWorldMap::GetRtsWorldMap/SetProvinceOverlayColors, resolved in the .cpp
                 // only. Does not create a cycle: WorldMap does not depend on RtsUI.

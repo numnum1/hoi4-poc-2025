@@ -91,8 +91,8 @@ protected:
 	int32 PendingCost = 0;
 
 	/** Computed by Revalidate() from the local state above, in the same order
-	 * URtsActions::GetInvalidInputReason checks it — kept in sync by hand since that logic lives in
-	 * RtsViewModels and cannot be called from here without the full FRtsActionContext/FRtsActionInput
+	 * URtsActions::GetInvalidInputReason checks it — kept in sync by hand since that logic needs the
+	 * full FRtsActionContext/FRtsActionInput
 	 * the parent alone can build (funds/context aside, this form has no organization-action gate to
 	 * run — GetBlockedReason for EA_FoundOrganization is always empty at RAS_Self). */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Found Organization Modal", meta=(AllowPrivateAccess))
