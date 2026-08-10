@@ -10,11 +10,11 @@
 class UEcology;
 
 /**
- * The static, client-visible half of a province.
+ * The static, UI-facing half of a province.
  *
- * Everything in here is authored once in the scenario and never changes, so it is replicated
- * as one array on UProvinces and deliberately kept out of Mass — FText, FSlateBrush and the
- * two UObject pointers would all need GC handling that Mass fragments do not give them.
+ * Everything in here is authored once in the scenario and never changes, so it is kept as one
+ * array on UProvinces and deliberately kept out of Mass — FText, FSlateBrush and the two
+ * UObject pointers would all need GC handling that Mass fragments do not give them.
  * TimezoneOffset is NOT here: it is simulation data the hourly sim reads, not UI, so it lives
  * in FProvinceTimeFragment instead — see UProvinces::GetTimezoneOffset.
  */

@@ -52,7 +52,6 @@ public:
 	/** Ids currently alive, in creation order. */
 	const TArray<FOrganizationId>& GetAliveIds() const { return AliveIds; }
 
-	// --- read ---
 	/** The character this organization belongs to, or an invalid id if it has no owner. */
 	FCharacterId GetOwnerCharacter(FOrganizationId InOrganizationId) const;
 	/** The department the organization is made of, or an invalid id if it has none. */
@@ -60,10 +59,8 @@ public:
 	bool IsAlignmentPublished(FOrganizationId InOrganizationId) const;
 	FOrganizationAlignment GetAlignment(FOrganizationId InOrganizationId) const;
 	TArray<FNationId> GetSettledNations(FOrganizationId InOrganizationId) const;
-	/** Every organization that has settled InNationId. */
 	TArray<FOrganizationId> CollectOrganizationsSettledIn(FNationId InNationId) const;
 
-	// --- write ---
 	/** Points the organization at its root department. Separate from CreateOrganization because the
 	 * department is created *for* this organization and so cannot exist before it does. */
 	void SetRootDepartment(FOrganizationId InOrganizationId, FDepartmentId InRootDepartmentId);
@@ -84,7 +81,6 @@ private:
 	 * handle means that slot's organization is dissolved; the slot itself is never removed. */
 	TArray<FMassEntityHandle> EntityByIndex;
 
-	/** Ids currently alive, in creation order. */
 	TArray<FOrganizationId> AliveIds;
 
 	/** Standalone chunk-iteration query backing CollectOrganizationsSettledIn. Not tied to a

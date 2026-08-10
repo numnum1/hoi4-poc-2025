@@ -53,7 +53,6 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UBanking* BankingContainer;
 
-	// Simulation
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	USchedules* SchedulesContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
@@ -79,11 +78,9 @@ public:
 	FORCEINLINE URoles* GetRoles() const { return RolesContainer; }
 	FORCEINLINE UBanking* GetBankingContainer() const { return BankingContainer; }
 
-	// Simulation
 	FORCEINLINE USchedules* GetSchedules() const { return SchedulesContainer; }
 	FORCEINLINE UTime* GetTime() const { return Time; }
-	
-	// Utils
+
 	// Characters + Organizations: a genuine two-domain composition, so it stays here rather
 	// than on either single-domain facade. Everything single-domain (timezone lookups, building
 	// queries) moved to UProvinces/UBuildings directly — call those components, not the GameState.

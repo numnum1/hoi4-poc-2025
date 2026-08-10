@@ -25,7 +25,6 @@ namespace ScenarioLoader
 	__inline TTuple<TArray<FRaceCategory>, TArray<FLifeType>, TArray<FSpecies>, TArray<FRace>, TArray<URaceAsset*>>
 	ExtractRaces(const TArray<UCharacterAsset*>& InCharacters)
 	{
-		// --- Collect unique assets from all characters ---
 		TArray<URaceAsset*>        RaceAssets;
 		TArray<USpeciesAsset*>     SpeciesAssets;
 		TArray<ULifeTypeAsset*>    LifeTypeAssets;
@@ -53,7 +52,6 @@ namespace ScenarioLoader
 			}
 		}
 
-		// --- Helper: convert asset traits to runtime traits ---
 		auto ConvertTraits = [](const TArray<URaceTraitAsset*>& InTraits) -> TArray<FRaceTrait>
 		{
 			TArray<FRaceTrait> Out;
@@ -64,7 +62,6 @@ namespace ScenarioLoader
 			return Out;
 		};
 
-		// --- Build runtime structs ---
 		TArray<FRaceCategory> OutCategories;
 		OutCategories.Reserve(CategoryAssets.Num());
 		for (const URaceCategoryAsset* Cat : CategoryAssets)
@@ -111,7 +108,6 @@ namespace ScenarioLoader
 		TArray<UNationAsset*> NationAssets;
 		NationAssets.Reserve(InProvinces.Num());
 
-		// 1) Unique Nations
 		for (const UProvinceAsset* Province : InProvinces)
 		{
 			if (!Province) continue;

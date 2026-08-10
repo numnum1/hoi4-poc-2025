@@ -6,9 +6,6 @@
 #include "UObject/Object.h"
 #include "Abilities.generated.h"
 
-/**
- * 
- */
 USTRUCT(BlueprintType)
 struct CHARACTERS_API FAbilities
 {

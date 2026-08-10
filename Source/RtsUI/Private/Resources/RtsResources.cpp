@@ -146,8 +146,8 @@ int32 URtsResources::GetAmount(const EResourceType InResource, const EResourceDe
 		}
 		// No credit/interest model exists yet — see Banking module's FBankTag comment for where a
 		// bank's credit policy eventually attaches.
-		case EResourceDetail::RD_Credit:      return 0; // future: the account's credit line
-		case EResourceDetail::RD_Outstanding: return 0; // future: sum of unpaid dues
+		case EResourceDetail::RD_Credit:      return 0;
+		case EResourceDetail::RD_Outstanding: return 0;
 		default: return 0;
 		}
 

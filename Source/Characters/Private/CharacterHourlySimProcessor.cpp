@@ -9,7 +9,6 @@ UCharacterHourlySimProcessor::UCharacterHourlySimProcessor()
 	// UCharacterEntitySubsystem runs this off UTime::OnHourElapsed, not off a frame phase.
 	bAutoRegisterWithProcessingPhases = false;
 	bRequiresGameThreadExecution = true;
-	// The sim is server-authoritative; character state does not replicate (yet).
 	ExecutionFlags = static_cast<int32>(EProcessorExecutionFlags::Standalone | EProcessorExecutionFlags::Server);
 }
 

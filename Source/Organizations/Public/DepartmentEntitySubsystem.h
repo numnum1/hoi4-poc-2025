@@ -59,7 +59,6 @@ public:
 	/** Ids currently alive, in creation order. */
 	const TArray<FDepartmentId>& GetAliveIds() const { return AliveIds; }
 
-	// --- read ---
 	FOrganizationId GetOrganization(FDepartmentId InDepartmentId) const;
 	/** Invalid for a root department. */
 	FDepartmentId GetParent(FDepartmentId InDepartmentId) const;
@@ -79,7 +78,6 @@ public:
 	 * it needs the building type this module deliberately cannot see. */
 	int32 GetUsedSpace(FBuildingId InBuildingId, EBuildingFunction InFunction) const;
 
-	// --- write ---
 	/** Re-homes the department. Refuses a parent that is inside its own subtree, which would
 	 * detach the whole branch from its organization and make every upward walk loop. */
 	void SetParent(FDepartmentId InDepartmentId, FDepartmentId InNewParentId);
@@ -99,7 +97,6 @@ private:
 	 * handle means that slot's department is gone; the slot itself is never removed. */
 	TArray<FMassEntityHandle> EntityByIndex;
 
-	/** Ids currently alive, in creation order. */
 	TArray<FDepartmentId> AliveIds;
 
 	/** Standalone chunk-iteration queries. Not tied to a processor — see Initialize for how they

@@ -52,15 +52,12 @@ public:
 	/** Ids currently alive, in creation order. */
 	const TArray<FBuildingId>& GetAliveIds() const { return AliveIds; }
 
-	// --- read ---
 	FProvinceId GetProvince(FBuildingId InBuildingId) const;
 	int32 GetTypeIndex(FBuildingId InBuildingId) const;
 	/** The character the building belongs to, or an invalid id if InBuildingId is not alive. */
 	FCharacterId GetOwnerCharacter(FBuildingId InBuildingId) const;
 
-	/** Every building currently standing in InProvinceId. */
 	TArray<FBuildingId> CollectBuildingsInProvince(FProvinceId InProvinceId) const;
-	/** Every building currently owned by InOwnerId. */
 	TArray<FBuildingId> CollectBuildingsOwnedByCharacter(FCharacterId InOwnerId) const;
 
 	/** Hands the building to a different character. A plain value write — every building has the
@@ -80,7 +77,6 @@ private:
 	 * handle means that slot's building is gone; the slot itself is never removed. */
 	TArray<FMassEntityHandle> EntityByIndex;
 
-	/** Ids currently alive, in creation order. */
 	TArray<FBuildingId> AliveIds;
 
 	/** Standalone chunk-iteration queries. Not tied to a processor — see Initialize for how they

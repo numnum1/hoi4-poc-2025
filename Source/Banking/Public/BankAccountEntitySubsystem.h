@@ -56,7 +56,6 @@ public:
 	/** Ids currently alive, in creation order. */
 	const TArray<FBankAccountId>& GetAliveIds() const { return AliveIds; }
 
-	// --- read ---
 	FBankId GetBankId(FBankAccountId InAccountId) const;
 	int32 GetBalance(FBankAccountId InAccountId) const;
 	/** Derived from which owner fragment is present. BAOT_None if InAccountId is not alive. */
@@ -71,7 +70,6 @@ public:
 	/** The organization's account, or an invalid id if it has never opened one. */
 	FBankAccountId FindAccountForOrganization(FOrganizationId InOwnerId) const;
 
-	// --- write ---
 	/** A pure value write, always succeeds while the account is alive. */
 	void Deposit(FBankAccountId InAccountId, int32 InAmount);
 	/** Fails (returns false, no-op) if InAmount is more than the current balance — no overdraft. */

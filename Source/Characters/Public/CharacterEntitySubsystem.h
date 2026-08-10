@@ -60,7 +60,6 @@ public:
 	/** Ids currently alive, in creation order. */
 	const TArray<FCharacterId>& GetAliveIds() const { return AliveIds; }
 
-	// --- read ---
 	FProvinceId GetCurrentProvince(FCharacterId InCharacterId) const;
 	int32 GetTimezoneOffset(FCharacterId InCharacterId) const;
 	FAbilities GetAbilities(FCharacterId InCharacterId) const;
@@ -70,10 +69,8 @@ public:
 	FScheduleId GetScheduleId(FCharacterId InCharacterId) const;
 	FCharacterVitals GetVitals(FCharacterId InCharacterId) const;
 	FCharacterSkills GetSkills(FCharacterId InCharacterId) const;
-	/** Every character currently living in InProvinceId. */
 	TArray<FCharacterId> CollectCharactersInProvince(FProvinceId InProvinceId) const;
 
-	// --- write ---
 	/** Resolves the destination's timezone offset itself via UProvinceEntitySubsystem. */
 	void MoveCharacter(FCharacterId InCharacterId, FProvinceId InNewProvinceId);
 	/** No-ops if the character already holds this exact (organization, role) pair. */
@@ -115,7 +112,6 @@ private:
 	 * handle means that slot's character is dead; the slot itself is never removed. */
 	TArray<FMassEntityHandle> EntityByIndex;
 
-	/** Ids currently alive, in creation order. */
 	TArray<FCharacterId> AliveIds;
 
 	/** Standalone chunk-iteration query backing CollectCharactersInProvince. Not tied to a

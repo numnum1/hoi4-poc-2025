@@ -122,10 +122,6 @@ void UBankAccountEntitySubsystem::CloseAccount(const FBankAccountId InAccountId)
 	AliveIds.RemoveSingle(InAccountId);
 }
 
-// -----------------------------------------------------------------------------
-// Read
-// -----------------------------------------------------------------------------
-
 FBankId UBankAccountEntitySubsystem::GetBankId(const FBankAccountId InAccountId) const
 {
 	const FMassEntityHandle Entity = GetEntity(InAccountId);
@@ -205,10 +201,6 @@ FBankAccountId UBankAccountEntitySubsystem::FindAccountForOrganization(const FOr
 	return Found ? *Found : FBankAccountId();
 }
 
-// -----------------------------------------------------------------------------
-// Write
-// -----------------------------------------------------------------------------
-
 void UBankAccountEntitySubsystem::Deposit(const FBankAccountId InAccountId, const int32 InAmount)
 {
 	const FMassEntityHandle Entity = GetEntity(InAccountId);
@@ -248,10 +240,6 @@ bool UBankAccountEntitySubsystem::Transfer(const FBankAccountId InFromId, const 
 	Deposit(InToId, InAmount);
 	return true;
 }
-
-// -----------------------------------------------------------------------------
-// Debug
-// -----------------------------------------------------------------------------
 
 void UBankAccountEntitySubsystem::LogAccount(const FBankAccountId InAccountId) const
 {

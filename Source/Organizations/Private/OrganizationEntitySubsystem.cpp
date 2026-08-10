@@ -90,14 +90,10 @@ void UOrganizationEntitySubsystem::Reset()
 	}
 }
 
-// -----------------------------------------------------------------------------
-// Read
-// -----------------------------------------------------------------------------
-
 namespace
 {
 	// A getter seeing an id that just died is normal UI behavior, not a bug — log quietly and
-	// return the default. Contrast with the Write section below, which ensureMsgf's instead.
+	// return the default, unlike the write functions below, which ensureMsgf's instead.
 	void LogInvalidRead(const FOrganizationId InOrganizationId, const TCHAR* InAccessor)
 	{
 		UE_LOG(LogRtsOrganizations, Verbose, TEXT("%s: organization %d is not alive"), InAccessor, InOrganizationId.Value);
@@ -202,10 +198,6 @@ TArray<FOrganizationId> UOrganizationEntitySubsystem::CollectOrganizationsSettle
 	return Result;
 }
 
-// -----------------------------------------------------------------------------
-// Write
-// -----------------------------------------------------------------------------
-
 void UOrganizationEntitySubsystem::PublishAlignment(const FOrganizationId InOrganizationId, const TArray<float>& InAlignment)
 {
 	const FMassEntityHandle Entity = GetEntity(InOrganizationId);
@@ -240,10 +232,6 @@ bool UOrganizationEntitySubsystem::SettleNation(const FOrganizationId InOrganiza
 	Settled.Add(InNationId);
 	return true;
 }
-
-// -----------------------------------------------------------------------------
-// Debug
-// -----------------------------------------------------------------------------
 
 void UOrganizationEntitySubsystem::LogOrganization(const FOrganizationId InOrganizationId) const
 {

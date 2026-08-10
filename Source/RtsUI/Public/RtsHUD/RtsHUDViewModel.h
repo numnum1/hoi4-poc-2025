@@ -27,16 +27,13 @@ public:
 	void SetSelectedPositionIndex(int32 InSelectedPositionIndex);
 
 private:
-	// PlayedCharacterByThePlayer
 	// TODO: Make this computed
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FCharacterId ControlledCharacterId;
 
-	// Modal selected in the playedCharacterView
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	EPlayerModal ActiveModal;
 
-	// Position selected in the playedCharacterView
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	int32 SelectedPositionIndex;
 

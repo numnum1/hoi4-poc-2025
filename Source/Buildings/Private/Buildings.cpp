@@ -185,10 +185,6 @@ void UBuildings::Destroy(const FBuildingId InBuildingId)
 	OnBuildingDestroyed.Broadcast(InBuildingId);
 }
 
-// -----------------------------------------------------------------------------
-// Debug
-// -----------------------------------------------------------------------------
-
 namespace
 {
 	/** No UBuildingType asset argument on purpose — these commands exist only to exercise the

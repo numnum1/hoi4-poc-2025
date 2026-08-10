@@ -3,12 +3,8 @@
 #include "CoreMinimal.h"
 #include "RtsIds.h"
 #include "Mass/EntityElementTypes.h"
-#include "Mass/ExternalSubsystemTraits.h"   // TMassFragmentTraits
+#include "Mass/ExternalSubsystemTraits.h"
 #include "OrganizationFragments.generated.h"
-
-// -----------------------------------------------------------------------------
-// Identity
-// -----------------------------------------------------------------------------
 
 /**
  * Back-reference from an entity to its stable FOrganizationId.
@@ -23,10 +19,6 @@ struct ORGANIZATIONS_API FOrganizationIndexFragment : public FMassFragment
 	UPROPERTY()
 	FOrganizationId Id;
 };
-
-// -----------------------------------------------------------------------------
-// Mutated by gameplay
-// -----------------------------------------------------------------------------
 
 /**
  * Who owns the organization — the character who founded it, until ownership is handed on.
@@ -108,10 +100,6 @@ struct TMassFragmentTraits<FOrganizationSettledNationsFragment> final
 		AuthorAcceptsItsNotTriviallyCopyable = true
 	};
 };
-
-// -----------------------------------------------------------------------------
-// Tags
-// -----------------------------------------------------------------------------
 
 USTRUCT()
 struct ORGANIZATIONS_API FOrganizationTag : public FMassTag

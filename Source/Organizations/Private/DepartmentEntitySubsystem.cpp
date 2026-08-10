@@ -114,14 +114,10 @@ void UDepartmentEntitySubsystem::Reset()
 	}
 }
 
-// -----------------------------------------------------------------------------
-// Read
-// -----------------------------------------------------------------------------
-
 namespace
 {
 	// A getter seeing an id that just died is normal UI behavior, not a bug — log quietly and
-	// return the default. Contrast with the Write section below, which ensureMsgf's instead.
+	// return the default, unlike the write functions below, which ensureMsgf's instead.
 	void LogInvalidRead(const FDepartmentId InDepartmentId, const TCHAR* InAccessor)
 	{
 		UE_LOG(LogRtsDepartments, Verbose, TEXT("%s: department %d is not alive"), InAccessor, InDepartmentId.Value);
@@ -277,10 +273,6 @@ int32 UDepartmentEntitySubsystem::GetUsedSpace(const FBuildingId InBuildingId, c
 	return Used;
 }
 
-// -----------------------------------------------------------------------------
-// Write
-// -----------------------------------------------------------------------------
-
 void UDepartmentEntitySubsystem::SetParent(const FDepartmentId InDepartmentId, const FDepartmentId InNewParentId)
 {
 	const FMassEntityHandle Entity = GetEntity(InDepartmentId);
@@ -318,10 +310,6 @@ void UDepartmentEntitySubsystem::SetSeat(const FDepartmentId InDepartmentId, con
 	Seat.BuildingId = InBuildingId;
 	Seat.Space = InSpace;
 }
-
-// -----------------------------------------------------------------------------
-// Debug
-// -----------------------------------------------------------------------------
 
 void UDepartmentEntitySubsystem::LogDepartment(const FDepartmentId InDepartmentId) const
 {

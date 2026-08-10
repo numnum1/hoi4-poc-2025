@@ -164,10 +164,6 @@ bool UBanking::Transfer(const FBankAccountId InFromId, const FBankAccountId InTo
 	return true;
 }
 
-// -----------------------------------------------------------------------------
-// Debug
-// -----------------------------------------------------------------------------
-
 namespace
 {
 	/** No InAmount clamp beyond what Withdraw already refuses (an overdraft) — the point of this

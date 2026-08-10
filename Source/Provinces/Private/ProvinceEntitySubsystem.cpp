@@ -79,14 +79,10 @@ void UProvinceEntitySubsystem::DestroyProvince(const FProvinceId InProvinceId)
 	AliveIds.RemoveSingle(InProvinceId);
 }
 
-// -----------------------------------------------------------------------------
-// Read
-// -----------------------------------------------------------------------------
-
 namespace
 {
 	// A getter seeing an id that just died is normal UI behavior, not a bug — log quietly and
-	// return the default. Contrast with the Write section below, which ensureMsgf's instead.
+	// return the default, unlike the write functions below, which ensureMsgf's instead.
 	void LogInvalidRead(const FProvinceId InProvinceId, const TCHAR* InAccessor)
 	{
 		UE_LOG(LogRtsProvinces, Verbose, TEXT("%s: province %d is not alive"), InAccessor, InProvinceId.Value);
@@ -139,10 +135,6 @@ TArray<FProvinceId> UProvinceEntitySubsystem::CollectProvincesOfNation(const FNa
 	return Result;
 }
 
-// -----------------------------------------------------------------------------
-// Write
-// -----------------------------------------------------------------------------
-
 void UProvinceEntitySubsystem::SetOwningNation(const FProvinceId InProvinceId, const FNationId InNationId)
 {
 	const FMassEntityHandle Entity = GetEntity(InProvinceId);
@@ -154,10 +146,6 @@ void UProvinceEntitySubsystem::SetOwningNation(const FProvinceId InProvinceId, c
 	FMassEntityView(GetEntityManager(), Entity)
 		.GetFragmentData<FProvinceOwnershipFragment>().OwningNationId = InNationId;
 }
-
-// -----------------------------------------------------------------------------
-// Debug
-// -----------------------------------------------------------------------------
 
 void UProvinceEntitySubsystem::LogProvince(const FProvinceId InProvinceId) const
 {

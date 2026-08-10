@@ -6,12 +6,8 @@
 #include "RtsIds.h"
 #include "Schedule.h"
 #include "Mass/EntityElementTypes.h"
-#include "Mass/ExternalSubsystemTraits.h"   // TMassFragmentTraits
+#include "Mass/ExternalSubsystemTraits.h"
 #include "CharacterFragments.generated.h"
-
-// -----------------------------------------------------------------------------
-// Identity
-// -----------------------------------------------------------------------------
 
 /**
  * Back-reference from an entity to its stable FCharacterId.
@@ -28,10 +24,7 @@ struct CHARACTERS_API FCharacterIndexFragment : public FMassFragment
 	FCharacterId Id;
 };
 
-// -----------------------------------------------------------------------------
-// Set once at creation
-// -----------------------------------------------------------------------------
-
+// Set once at creation, never mutated afterward.
 USTRUCT()
 struct CHARACTERS_API FCharacterOriginFragment : public FMassFragment
 {
@@ -42,10 +35,6 @@ struct CHARACTERS_API FCharacterOriginFragment : public FMassFragment
 	UPROPERTY()
 	FRaceId BaseRaceId;
 };
-
-// -----------------------------------------------------------------------------
-// Mutated by gameplay
-// -----------------------------------------------------------------------------
 
 USTRUCT()
 struct CHARACTERS_API FCharacterLocationFragment : public FMassFragment
@@ -112,10 +101,6 @@ struct TMassFragmentTraits<FCharacterPositionsFragment> final
 	};
 };
 
-// -----------------------------------------------------------------------------
-// Shared: many characters reference the same schedule / race data
-// -----------------------------------------------------------------------------
-
 /**
  * The schedule a character runs, by value. Const shared: Mass hashes the whole fragment, so
  * every character following the same library entry lands on the same instance automatically.
@@ -145,10 +130,7 @@ struct CHARACTERS_API FCharacterRaceSharedFragment : public FMassConstSharedFrag
 	FAbilities RaceModifiers;
 };
 
-// -----------------------------------------------------------------------------
-// Tags — ECharacterSimTier becomes the archetype split
-// -----------------------------------------------------------------------------
-
+// Tags: ECharacterSimTier becomes the archetype split.
 USTRUCT()
 struct CHARACTERS_API FCharacterTag : public FMassTag
 {

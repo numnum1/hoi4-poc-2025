@@ -90,7 +90,7 @@ public:
     UFUNCTION(BlueprintPure)
     FCharacterDisplayInfo GetDisplayInfo(FCharacterId InCharacterId) const;
 
-    // --- forwarded to the entity subsystem ---
+    // Forwarded to the entity subsystem.
     UFUNCTION(BlueprintPure)
     FProvinceId GetCurrentProvince(FCharacterId InCharacterId) const;
 

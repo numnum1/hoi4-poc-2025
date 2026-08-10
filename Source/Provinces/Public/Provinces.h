@@ -40,7 +40,6 @@ public:
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TArray<FProvinceDisplayInfo> Display;
-    // Optimization
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TMap<FName, FProvinceId> MapIds;
 public:
@@ -57,7 +56,6 @@ public:
     UFUNCTION(BlueprintPure)
     FProvinceId FindByMapId(FName InMapId) const;
 
-    // --- forwarded to the entity subsystem ---
     UFUNCTION(BlueprintPure)
     FNationId GetOwningNation(FProvinceId InProvinceId) const;
 

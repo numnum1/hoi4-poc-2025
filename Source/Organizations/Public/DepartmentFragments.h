@@ -6,10 +6,6 @@
 #include "Mass/EntityElementTypes.h"
 #include "DepartmentFragments.generated.h"
 
-// -----------------------------------------------------------------------------
-// Identity
-// -----------------------------------------------------------------------------
-
 /**
  * Back-reference from an entity to its stable FDepartmentId. Same role as
  * FOrganizationIndexFragment: the id is what every other domain and every view model addresses a
@@ -37,10 +33,6 @@ struct ORGANIZATIONS_API FDepartmentOrganizationFragment : public FMassFragment
 	UPROPERTY()
 	FOrganizationId OrganizationId;
 };
-
-// -----------------------------------------------------------------------------
-// Mutated by gameplay
-// -----------------------------------------------------------------------------
 
 /**
  * The department this one reports to. An invalid id means this is the root — the one an
@@ -98,10 +90,6 @@ struct ORGANIZATIONS_API FDepartmentFunctionFragment : public FMassFragment
 	UPROPERTY()
 	EBuildingFunction Function = EBuildingFunction::BF_Bureaucracy;
 };
-
-// -----------------------------------------------------------------------------
-// Tags
-// -----------------------------------------------------------------------------
 
 USTRUCT()
 struct ORGANIZATIONS_API FDepartmentTag : public FMassTag

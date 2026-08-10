@@ -13,9 +13,6 @@ struct FMassEntityManager;
 
 /**
  * Owns the province entities and bridges them to the stable FProvinceId.
- *
- * Server-only in effect: Mass entities do not replicate, so clients read province ownership
- * from the replicated mirror on UProvinces instead. See the comment there.
  */
 UCLASS()
 class PROVINCES_API UProvinceEntitySubsystem : public UWorldSubsystem
@@ -46,13 +43,10 @@ public:
 	/** Ids currently alive, in creation order. */
 	const TArray<FProvinceId>& GetAliveIds() const { return AliveIds; }
 
-	// --- read ---
 	FNationId GetOwningNation(FProvinceId InProvinceId) const;
 	int32 GetTimezoneOffset(FProvinceId InProvinceId) const;
-	/** Every province currently owned by InNationId. */
 	TArray<FProvinceId> CollectProvincesOfNation(FNationId InNationId) const;
 
-	// --- write ---
 	void SetOwningNation(FProvinceId InProvinceId, FNationId InNationId);
 
 	/** Logs one province's fragments. Backs the Rts.DumpProvinces console command. */
@@ -68,7 +62,6 @@ private:
 	 * handle means that slot's province entity is gone; the slot itself is never removed. */
 	TArray<FMassEntityHandle> EntityByIndex;
 
-	/** Ids currently alive, in creation order. */
 	TArray<FProvinceId> AliveIds;
 
 	/** Standalone chunk-iteration query backing CollectProvincesOfNation. Not tied to a

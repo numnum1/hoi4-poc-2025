@@ -36,7 +36,6 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FOrganizationsEvent OnOrganizationAdded;
-    // Org events
     UPROPERTY(BlueprintAssignable)
     FOrganizationEvent OnNationSettled;
     UPROPERTY(BlueprintAssignable)
@@ -61,12 +60,10 @@ public:
     UFUNCTION(BlueprintPure)
     FOrganizationInfo GetOrganizationInfo(FOrganizationId InOrganizationId) const;
 
-    // --- forwarded to the entity subsystem ---
     /** The character the organization belongs to — its founder. Invalid for a scenario-authored one. */
     UFUNCTION(BlueprintPure)
     FCharacterId GetOwnerCharacter(FOrganizationId InOrganizationId) const;
 
-    /** True if InCharacterId is the one character this organization belongs to. */
     UFUNCTION(BlueprintPure)
     bool IsOwnedBy(FOrganizationId InOrganizationId, FCharacterId InCharacterId) const;
 

@@ -62,8 +62,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FBankId AddBank(const FBankInfo& NewBank);
 
-	// --- accounts, forwarded to the entity subsystem ---
-
 	/** Always opens a new account — a character can hold several. */
 	UFUNCTION(BlueprintCallable)
 	FBankAccountId OpenAccountForCharacter(FBankId InBankId, FCharacterId InOwnerId);

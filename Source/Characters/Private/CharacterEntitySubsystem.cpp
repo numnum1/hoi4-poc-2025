@@ -172,14 +172,10 @@ void UCharacterEntitySubsystem::HandleHourElapsed(const int32 InHoursElapsed)
 	}
 }
 
-// -----------------------------------------------------------------------------
-// Read
-// -----------------------------------------------------------------------------
-
 namespace
 {
 	// A getter seeing an id that just died is normal UI behavior, not a bug — log quietly and
-	// return the default. Contrast with the Write section below, which ensureMsgf's instead.
+	// return the default, unlike the write functions below, which ensureMsgf's instead.
 	void LogInvalidRead(const FCharacterId InCharacterId, const TCHAR* InAccessor)
 	{
 		UE_LOG(LogRtsCharacters, Verbose, TEXT("%s: character %d is not alive"), InAccessor, InCharacterId.Value);
@@ -315,10 +311,6 @@ TArray<FCharacterId> UCharacterEntitySubsystem::CollectCharactersInProvince(cons
 	return Result;
 }
 
-// -----------------------------------------------------------------------------
-// Write
-// -----------------------------------------------------------------------------
-
 void UCharacterEntitySubsystem::MoveCharacter(const FCharacterId InCharacterId, const FProvinceId InNewProvinceId)
 {
 	const FMassEntityHandle Entity = GetEntity(InCharacterId);
@@ -381,10 +373,6 @@ void UCharacterEntitySubsystem::RemovePosition(const FCharacterId InCharacterId,
 		return Existing.OrganizationId == InAtOrganizationId;
 	});
 }
-
-// -----------------------------------------------------------------------------
-// Debug
-// -----------------------------------------------------------------------------
 
 void UCharacterEntitySubsystem::LogCharacter(const FCharacterId InCharacterId) const
 {

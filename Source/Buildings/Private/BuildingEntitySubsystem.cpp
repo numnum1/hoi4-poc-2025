@@ -89,10 +89,6 @@ void UBuildingEntitySubsystem::DestroyBuilding(const FBuildingId InBuildingId)
 	AliveIds.RemoveSingle(InBuildingId);
 }
 
-// -----------------------------------------------------------------------------
-// Read
-// -----------------------------------------------------------------------------
-
 FProvinceId UBuildingEntitySubsystem::GetProvince(const FBuildingId InBuildingId) const
 {
 	const FMassEntityHandle Entity = GetEntity(InBuildingId);
@@ -168,10 +164,6 @@ TArray<FBuildingId> UBuildingEntitySubsystem::CollectBuildingsOwnedByCharacter(c
 	return Result;
 }
 
-// -----------------------------------------------------------------------------
-// Ownership transfer
-// -----------------------------------------------------------------------------
-
 void UBuildingEntitySubsystem::SetCharacterOwner(const FBuildingId InBuildingId, const FCharacterId InNewOwnerId)
 {
 	const FMassEntityHandle Entity = GetEntity(InBuildingId);
@@ -182,10 +174,6 @@ void UBuildingEntitySubsystem::SetCharacterOwner(const FBuildingId InBuildingId,
 
 	FMassEntityView(GetEntityManager(), Entity).GetFragmentData<FBuildingCharacterOwnerFragment>().OwnerId = InNewOwnerId;
 }
-
-// -----------------------------------------------------------------------------
-// Debug
-// -----------------------------------------------------------------------------
 
 void UBuildingEntitySubsystem::LogBuilding(const FBuildingId InBuildingId) const
 {

@@ -212,7 +212,6 @@ FText URtsActions::GetBlockedReason(const EAction InAction, const FRtsActionCont
 		}
 	}
 
-	// Action-specific checks on top of the shared gate.
 	switch (InAction)
 	{
 	case EAction::EA_FoundOrganization:
