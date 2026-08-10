@@ -1,20 +1,20 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ProvinceVisuals.h"
 #include "RtsIds.h"
 #include "MVVMViewModelBase.h"
 #include "WorldMapViewModel.generated.h"
 
 /**
- * Widget state for the WeltMap: which province the player currently has selected on it. Nothing
- * here is derived from the simulation — a province only becomes "selected" because the player
- * clicked it, so this is UI-invented state, the same distinction UPlayerCharacterViewModel draws
- * between itself and UCharacterViewModel.
+ * How the WeltMap should be painted: one FProvinceVisuals per province that deviates from the map's
+ * default shading, provinces left out keep it. Nothing here is derived from the simulation — the map
+ * has no opinion on why a province is green — so this is pushed in from above as a whole map at a
+ * time, by whoever owns the current view mode (URtsHUDViewModel's compute method).
  *
- * SelectedProvinceId is meant to be read as a destination binding by other CreateInstance view
- * models that need a province as context (e.g. a province detail panel's
- * UProvinceViewModel::Initialize), the same "Kind-ViewModels: Create Instance + Initialize"
- * pattern UTimezoneViewModel::Initialize is bound to a character id with.
+ * The view model only holds the colors; turning them into the plugin's LUT write is
+ * UWorldMapWidget::ApplyOverriddenVisuals, so this class stays a plain value holder and nothing here
+ * needs to know the map actor exists.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
 class WORLDMAP_API UWorldMapViewModel : public UMVVMViewModelBase
@@ -22,20 +22,14 @@ class WORLDMAP_API UWorldMapViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	/** Bind this to the WeltMap's province click handler. Passing an invalid id clears the
-	 * selection. */
+	/** Replaces the whole map — a province absent from InOverriddenVisuals loses its override.
+	 * Single-parameter so it is a valid MVVM destination binding for a compute method. */
 	UFUNCTION(BlueprintCallable, Category="World Map Viewmodel")
-	void SelectProvince(FProvinceId InProvinceId);
+	void SetOverriddenVisuals(const TMap<FProvinceId, FProvinceVisuals>& InOverriddenVisuals);
 
-protected:
+	const TMap<FProvinceId, FProvinceVisuals>& GetOverriddenVisuals() const { return OverriddenVisuals; }
+
+private:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="World Map Viewmodel", meta=(AllowPrivateAccess))
-	FProvinceId SelectedProvinceId;
-
-	/** SelectedProvinceId as a plain int32, for widgets that cannot bind the id struct. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="World Map Viewmodel", meta=(AllowPrivateAccess))
-	int32 SelectedProvinceIdValue = INDEX_NONE;
-
-public:
-	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
-	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
+	TMap<FProvinceId, FProvinceVisuals> OverriddenVisuals;
 };

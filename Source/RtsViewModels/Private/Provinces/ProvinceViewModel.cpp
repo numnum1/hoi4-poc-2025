@@ -1,4 +1,4 @@
-#include "Provinces/ProvinceViewModel.h"
+#include "Resources/ProvinceViewModel.h"
 
 #include "Buildings.h"
 #include "Characters.h"

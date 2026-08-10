@@ -10,6 +10,13 @@
 void ARtsWorldMap::SetWorldMapWidget(UWorldMapWidget* InWidget)
 {
 	WorldMapWidget = InWidget;
+
+	// The widget's first ApplyOverriddenVisuals runs before this actor is reachable when the HUD
+	// builds its widgets first, so repaint once the connection exists.
+	if (WorldMapWidget)
+	{
+		WorldMapWidget->ApplyOverriddenVisuals();
+	}
 }
 
 void ARtsWorldMap::SelectProvinceAt(const FVector2D InUV)
@@ -20,14 +27,14 @@ void ARtsWorldMap::SelectProvinceAt(const FVector2D InUV)
 	}
 }
 
-void ARtsWorldMap::SetProvinceOverlayColors(const TMap<FProvinceId, FColor>& InColors)
+void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals)
 {
 	EnsureProvinceColorLookup();
 
 	TArray<FDataLUT> DataLUT;
-	DataLUT.Reserve(InColors.Num());
+	DataLUT.Reserve(InVisuals.Num());
 
-	for (const TPair<FProvinceId, FColor>& Entry : InColors)
+	for (const TPair<FProvinceId, FProvinceVisuals>& Entry : InVisuals)
 	{
 		const FColorRG* LookupId = ProvinceIdToColorRG.Find(Entry.Key);
 		if (LookupId == nullptr)
@@ -37,11 +44,26 @@ void ARtsWorldMap::SetProvinceOverlayColors(const TMap<FProvinceId, FColor>& InC
 
 		FDataLUT Row;
 		Row.ID = *LookupId;
-		Row.Primary = Entry.Value;
+		Row.Primary = Entry.Value.PrimaryColor;
+		Row.Secondary = Entry.Value.SecondaryColor;
 		DataLUT.Add(Row);
 	}
 
 	WriteToLUTs(DataLUT, /*ClearLUTs=*/true, /*UpdateNational=*/false);
+}
+
+void ARtsWorldMap::SetProvinceOverlayColors(const TMap<FProvinceId, FColor>& InColors)
+{
+	TMap<FProvinceId, FProvinceVisuals> Visuals;
+	Visuals.Reserve(InColors.Num());
+
+	for (const TPair<FProvinceId, FColor>& Entry : InColors)
+	{
+		FProvinceVisuals& Visual = Visuals.Add(Entry.Key);
+		Visual.PrimaryColor = Entry.Value;
+	}
+
+	SetProvinceVisuals(Visuals);
 }
 
 void ARtsWorldMap::ClearProvinceOverlayColors()

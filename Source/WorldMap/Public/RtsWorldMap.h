@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "BA_Map.h"
+#include "ProvinceVisuals.h"
 #include "RtsIds.h"
 #include "RtsWorldMap.generated.h"
 
@@ -49,11 +50,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SelectProvinceAt(FVector2D InUV);
 
-	/** Colors every province in InColors and clears every other one, via the plugin's LUT shading
-	 * (WriteToLUTs). This class only knows how to turn a province->color map into a LUT write —
-	 * what the color means is entirely up to the caller (see
-	 * UFoundOrganizationModalWidgetViewModel for the current one, coloring by founding
-	 * eligibility). Reuses the Primary LUT channel; nothing else writes to it yet. */
+	/** Paints every province in InVisuals and clears every other one, via the plugin's LUT shading
+	 * (WriteToLUTs). This class only knows how to turn a province->visuals map into a LUT write —
+	 * what the colors mean is entirely up to the caller; UWorldMapWidget feeds this from
+	 * UWorldMapViewModel::OverriddenVisuals. */
+	UFUNCTION(BlueprintCallable, Category="World Map")
+	void SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals);
+
+	/** SetProvinceVisuals for callers that only care about the primary color (see
+	 * UFoundOrganizationModalWidgetViewModel, coloring by founding eligibility). */
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SetProvinceOverlayColors(const TMap<FProvinceId, FColor>& InColors);
 
