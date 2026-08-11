@@ -18,5 +18,9 @@ struct NATIONS_API FNationInfo
 	FText NationName = FText::FromString("Unnamed Nation");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FSlateBrush Flag = FSlateNoResource();	
+	FSlateBrush Flag = FSlateNoResource();
+
+	/** The nation's color on the world map — the map's default shading reads it from here. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FColor MapColor = FColor::White;
 };

@@ -92,6 +92,8 @@ void UProvinces::Setup(const TArray<FProvinceSpawnData>& NewProvinces)
 	{
 		Create(SpawnData);
 	}
+
+	OnProvincesSetup.Broadcast();
 }
 
 void UProvinces::SetOwningNation(const FProvinceId InProvinceId, const FNationId InNationId)

@@ -126,7 +126,8 @@ namespace ScenarioLoader
 		{
 			Res.Key.Add(FNationInfo{
 				Nation->GetNationName(),
-				Nation->GetFlag()
+				Nation->GetFlag(),
+				Nation->GetMapColor()
 			});
 		}
 

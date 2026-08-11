@@ -7,10 +7,11 @@
 #include "WorldMapViewModel.generated.h"
 
 /**
- * How the WeltMap should be painted: one FProvinceVisuals per province that deviates from the map's
- * default shading, provinces left out keep it. Nothing here is derived from the simulation — the map
- * has no opinion on why a province is green — so this is pushed in from above as a whole map at a
- * time, by whoever owns the current view mode (URtsHUDViewModel's compute method).
+ * How the WeltMap deviates from its default shading: one FProvinceVisuals per province that is
+ * overridden, provinces left out keep the political map ARtsWorldMap derives from province
+ * ownership. Empty is therefore the normal state, not a blank world. Nothing here is derived from
+ * the simulation — the map has no opinion on why a province is green — so this is pushed in from
+ * above as a whole map at a time, by whoever owns the current view mode.
  *
  * The view model only holds the colors; turning them into the plugin's LUT write is
  * UWorldMapWidget::ApplyOverriddenVisuals, so this class stays a plain value holder and nothing here

@@ -16,7 +16,13 @@ void UWorldMapWidget::NativeOnInitialized()
 		UWorldMapViewModel::FFieldNotificationClassDescriptor::OverriddenVisuals,
 		INotifyFieldValueChanged::FFieldValueChangedDelegate::CreateUObject(this, &UWorldMapWidget::HandleOverriddenVisualsChanged));
 
-	ApplyOverriddenVisuals();
+	// Registering both directions here rather than waiting for the HUD to push us in: the map is a
+	// level actor this widget can find on its own, and without the back-channel it drops every click.
+	// SetWorldMapWidget repaints, so no separate ApplyOverriddenVisuals call.
+	if (ARtsWorldMap* WorldMap = ARtsWorldMap::GetRtsWorldMap(this))
+	{
+		WorldMap->SetWorldMapWidget(this);
+	}
 }
 
 void UWorldMapWidget::HandleProvinceClicked(const FProvinceId InProvinceId)

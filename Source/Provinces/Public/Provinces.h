@@ -16,6 +16,7 @@ public:
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FProvincesEvent, FProvinceId, InProvinceId);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FProvincesSetupEvent);
 
 /**
  * The UI-facing face of the province data.
@@ -32,6 +33,11 @@ class PROVINCES_API UProvinces : public UActorComponent
 public:
     UProvinces();
 
+    /** Fired once after Setup created every province of the scenario. Create() alone stays silent —
+     * a listener that wants the finished map (ARtsWorldMap's default shading) would otherwise
+     * rebuild itself once per province during scenario load. */
+    UPROPERTY(BlueprintAssignable)
+    FProvincesSetupEvent OnProvincesSetup;
     UPROPERTY(BlueprintAssignable)
     FProvincesEvent OnOwningNationChanged;
     /** Fired after a province's entity is gone. Its display row stays around. */

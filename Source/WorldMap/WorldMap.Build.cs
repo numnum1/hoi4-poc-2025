@@ -32,7 +32,11 @@ public class WorldMap : ModuleRules
 				// (RtsCore), not a dependency on RtsUI or Rts: see UWorldMapWidget's class comment for
 				// why the connection to UPlayerCharacterViewModel is a Blueprint binding, not a C++
 				// dependency in either direction.
-				"Provinces"
+				"Provinces",
+				// ARtsWorldMap::Repaint paints a province in its owning nation's FNationInfo::MapColor
+				// when nothing overrides it. Same resolution path as Provinces above
+				// (FindRtsGameStateComponent), no header dependency.
+				"Nations"
 			}
 		);
 	}
