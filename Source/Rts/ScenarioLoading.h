@@ -141,6 +141,7 @@ namespace ScenarioLoader
 
 			FProvinceSpawnData SpawnData;
 			SpawnData.Display.MapId = Province->GetMapId();
+			SpawnData.Display.MapPixelColor = Province->GetMapPixelColor();
 			SpawnData.Display.Name = Province->GetProvinceName();
 			SpawnData.Display.Picture = Province->GetPicture();
 			SpawnData.Display.InspectionSound = Province->GetInspectionSound();

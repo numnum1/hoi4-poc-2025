@@ -20,7 +20,13 @@ public:
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	FName MapId;
-	
+
+	/** This province's pixel color in the world map's province-ID texture — red and green only, the
+	 * two channels the map shader indexes with. Copied straight from the province row authored for
+	 * the map, so nothing at runtime needs that DataTable. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
+	FColor MapPixelColor = FColor::Black;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	FText ProvinceName;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
@@ -35,6 +41,7 @@ private:
 	int32 TimezoneOffset;
 public:
 	FORCEINLINE const FName& GetMapId() const { return MapId; }
+	FORCEINLINE const FColor& GetMapPixelColor() const { return MapPixelColor; }
 	FORCEINLINE const FText& GetProvinceName() const { return ProvinceName; }
 	FORCEINLINE const FSlateBrush& GetPicture() const { return Picture; }
 	FORCEINLINE UNationAsset* GetOwningNation() const { return OwningNation; }

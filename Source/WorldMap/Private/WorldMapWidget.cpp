@@ -1,47 +1,40 @@
 #include "WorldMapWidget.h"
 
+#include "Kismet/GameplayStatics.h"
+#include "RtsMapPawn.h"
 #include "RtsWorldMap.h"
-#include "WorldMapViewModel.h"
 
-void UWorldMapWidget::NativeOnInitialized()
+void UWorldMapWidget::NativeConstruct()
 {
-	Super::NativeOnInitialized();
+	Super::NativeConstruct();
 
-	if (WorldMapViewModel == nullptr)
+	MapPawn = Cast<ARtsMapPawn>(UGameplayStatics::GetPlayerPawn(this, 0));
+	if (MapPawn)
 	{
-		WorldMapViewModel = NewObject<UWorldMapViewModel>(this);
+		MapPawn->OnProvinceClicked.AddDynamic(this, &UWorldMapWidget::HandleProvinceClicked);
+	}
+}
+
+void UWorldMapWidget::NativeDestruct()
+{
+	if (MapPawn)
+	{
+		MapPawn->OnProvinceClicked.RemoveAll(this);
+		MapPawn = nullptr;
 	}
 
-	WorldMapViewModel->AddFieldValueChangedDelegate(
-		UWorldMapViewModel::FFieldNotificationClassDescriptor::OverriddenVisuals,
-		INotifyFieldValueChanged::FFieldValueChangedDelegate::CreateUObject(this, &UWorldMapWidget::HandleOverriddenVisualsChanged));
+	Super::NativeDestruct();
+}
 
-	// Registering both directions here rather than waiting for the HUD to push us in: the map is a
-	// level actor this widget can find on its own, and without the back-channel it drops every click.
-	// SetWorldMapWidget repaints, so no separate ApplyOverriddenVisuals call.
+void UWorldMapWidget::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals)
+{
 	if (ARtsWorldMap* WorldMap = ARtsWorldMap::GetRtsWorldMap(this))
 	{
-		WorldMap->SetWorldMapWidget(this);
+		WorldMap->SetProvinceVisuals(InVisuals);
 	}
 }
 
 void UWorldMapWidget::HandleProvinceClicked(const FProvinceId InProvinceId)
 {
 	OnProvinceClicked.Broadcast(InProvinceId);
-}
-
-void UWorldMapWidget::ApplyOverriddenVisuals()
-{
-	ARtsWorldMap* WorldMap = ARtsWorldMap::GetRtsWorldMap(this);
-	if (WorldMap == nullptr || WorldMapViewModel == nullptr)
-	{
-		return;
-	}
-
-	WorldMap->SetProvinceVisuals(WorldMapViewModel->GetOverriddenVisuals());
-}
-
-void UWorldMapWidget::HandleOverriddenVisualsChanged(UObject* InViewModel, UE::FieldNotification::FFieldId InFieldId)
-{
-	ApplyOverriddenVisuals();
 }

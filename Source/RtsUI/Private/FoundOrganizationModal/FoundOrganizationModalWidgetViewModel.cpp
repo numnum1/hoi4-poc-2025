@@ -215,15 +215,21 @@ void UFoundOrganizationModalWidgetViewModel::RefreshProvinceOverlay() const
 		Colors.Add(CandidateId, bAlreadyHasType ? FColor::Blue : FColor::Green);
 	}
 
-	WorldMap->SetProvinceOverlayColors(Colors);
+	TMap<FProvinceId, FProvinceVisuals> Visuals;
+	Visuals.Reserve(Colors.Num());
+	for (const TPair<FProvinceId, FColor>& Entry : Colors)
+	{
+		Visuals.Add(Entry.Key).PrimaryColor = Entry.Value;
+	}
+
+	WorldMap->SetProvinceVisuals(Visuals);
 }
 
 void UFoundOrganizationModalWidgetViewModel::ClearProvinceOverlay() const
 {
-	if (ARtsWorldMap* WorldMap = ARtsWorldMap::GetRtsWorldMap(this))
-	{
-		WorldMap->ClearProvinceOverlayColors();
-	}
+	// Nothing to undo here: closing the modal changes URtsHUDViewModel::ActiveModal, which
+	// re-broadcasts its computed ProvinceVisuals and repaints the whole map in the active mode over
+	// these colors. Painting a "cleared" state here would only fight that repaint.
 }
 
 int32 UFoundOrganizationModalWidgetViewModel::GetCharacterFunds() const

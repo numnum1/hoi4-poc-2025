@@ -12,13 +12,17 @@ public class WorldMap : ModuleRules
 				"Core",
 				// FProvinceId
 				"RtsCore",
-				// UWorldMapViewModel derives from UMVVMViewModelBase
+				// The widget blueprint deriving from UWorldMapWidget binds through MVVM
 				"ModelViewViewModel",
 				// UWorldMapWidget derives from UUserWidget
 				"UMG",
-				// ARtsWorldMap derives from ABA_Map (BloodAnvil plugin) — the base class needs the
-				// full type in the header, not just a forward declare
-				"BloodAnvil"
+				// ARtsWorldMap derives from ABA_Map and ARtsMapPawn from ABA_MapPawn (BloodAnvil
+				// plugin) — the base classes need the full type in the header, not just a forward
+				// declare
+				"BloodAnvil",
+				// ARtsMapPawn binds its own handler to the plugin's InputSelect action rather than
+				// implementing ABA_MapPawn::Select, which is Blueprint-only
+				"EnhancedInput"
 			}
 		);
 
@@ -27,16 +31,12 @@ public class WorldMap : ModuleRules
 			{
 				"CoreUObject",
 				"Engine",
-				// ARtsWorldMap::ResolveProvinceAt resolves the clicked province by name via
-				// UProvinces::FindByMapId. Resolved off the game state via FindRtsGameStateComponent
-				// (RtsCore), not a dependency on RtsUI or Rts: see UWorldMapWidget's class comment for
-				// why the connection to UPlayerCharacterViewModel is a Blueprint binding, not a C++
-				// dependency in either direction.
-				"Provinces",
-				// ARtsWorldMap::Repaint paints a province in its owning nation's FNationInfo::MapColor
-				// when nothing overrides it. Same resolution path as Provinces above
-				// (FindRtsGameStateComponent), no header dependency.
-				"Nations"
+				// Both directions of the province lookup go through UProvinces: ARtsMapPawn turns a
+				// clicked pixel into an id via FindByMapPixelColor, ARtsWorldMap turns an id back
+				// into the pixel color the plugin's lookup tables are keyed on. Resolved off the
+				// game state via FindRtsGameStateComponent (RtsCore) in the .cpp only — this module
+				// still knows nothing about RtsUI, see UWorldMapWidget's class comment.
+				"Provinces"
 			}
 		);
 	}

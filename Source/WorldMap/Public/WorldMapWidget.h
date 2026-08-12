@@ -2,27 +2,24 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "FieldNotificationId.h"
+#include "ProvinceVisuals.h"
 #include "RtsIds.h"
 #include "WorldMapWidget.generated.h"
 
-class UWorldMapViewModel;
+class ARtsMapPawn;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWorldMapProvinceClicked, FProvinceId, ProvinceId);
 
 /**
- * The C++ half of the WeltMap widget. Owns the module's UWorldMapViewModel — created itself in
- * NativeOnInitialized, the same "Widgets sind C++-Klassen" root pattern UPlayedCharacterView uses
- * for UPlayerCharacterViewModel — and is the one place that translates it into the map actor:
- * ApplyOverriddenVisuals turns the view model's province colors into ARtsWorldMap's LUT write, and
- * runs itself whenever OverriddenVisuals changes, so whoever fills the view model never touches
- * ARtsWorldMap.
+ * The world map's interface to the rest of the UI, and nothing else: clicks leave through
+ * OnProvinceClicked, colors arrive through SetProvinceVisuals. It exists so the map can be dropped
+ * anywhere in the HUD's widget tree without whoever places it having to know about the map actor or
+ * the pawn.
  *
- * This module deliberately does not know RtsUI/URtsHUDViewModel: what a province click means and
- * which colors the map should show are decided above this widget. Clicks leave through
- * OnProvinceClicked and colors arrive through the view model — a C++ push in either direction would
- * make WorldMap depend on RtsUI while RtsUI already depends on WorldMap for this same class, a
- * cycle.
+ * It decides nothing. It does not know what a province click means, and it has no opinion on which
+ * colors are correct — both are settled in RtsUI, which owns the map mode and pushes the result
+ * down here. A C++ dependency in the other direction would make WorldMap depend on RtsUI while
+ * RtsUI already depends on WorldMap, a cycle.
  */
 UCLASS(Abstract)
 class WORLDMAP_API UWorldMapWidget : public UUserWidget
@@ -30,30 +27,25 @@ class WORLDMAP_API UWorldMapWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintPure, Category="World Map")
-	UWorldMapViewModel* GetWorldMapViewModel() const { return WorldMapViewModel; }
-
-	/** Fires for every click the map resolves; an invalid id means the player clicked off any
-	 * province. Bound by whoever owns this widget (the HUD), which decides what a selection does. */
+	/** Fires for every click on the map; an invalid id means the player clicked off any province. */
 	UPROPERTY(BlueprintAssignable, Category="World Map")
 	FWorldMapProvinceClicked OnProvinceClicked;
 
-	/** Bind this to the map pawn's province click resolution (ProvID texture -> DataTable name ->
-	 * UProvinces::FindByMapId). Passing an invalid id clears the selection. */
+	/** Paints the given provinces. Provinces left out keep whatever color they had — this is a
+	 * change set, not a whole world, so the caller decides what "reset" means. */
 	UFUNCTION(BlueprintCallable, Category="World Map")
-	void HandleProvinceClicked(FProvinceId InProvinceId);
-
-	/** Paints the map with the view model's current OverriddenVisuals. Runs automatically on every
-	 * change; public for the first paint, when the map actor may not have existed yet. */
-	UFUNCTION(BlueprintCallable, Category="World Map")
-	void ApplyOverriddenVisuals();
+	void SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals);
 
 protected:
-	virtual void NativeOnInitialized() override;
+	/** Bound here rather than in NativeOnInitialized: the pawn has to exist and be possessed first,
+	 * which is not guaranteed while the widget is still being constructed. */
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 private:
-	void HandleOverriddenVisualsChanged(UObject* InViewModel, UE::FieldNotification::FFieldId InFieldId);
+	UFUNCTION()
+	void HandleProvinceClicked(FProvinceId InProvinceId);
 
 	UPROPERTY(Transient)
-	TObjectPtr<UWorldMapViewModel> WorldMapViewModel;
+	TObjectPtr<ARtsMapPawn> MapPawn;
 };

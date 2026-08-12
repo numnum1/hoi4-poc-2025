@@ -21,7 +21,12 @@ public class RtsUI : ModuleRules
                 // headquarters the found-organization modal is collecting.
                 "Buildings",
                 // The view models derive from UMVVMViewModelBase on their public headers.
-                "ModelViewViewModel"
+                "ModelViewViewModel",
+                // URtsMapModes::BuildVisuals and URtsHUDViewModel::GetProvinceVisuals both return
+                // FProvinceVisuals on public headers, so this cannot be private. Does not create a
+                // cycle: WorldMap does not depend on RtsUI — the map is handed colors and knows
+                // nothing about why a province is that color.
+                "WorldMap"
             }
         );
 
@@ -54,11 +59,7 @@ public class RtsUI : ModuleRules
                 // component there.
                 "Time",
                 // UProvinceViewModel passes UEcology* through
-                "Ecology",
-                // UFoundOrganizationModalWidgetViewModel colors the WeltMap by founding eligibility
-                // through ARtsWorldMap::GetRtsWorldMap/SetProvinceOverlayColors, resolved in the .cpp
-                // only. Does not create a cycle: WorldMap does not depend on RtsUI.
-                "WorldMap"
+                "Ecology"
             }
         );
     }
