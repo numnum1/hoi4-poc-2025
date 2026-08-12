@@ -26,16 +26,6 @@ struct PROVINCES_API FProvinceDisplayInfo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName MapId = NAME_None;
 
-	/** This province's pixel color in the world map's province-ID texture. Only red and green carry
-	 * the id — the map shader indexes its lookup tables with exactly those two channels, and blue
-	 * and alpha are unused there.
-	 *
-	 * Authored data copied in at scenario load, not something the simulation ever changes. It lives
-	 * here so nothing at runtime has to open the map's province DataTable: painting a province and
-	 * resolving a click on one both become plain lookups on UProvinces. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FColor MapPixelColor = FColor::Black;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText Name = FText::FromString("Unnamed Province");
 

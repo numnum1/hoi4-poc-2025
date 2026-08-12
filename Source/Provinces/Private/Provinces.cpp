@@ -19,17 +19,6 @@ void FProvincesModule::ShutdownModule()
 
 IMPLEMENT_MODULE(FProvincesModule, Provinces)
 
-namespace
-{
-	/** The province-ID texture stores the id in red and green only. Packing those two into the map
-	 * key drops blue and alpha, which a pixel sampled off the texture carries but no province ever
-	 * declares — comparing whole FColors would miss every click. */
-	int32 PackMapPixelColor(const FColor& InColor)
-	{
-		return (static_cast<int32>(InColor.R) << 8) | static_cast<int32>(InColor.G);
-	}
-}
-
 UProvinces::UProvinces()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -56,17 +45,6 @@ FProvinceDisplayInfo UProvinces::GetDisplayInfo(const FProvinceId InProvinceId) 
 FProvinceId UProvinces::FindByMapId(const FName InMapId) const
 {
 	const FProvinceId* Found = MapIds.Find(InMapId);
-	return Found ? *Found : FProvinceId();
-}
-
-FColor UProvinces::GetMapPixelColor(const FProvinceId InProvinceId) const
-{
-	return Display.IsValidIndex(InProvinceId.Value) ? Display[InProvinceId.Value].MapPixelColor : FColor::Black;
-}
-
-FProvinceId UProvinces::FindByMapPixelColor(const FColor InMapPixelColor) const
-{
-	const FProvinceId* Found = MapPixelColors.Find(PackMapPixelColor(InMapPixelColor));
 	return Found ? *Found : FProvinceId();
 }
 
@@ -101,7 +79,6 @@ FProvinceId UProvinces::Create(const FProvinceSpawnData& InSpawnData)
 	check(NewId.Value == Display.Num());
 	Display.Add(InSpawnData.Display);
 	MapIds.Emplace(InSpawnData.Display.MapId, NewId);
-	MapPixelColors.Emplace(PackMapPixelColor(InSpawnData.Display.MapPixelColor), NewId);
 
 	return NewId;
 }
@@ -110,7 +87,6 @@ void UProvinces::Setup(const TArray<FProvinceSpawnData>& NewProvinces)
 {
 	Display.Reset(NewProvinces.Num());
 	MapIds.Empty(NewProvinces.Num());
-	MapPixelColors.Empty(NewProvinces.Num());
 
 	for (const FProvinceSpawnData& SpawnData : NewProvinces)
 	{

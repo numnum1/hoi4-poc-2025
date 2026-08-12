@@ -22,7 +22,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	FSlateBrush Flag;
 	/** The nation's color on the world map — the map's default shading paints every province this
-	 * nation owns with it, see ARtsWorldMap::ResolveVisuals. */
+	 * nation owns with it, see URtsMapModes' political map mode. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	FColor MapColor = FColor::White;
 public:

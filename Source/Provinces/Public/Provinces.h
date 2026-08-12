@@ -48,10 +48,6 @@ private:
     TArray<FProvinceDisplayInfo> Display;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     TMap<FName, FProvinceId> MapIds;
-
-    /** Reverse of FProvinceDisplayInfo::MapPixelColor, keyed on the packed red/green channels —
-     * see PackMapPixelColor for why the other two are dropped. */
-    TMap<int32, FProvinceId> MapPixelColors;
 public:
     /** Ids ever created, alive or not. Slot count, not a live headcount — see IsAlive. */
     UFUNCTION(BlueprintPure)
@@ -65,17 +61,6 @@ public:
 
     UFUNCTION(BlueprintPure)
     FProvinceId FindByMapId(FName InMapId) const;
-
-    /** This province's pixel color in the map's province-ID texture. Black for an unknown id, which
-     * is also a legal authored color — check the id before trusting the result. */
-    UFUNCTION(BlueprintPure)
-    FColor GetMapPixelColor(FProvinceId InProvinceId) const;
-
-    /** The province a province-ID pixel names. Only red and green are compared: the id lives in
-     * those two channels, and a pixel sampled off the texture carries whatever the encoder left in
-     * blue and alpha. Invalid when no province claims that color — a click on open water. */
-    UFUNCTION(BlueprintPure)
-    FProvinceId FindByMapPixelColor(FColor InMapPixelColor) const;
 
     UFUNCTION(BlueprintPure)
     FNationId GetOwningNation(FProvinceId InProvinceId) const;

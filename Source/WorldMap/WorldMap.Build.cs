@@ -31,11 +31,11 @@ public class WorldMap : ModuleRules
 			{
 				"CoreUObject",
 				"Engine",
-				// Both directions of the province lookup go through UProvinces: ARtsMapPawn turns a
-				// clicked pixel into an id via FindByMapPixelColor, ARtsWorldMap turns an id back
-				// into the pixel color the plugin's lookup tables are keyed on. Resolved off the
-				// game state via FindRtsGameStateComponent (RtsCore) in the .cpp only — this module
-				// still knows nothing about RtsUI, see UWorldMapWidget's class comment.
+				// Both directions of ARtsWorldMap's province lookup go through
+				// FProvinceDisplayInfo::MapId — an id to the pixel color the plugin's lookup tables
+				// are keyed on, and a clicked pixel back to an id. Resolved off the game state via
+				// FindRtsGameStateComponent (RtsCore) in the .cpp only — this module still knows
+				// nothing about RtsUI, see UWorldMapWidget's class comment.
 				"Provinces"
 			}
 		);
