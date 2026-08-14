@@ -8,6 +8,7 @@
 #include "Characters.h"
 #include "Nations.h"
 #include "Organizations.h"
+#include "Populations.h"
 #include "Provinces.h"
 #include "Races.h"
 #include "ScenarioLoading.h"
@@ -55,6 +56,13 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 
 	RtsGameState->GetNationsContainer()->Setup(Nations);
 	RtsGameState->GetProvincesContainer()->Setup(Provinces);
+
+	// After the provinces: a pop names its province by id, and those ids are only handed out by the
+	// Setup above.
+	auto [Ethnicities, Pops] = ScenarioLoader::ExtractPopulations(InScenario->GetProvinces());
+	UPopulations* PopulationsContainer = RtsGameState->GetPopulationsContainer();
+	PopulationsContainer->SetupEthnicities(Ethnicities);
+	PopulationsContainer->Setup(Pops);
 
 	// Banks first: independent of everything else, and characters/organizations below may open an
 	// account with one, so the FBankId their FBankAccountAsset resolves to must already exist.

@@ -38,6 +38,11 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "Populations",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "Characters",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"

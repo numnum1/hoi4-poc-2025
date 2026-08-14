@@ -18,10 +18,9 @@ void URtsHUDWidget::NativeOnInitialized()
 
 	HUDViewModel->Initialize();
 
-	// Initialize's own broadcast happens before the delegate above could matter for the very first
-	// paint only if the map is already there; pushing once here covers the ordinary case where the
-	// scenario is loaded and nothing will change again on its own.
-	PushProvinceVisuals();
+	// Initialize broadcasts on its own, but the map actor may not have resolved its province lookup
+	// yet that early — the first tick repaints regardless, and by then it has.
+	bProvinceVisualsDirty = true;
 }
 
 void URtsHUDWidget::NativeDestruct()
@@ -34,9 +33,20 @@ void URtsHUDWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
+void URtsHUDWidget::NativeTick(const FGeometry& MyGeometry, const float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	if (bProvinceVisualsDirty)
+	{
+		bProvinceVisualsDirty = false;
+		PushProvinceVisuals();
+	}
+}
+
 void URtsHUDWidget::HandleProvinceVisualsChanged(UObject* InViewModel, UE::FieldNotification::FFieldId InFieldId)
 {
-	PushProvinceVisuals();
+	bProvinceVisualsDirty = true;
 }
 
 void URtsHUDWidget::PushProvinceVisuals()

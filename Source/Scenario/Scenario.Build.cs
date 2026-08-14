@@ -14,6 +14,8 @@ public class Scenario : ModuleRules
                 "Characters",
                 // UScheduleAsset authors an FSchedule in a public header
                 "Schedules"
+                // UEthnicityAsset needs no domain module: it authors plain data, and the conversion
+                // to FEthnicityInfo/FPopSpawnData happens in ScenarioLoading.h like every other asset
             }
         );
 

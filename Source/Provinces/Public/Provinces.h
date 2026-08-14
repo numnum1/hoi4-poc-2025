@@ -34,7 +34,7 @@ public:
     UProvinces();
 
     /** Fired once after Setup created every province of the scenario. Create() alone stays silent —
-     * a listener that wants the finished map (ARtsWorldMap's default shading) would otherwise
+     * a listener that wants the finished map (the active map mode's shading) would otherwise
      * rebuild itself once per province during scenario load. */
     UPROPERTY(BlueprintAssignable)
     FProvincesSetupEvent OnProvincesSetup;

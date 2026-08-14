@@ -12,6 +12,7 @@ class UDepartments;
 class UMapModeEntryViewModel;
 class UNations;
 class UOrganizations;
+class UPopulations;
 class UProvinces;
 
 /**
@@ -95,6 +96,12 @@ private:
 	UFUNCTION()
 	void HandleDepartmentChanged(FDepartmentId InDepartmentId);
 
+	UFUNCTION()
+	void HandlePopulationsSetup();
+
+	UFUNCTION()
+	void HandlePopChanged(FPopId InPopId);
+
 	void BindFacades();
 	void UnbindFacades();
 	void RefreshMapModeEntries();
@@ -113,6 +120,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UBuildings> Buildings;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPopulations> Populations;
 
 public:
 	FCharacterId GetControlledCharacterId() const { return ControlledCharacterId; }

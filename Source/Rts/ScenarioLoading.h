@@ -13,6 +13,9 @@
 #include "NationAsset.h"
 #include "OrganizationAsset.h"
 #include "OrganizationInfo.h"
+#include "EthnicityAsset.h"
+#include "EthnicityInfo.h"
+#include "PopulationInfo.h"
 #include "ProvinceAsset.h"
 #include "ProvinceInfo.h"
 #include "RoleAsset.h"
@@ -148,6 +151,85 @@ namespace ScenarioLoader
 			SpawnData.TimezoneOffset = Province->GetTimezoneOffset();
 			SpawnData.OwningNationId = NationId;
 			Res.Value.Add(MoveTemp(SpawnData));
+		}
+
+		return Res;
+	}
+
+	/**
+	 * The ethnicity library plus one pop per province and ethnicity, both discovered from the
+	 * province assets — the same "find it through what uses it" shape ExtractRaces and
+	 * ExtractSchedules have, so there is no separate ethnicity list that could fall out of sync.
+	 *
+	 * InProvinces must be the same array ExtractNationsAndProvinces was given: province ids are
+	 * positions in it, so the null-skipping below has to match that function's exactly or every pop
+	 * would land in the wrong province.
+	 */
+	__inline TTuple<TArray<FEthnicityInfo>, TArray<FPopSpawnData>> ExtractPopulations(const TArray<UProvinceAsset*>& InProvinces)
+	{
+		TTuple<TArray<FEthnicityInfo>, TArray<FPopSpawnData>> Res;
+
+		TArray<UEthnicityAsset*> EthnicityAssets;
+		for (const UProvinceAsset* Province : InProvinces)
+		{
+			if (!Province) continue;
+
+			for (const FProvincePopulationEntry& Entry : Province->GetPopulation())
+			{
+				if (Entry.Ethnicity && !EthnicityAssets.Contains(Entry.Ethnicity))
+				{
+					EthnicityAssets.Add(Entry.Ethnicity);
+				}
+			}
+		}
+
+		Res.Key.Reserve(EthnicityAssets.Num());
+		for (const UEthnicityAsset* Ethnicity : EthnicityAssets)
+		{
+			FEthnicityInfo Info;
+			Info.EthnicityName = Ethnicity->GetEthnicityName();
+			Info.MapColor = Ethnicity->GetMapColor();
+			Res.Key.Add(MoveTemp(Info));
+		}
+
+		int32 ProvinceIndex = 0;
+		for (const UProvinceAsset* Province : InProvinces)
+		{
+			if (!Province) continue;
+
+			const FProvinceId ProvinceId(ProvinceIndex++);
+
+			// Summed per ethnicity rather than one pop per authored entry: an ethnicity listed twice
+			// on the same province is the same people, and two pops for them would drift apart.
+			TMap<FEthnicityId, int32> SizeByEthnicity;
+			for (const FProvincePopulationEntry& Entry : Province->GetPopulation())
+			{
+				if (Entry.Ethnicity == nullptr || Entry.Size <= 0)
+				{
+					continue;
+				}
+
+				const FEthnicityId EthnicityId(EthnicityAssets.Find(Entry.Ethnicity));
+				SizeByEthnicity.FindOrAdd(EthnicityId) += Entry.Size;
+			}
+
+			// In library order, so a tie in UPopulations::GetDominantEthnicity resolves to the lower
+			// id rather than to whatever order the asset happened to list them in.
+			for (int32 EthnicityIndex = 0; EthnicityIndex < EthnicityAssets.Num(); ++EthnicityIndex)
+			{
+				const FEthnicityId EthnicityId(EthnicityIndex);
+				const int32* Size = SizeByEthnicity.Find(EthnicityId);
+				if (Size == nullptr)
+				{
+					continue;
+				}
+
+				FPopSpawnData SpawnData;
+				SpawnData.ProvinceId = ProvinceId;
+				SpawnData.EthnicityId = EthnicityId;
+				SpawnData.Size = *Size;
+				Res.Value.Add(MoveTemp(SpawnData));
+			}
 		}
 
 		return Res;

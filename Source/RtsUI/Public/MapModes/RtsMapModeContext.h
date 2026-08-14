@@ -7,6 +7,7 @@ class UBuildings;
 class UDepartments;
 class UNations;
 class UOrganizations;
+class UPopulations;
 class UProvinces;
 
 /**
@@ -40,4 +41,7 @@ struct RTSUI_API FRtsMapModeContext
 
 	UPROPERTY(BlueprintReadOnly, Category="Map Mode")
 	TObjectPtr<UBuildings> Buildings;
+
+	UPROPERTY(BlueprintReadOnly, Category="Map Mode")
+	TObjectPtr<UPopulations> Populations;
 };

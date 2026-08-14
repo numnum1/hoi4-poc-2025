@@ -6,6 +6,7 @@
 #include "MapModes/RtsMapModes.h"
 #include "Nations.h"
 #include "Organizations.h"
+#include "Populations.h"
 #include "Provinces.h"
 #include "RtsGameStateComponent.h"
 
@@ -23,6 +24,7 @@ void URtsHUDViewModel::Initialize()
 	Organizations = FindRtsGameStateComponent<UOrganizations>(this);
 	Departments = FindRtsGameStateComponent<UDepartments>(this);
 	Buildings = FindRtsGameStateComponent<UBuildings>(this);
+	Populations = FindRtsGameStateComponent<UPopulations>(this);
 
 	BindFacades();
 	RefreshMapModeEntries();
@@ -83,6 +85,7 @@ TMap<FProvinceId, FProvinceVisuals> URtsHUDViewModel::GetProvinceVisuals() const
 	Context.Organizations = Organizations;
 	Context.Departments = Departments;
 	Context.Buildings = Buildings;
+	Context.Populations = Populations;
 
 	return URtsMapModes::BuildVisuals(ActiveMapMode, Context);
 }
@@ -145,6 +148,16 @@ void URtsHUDViewModel::HandleDepartmentChanged(FDepartmentId InDepartmentId)
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
 }
 
+void URtsHUDViewModel::HandlePopulationsSetup()
+{
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+}
+
+void URtsHUDViewModel::HandlePopChanged(FPopId InPopId)
+{
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+}
+
 void URtsHUDViewModel::BindFacades()
 {
 	if (Provinces)
@@ -167,6 +180,15 @@ void URtsHUDViewModel::BindFacades()
 	{
 		Departments->OnDepartmentSeatChanged.AddDynamic(this, &URtsHUDViewModel::HandleDepartmentChanged);
 	}
+
+	// A pop shrinking below its neighbour flips the province's dominant ethnicity, so the ethnicity
+	// mode has to follow size changes, not just creation.
+	if (Populations)
+	{
+		Populations->OnPopulationsSetup.AddDynamic(this, &URtsHUDViewModel::HandlePopulationsSetup);
+		Populations->OnPopSizeChanged.AddDynamic(this, &URtsHUDViewModel::HandlePopChanged);
+		Populations->OnPopDestroyed.AddDynamic(this, &URtsHUDViewModel::HandlePopChanged);
+	}
 }
 
 void URtsHUDViewModel::UnbindFacades()
@@ -188,5 +210,12 @@ void URtsHUDViewModel::UnbindFacades()
 	if (Departments)
 	{
 		Departments->OnDepartmentSeatChanged.RemoveAll(this);
+	}
+
+	if (Populations)
+	{
+		Populations->OnPopulationsSetup.RemoveAll(this);
+		Populations->OnPopSizeChanged.RemoveAll(this);
+		Populations->OnPopDestroyed.RemoveAll(this);
 	}
 }

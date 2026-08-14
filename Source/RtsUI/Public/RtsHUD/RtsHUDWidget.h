@@ -34,6 +34,9 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeDestruct() override;
 
+	/** Where the coalesced repaint happens — see HandleProvinceVisualsChanged. */
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
 	/** Optional so a HUD Blueprint without a map on screen still works. */
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
 	TObjectPtr<UWorldMapWidget> WorldMapWidget;
@@ -45,4 +48,10 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<URtsHUDViewModel> HUDViewModel;
+
+	/** One repaint per frame at most. Province ownership changes arrive one province at a time, and
+	 * each repaint recomputes the whole mode and makes the plugin read back and rewrite its lookup
+	 * textures in full — so a nation losing twenty provinces in one tick must not cost twenty of
+	 * those. */
+	bool bProvinceVisualsDirty = false;
 };

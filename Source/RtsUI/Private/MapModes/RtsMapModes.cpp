@@ -5,6 +5,7 @@
 #include "Departments.h"
 #include "Nations.h"
 #include "Organizations.h"
+#include "Populations.h"
 #include "Provinces.h"
 
 #define LOCTEXT_NAMESPACE "RtsMapModes"
@@ -117,11 +118,60 @@ namespace
 
 		return Visuals;
 	}
+
+	TMap<FProvinceId, FProvinceVisuals> BuildEthnicityVisuals(const FRtsMapModeContext& InContext)
+	{
+		if (InContext.Provinces == nullptr || InContext.Populations == nullptr)
+		{
+			return TMap<FProvinceId, FProvinceVisuals>();
+		}
+
+		TMap<FProvinceId, FProvinceVisuals> Visuals = MakeNeutralBase(*InContext.Provinces);
+
+		// One pass over every pop rather than UPopulations::GetDominantEthnicity per province: that
+		// getter rescans all pops each call, which would make this quadratic across the whole world.
+		struct FDominant
+		{
+			FEthnicityId EthnicityId;
+			int32 Size = 0;
+		};
+		TMap<FProvinceId, FDominant> DominantByProvince;
+
+		for (const FPopInfo& Pop : InContext.Populations->CollectPops())
+		{
+			if (Pop.Size <= 0 || !Visuals.Contains(Pop.ProvinceId))
+			{
+				continue;
+			}
+
+			FDominant& Dominant = DominantByProvince.FindOrAdd(Pop.ProvinceId);
+
+			// Ties go to the lower id so the map cannot flicker between two equal groups depending on
+			// what order the entity chunks happened to come back in.
+			const bool bWins = Pop.Size > Dominant.Size
+				|| (Pop.Size == Dominant.Size && Pop.EthnicityId.Value < Dominant.EthnicityId.Value);
+			if (bWins)
+			{
+				Dominant.EthnicityId = Pop.EthnicityId;
+				Dominant.Size = Pop.Size;
+			}
+		}
+
+		// A province nobody lives in keeps the neutral base — that is the honest answer here, unlike
+		// in the political mode where unowned still means unowned by someone.
+		for (const TPair<FProvinceId, FDominant>& Entry : DominantByProvince)
+		{
+			Visuals[Entry.Key].PrimaryColor =
+				InContext.Populations->GetEthnicityInfo(Entry.Value.EthnicityId).MapColor;
+		}
+
+		return Visuals;
+	}
 }
 
 TArray<EMapMode> URtsMapModes::GetMapModes()
 {
-	return { EMapMode::EMM_Political, EMapMode::EMM_Organizations };
+	return { EMapMode::EMM_Political, EMapMode::EMM_Organizations, EMapMode::EMM_Ethnicities };
 }
 
 FText URtsMapModes::GetDisplayName(const EMapMode InMapMode)
@@ -132,6 +182,8 @@ FText URtsMapModes::GetDisplayName(const EMapMode InMapMode)
 		return LOCTEXT("PoliticalMapMode", "Political");
 	case EMapMode::EMM_Organizations:
 		return LOCTEXT("OrganizationsMapMode", "Organizations");
+	case EMapMode::EMM_Ethnicities:
+		return LOCTEXT("EthnicitiesMapMode", "Ethnicities");
 	}
 
 	return FText::GetEmpty();
@@ -143,6 +195,7 @@ FSlateBrush URtsMapModes::GetIcon(const EMapMode InMapMode)
 	{
 	case EMapMode::EMM_Political:
 	case EMapMode::EMM_Organizations:
+	case EMapMode::EMM_Ethnicities:
 		return FSlateNoResource();
 	}
 
@@ -157,6 +210,8 @@ TMap<FProvinceId, FProvinceVisuals> URtsMapModes::BuildVisuals(const EMapMode In
 		return BuildPoliticalVisuals(InContext);
 	case EMapMode::EMM_Organizations:
 		return BuildOrganizationVisuals(InContext);
+	case EMapMode::EMM_Ethnicities:
+		return BuildEthnicityVisuals(InContext);
 	}
 
 	return TMap<FProvinceId, FProvinceVisuals>();

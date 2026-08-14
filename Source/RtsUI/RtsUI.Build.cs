@@ -48,6 +48,9 @@ public class RtsUI : ModuleRules
                 "Provinces",
                 // NationViewModel/ProvinceViewModel read UNations for the owning nation's name
                 "Nations",
+                // The ethnicity map mode reads UPopulations; FRtsMapModeContext only forward-declares
+                // it, so this stays private
+                "Populations",
                 // RefreshJoinableOrganizations reads UOrganizations::GetOrganizationInfo directly
                 // to name each joinable row's organization
                 "Organizations",

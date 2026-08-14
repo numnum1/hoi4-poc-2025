@@ -12,11 +12,13 @@
 UENUM(BlueprintType)
 enum class EMapMode : uint8
 {
-	/** The owning nation's color. Produces no overrides at all — ARtsWorldMap already derives this
-	 * as its default shading, so the mode exists to switch *back* to it. */
+	/** Every province in the color of the nation that owns it. */
 	EMM_Political     UMETA(DisplayName = "Political"),
 
 	/** Where each organization holds sway, with its headquarters province picked out on the map's
 	 * national channel. */
 	EMM_Organizations UMETA(DisplayName = "Organizations"),
+
+	/** Every province in the color of the ethnicity most of its people belong to. */
+	EMM_Ethnicities   UMETA(DisplayName = "Ethnicities"),
 };

@@ -10,6 +10,7 @@
 #include "Economy/RtsEconomy.h"
 #include "Nations.h"
 #include "Organizations.h"
+#include "Populations.h"
 #include "Provinces.h"
 #include "Races.h"
 #include "Roles.h"
@@ -21,6 +22,7 @@ ARtsGameState::ARtsGameState()
 	CharactersContainer = CreateDefaultSubobject<UCharacters>(TEXT("CharactersContainer"));
 	NationsContainer = CreateDefaultSubobject<UNations>(TEXT("NationsContainer"));
 	ProvincesContainer = CreateDefaultSubobject<UProvinces>(TEXT("ProvincesContainer"));
+	PopulationsContainer = CreateDefaultSubobject<UPopulations>(TEXT("PopulationsContainer"));
 	RacesContainer = CreateDefaultSubobject<URaces>(TEXT("RacesContainer"));
 	BuildingsContainer = CreateDefaultSubobject<UBuildings>(TEXT("BuildingsContainer"));
 	OrganizationsContainer = CreateDefaultSubobject<UOrganizations>(TEXT("OrganizationsContainer"));

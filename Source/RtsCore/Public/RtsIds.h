@@ -5,7 +5,7 @@
 
 /**
  * Typed entity identifiers shared across every domain module (Characters, Provinces, Nations,
- * Organizations, Buildings, Races). Each wraps a single int32 so Blueprint pins carry the type
+ * Organizations, Buildings, Races, Populations). Each wraps a single int32 so Blueprint pins carry the type
  * name instead of looking like an interchangeable integer, and the compiler catches passing a
  * FProvinceId where a FCharacterId was expected.
  *
@@ -135,6 +135,52 @@ struct RTSCORE_API FRaceId
 	bool operator==(const FRaceId& Other) const { return Value == Other.Value; }
 	bool operator!=(const FRaceId& Other) const { return !(*this == Other); }
 	friend uint32 GetTypeHash(const FRaceId& Id) { return ::GetTypeHash(Id.Value); }
+};
+
+/**
+ * Names an entry in UPopulations' ethnicity library, not a group of people. Like FRaceId it points
+ * into authored template data rather than at an entity: every pop of Dutch people in every province
+ * carries the same FEthnicityId, and what it means (name, map color) lives in the library entry.
+ *
+ * Deliberately separate from FRaceId: that one is biological (species, traits, ability scores), this
+ * one is cultural. A Dutch and a German human share a race and differ here.
+ */
+USTRUCT(BlueprintType)
+struct RTSCORE_API FEthnicityId
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Value = INDEX_NONE;
+
+	FEthnicityId() = default;
+	explicit FEthnicityId(const int32 InValue) : Value(InValue) {}
+
+	bool IsValid() const { return Value != INDEX_NONE; }
+	bool operator==(const FEthnicityId& Other) const { return Value == Other.Value; }
+	bool operator!=(const FEthnicityId& Other) const { return !(*this == Other); }
+	friend uint32 GetTypeHash(const FEthnicityId& Id) { return ::GetTypeHash(Id.Value); }
+};
+
+/**
+ * Names one pop — the people of a single ethnicity living in a single province. A province with
+ * three ethnicities in it has three pops, each its own entity.
+ */
+USTRUCT(BlueprintType)
+struct RTSCORE_API FPopId
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Value = INDEX_NONE;
+
+	FPopId() = default;
+	explicit FPopId(const int32 InValue) : Value(InValue) {}
+
+	bool IsValid() const { return Value != INDEX_NONE; }
+	bool operator==(const FPopId& Other) const { return Value == Other.Value; }
+	bool operator!=(const FPopId& Other) const { return !(*this == Other); }
+	friend uint32 GetTypeHash(const FPopId& Id) { return ::GetTypeHash(Id.Value); }
 };
 
 USTRUCT(BlueprintType)
