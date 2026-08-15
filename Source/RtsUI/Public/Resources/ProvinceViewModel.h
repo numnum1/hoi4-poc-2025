@@ -12,9 +12,52 @@ class UDepartments;
 class UEcology;
 class UNations;
 class UOrganizations;
+class UPopulations;
 class UProvinces;
 class USelectableOrganizationViewModel;
 class USoundBase;
+
+/** Everything the UI shows about one ethnicity, resolved from the library so a widget never has to
+ * ask UPopulations for a name or color itself. */
+USTRUCT(BlueprintType)
+struct RTSUI_API FEthnicityDisplayData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category="Ethnicity")
+	FEthnicityId EthnicityId;
+
+	UPROPERTY(BlueprintReadOnly, Category="Ethnicity")
+	FText Name;
+
+	UPROPERTY(BlueprintReadOnly, Category="Ethnicity")
+	FColor MapColor = FColor::White;
+
+	// FText has no operator==, hence EqualTo. Needed because UE_MVVM_SET_PROPERTY_VALUE compares the
+	// whole array before deciding to broadcast.
+	bool operator==(const FEthnicityDisplayData& InOther) const
+	{
+		return EthnicityId == InOther.EthnicityId && Name.EqualTo(InOther.Name) && MapColor == InOther.MapColor;
+	}
+};
+
+/** One ethnicity's share of a province's people. */
+USTRUCT(BlueprintType)
+struct RTSUI_API FPopulationInProvince
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category="Population")
+	FEthnicityDisplayData Ethnicity;
+
+	UPROPERTY(BlueprintReadOnly, Category="Population")
+	int32 Amount = 0;
+
+	bool operator==(const FPopulationInProvince& InOther) const
+	{
+		return Ethnicity == InOther.Ethnicity && Amount == InOther.Amount;
+	}
+};
 
 /**
  * A read-only C++ MVVM view model for a single province, addressed by the same FProvinceId
@@ -107,6 +150,23 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel|Presence", meta=(AllowPrivateAccess))
 	int32 CharacterCount = 0;
 
+	//~ Population ---------------------------------------------------------------------------------
+	// Read through UPopulations directly — Provinces itself is not allowed to know that module.
+
+	/** Who lives here, one entry per ethnicity, largest first. Plain values rather than a view model
+	 * per ethnicity: this is a display list, not a set of entities. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel|Population", meta=(AllowPrivateAccess))
+	TArray<FPopulationInProvince> Population;
+
+	/** Everyone in the province, across all ethnicities. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel|Population", meta=(AllowPrivateAccess))
+	int32 TotalPopulation = 0;
+
+	/** The ethnicity most people here belong to, for a widget that shows one label instead of the
+	 * whole list. Empty name and white if nobody lives here. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Province Viewmodel|Population", meta=(AllowPrivateAccess))
+	FEthnicityDisplayData DominantEthnicity;
+
 public:
 	bool IsValid() const { return bIsValid; }
 	FProvinceId GetProvinceId() const { return ProvinceId; }
@@ -128,6 +188,14 @@ public:
 	int32 GetOrganizationsPresentCount() const { return OrganizationsPresentCount; }
 	int32 GetBuildingCount() const { return BuildingCount; }
 	int32 GetCharacterCount() const { return CharacterCount; }
+
+	const TArray<FPopulationInProvince>& GetPopulation() const { return Population; }
+	int32 GetTotalPopulation() const { return TotalPopulation; }
+	FEthnicityDisplayData GetDominantEthnicity() const { return DominantEthnicity; }
+
+	/** How many people of one ethnicity live here, 0 if none do. */
+	UFUNCTION(BlueprintPure, Category="Province Viewmodel|Population")
+	int32 GetPopulationOfEthnicity(FEthnicityId InEthnicityId) const;
 
 protected:
 	UFUNCTION(BlueprintNativeEvent, Category="Province Viewmodel")
@@ -155,8 +223,22 @@ private:
 	UFUNCTION()
 	void HandleCharacterMoved(FCharacterId InCharacterId);
 
+	/** Bound to OnPopulationsSetup/OnPopulationsGrown — neither carries a province id, both mean
+	 * "something in this province may have changed". */
+	UFUNCTION()
+	void HandlePopulationsChanged();
+
+	/** Bound to OnPopSizeChanged/OnPopDestroyed. Both carry an FPopId, not a province id — by the
+	 * time OnPopDestroyed fires the pop's fragments are already gone, so there is no cheaper check
+	 * than re-deriving Population, same reasoning as HandlePresenceEvent above. */
+	UFUNCTION()
+	void HandlePopEvent(FPopId InPopId);
+
 	/** Rebuilds OrganizationsPresent from URtsPresence::CollectOrganizationsIn. */
 	void RefreshOrganizationsPresent();
+
+	/** Rebuilds Population from UPopulations::CollectPopsInProvince. */
+	void RefreshPopulation();
 
 	UPROPERTY()
 	TObjectPtr<UProvinces> Provinces;
@@ -175,6 +257,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UCharacters> Characters;
+
+	UPROPERTY()
+	TObjectPtr<UPopulations> Populations;
 
 	/** Reused across refreshes so a rebuild that offers the same organizations keeps the same row
 	 * objects — same idea as UPlayerCharacterViewModel::ActionEntryCache. */

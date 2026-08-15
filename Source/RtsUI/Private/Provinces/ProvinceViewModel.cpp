@@ -6,8 +6,11 @@
 #include "NationInfo.h"
 #include "Nations.h"
 #include "OrganizationInfo.h"
+#include "EthnicityInfo.h"
 #include "Organizations.h"
 #include "Organizations/SelectableOrganizationViewModel.h"
+#include "PopulationInfo.h"
+#include "Populations.h"
 #include "Presence/RtsPresence.h"
 #include "Provinces.h"
 #include "RtsGameStateComponent.h"
@@ -20,6 +23,7 @@ void UProvinceViewModel::Initialize(const FProvinceId InProvinceId)
 	UDepartments* NewDepartments = FindRtsGameStateComponent<UDepartments>(this);
 	UBuildings* NewBuildings = FindRtsGameStateComponent<UBuildings>(this);
 	UCharacters* NewCharacters = FindRtsGameStateComponent<UCharacters>(this);
+	UPopulations* NewPopulations = FindRtsGameStateComponent<UPopulations>(this);
 
 	if (Provinces == NewProvinces && ProvinceId == InProvinceId)
 	{
@@ -34,6 +38,7 @@ void UProvinceViewModel::Initialize(const FProvinceId InProvinceId)
 	Departments = NewDepartments;
 	Buildings = NewBuildings;
 	Characters = NewCharacters;
+	Populations = NewPopulations;
 
 	ProvinceId = InProvinceId;
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ProvinceId);
@@ -63,6 +68,14 @@ void UProvinceViewModel::Initialize(const FProvinceId InProvinceId)
 		Characters->OnCurrentProvinceChanged.AddDynamic(this, &UProvinceViewModel::HandleCharacterMoved);
 	}
 
+	if (Populations)
+	{
+		Populations->OnPopulationsSetup.AddDynamic(this, &UProvinceViewModel::HandlePopulationsChanged);
+		Populations->OnPopulationsGrown.AddDynamic(this, &UProvinceViewModel::HandlePopulationsChanged);
+		Populations->OnPopSizeChanged.AddDynamic(this, &UProvinceViewModel::HandlePopEvent);
+		Populations->OnPopDestroyed.AddDynamic(this, &UProvinceViewModel::HandlePopEvent);
+	}
+
 	Refresh();
 }
 
@@ -85,6 +98,16 @@ void UProvinceViewModel::HandleBuildingEvent(const FBuildingId InBuildingId)
 }
 
 void UProvinceViewModel::HandleCharacterMoved(const FCharacterId InCharacterId)
+{
+	Refresh();
+}
+
+void UProvinceViewModel::HandlePopulationsChanged()
+{
+	Refresh();
+}
+
+void UProvinceViewModel::HandlePopEvent(const FPopId InPopId)
 {
 	Refresh();
 }
@@ -118,6 +141,7 @@ void UProvinceViewModel::Refresh_Implementation()
 	RefreshOrganizationsPresent();
 	UE_MVVM_SET_PROPERTY_VALUE(BuildingCount, Buildings ? Buildings->CollectBuildingsInProvince(ProvinceId).Num() : 0);
 	UE_MVVM_SET_PROPERTY_VALUE(CharacterCount, Characters ? Characters->CollectCharactersInProvince(ProvinceId).Num() : 0);
+	RefreshPopulation();
 }
 
 void UProvinceViewModel::RefreshOrganizationsPresent()
@@ -147,6 +171,53 @@ void UProvinceViewModel::RefreshOrganizationsPresent()
 	UE_MVVM_SET_PROPERTY_VALUE(OrganizationsPresentCount, NewRows.Num());
 }
 
+void UProvinceViewModel::RefreshPopulation()
+{
+	TArray<FPopulationInProvince> NewPopulation;
+	int32 Total = 0;
+
+	if (Populations)
+	{
+		for (const FPopInfo& Pop : Populations->CollectPopsInProvince(ProvinceId))
+		{
+			const FEthnicityInfo Info = Populations->GetEthnicityInfo(Pop.EthnicityId);
+
+			FPopulationInProvince Entry;
+			Entry.Ethnicity.EthnicityId = Pop.EthnicityId;
+			Entry.Ethnicity.Name = Info.EthnicityName;
+			Entry.Ethnicity.MapColor = Info.MapColor;
+			Entry.Amount = Pop.Size;
+
+			NewPopulation.Add(MoveTemp(Entry));
+			Total += Pop.Size;
+		}
+	}
+
+	// Largest first so a widget can show the list as-is, and so index 0 is the dominant ethnicity.
+	NewPopulation.Sort([](const FPopulationInProvince& InA, const FPopulationInProvince& InB)
+	{
+		return InA.Amount > InB.Amount;
+	});
+
+	UE_MVVM_SET_PROPERTY_VALUE(Population, NewPopulation);
+	UE_MVVM_SET_PROPERTY_VALUE(TotalPopulation, Total);
+	UE_MVVM_SET_PROPERTY_VALUE(DominantEthnicity,
+		NewPopulation.Num() > 0 ? NewPopulation[0].Ethnicity : FEthnicityDisplayData());
+}
+
+int32 UProvinceViewModel::GetPopulationOfEthnicity(const FEthnicityId InEthnicityId) const
+{
+	for (const FPopulationInProvince& Entry : Population)
+	{
+		if (Entry.Ethnicity.EthnicityId == InEthnicityId)
+		{
+			return Entry.Amount;
+		}
+	}
+
+	return 0;
+}
+
 void UProvinceViewModel::Unbind()
 {
 	if (Provinces)
@@ -171,6 +242,14 @@ void UProvinceViewModel::Unbind()
 	if (Characters)
 	{
 		Characters->OnCurrentProvinceChanged.RemoveAll(this);
+	}
+
+	if (Populations)
+	{
+		Populations->OnPopulationsSetup.RemoveAll(this);
+		Populations->OnPopulationsGrown.RemoveAll(this);
+		Populations->OnPopSizeChanged.RemoveAll(this);
+		Populations->OnPopDestroyed.RemoveAll(this);
 	}
 }
 
