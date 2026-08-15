@@ -13,6 +13,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "Provinces.h"
 #include "RtsGameStateComponent.h"
 #include "UObject/ConstructorHelpers.h"
@@ -151,6 +152,20 @@ ARtsWorldMap::ARtsWorldMap()
 	{
 		GlobeMesh = GlobeMeshFinder.Object;
 	}
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> MapMaterialFinder(TEXT("/BloodAnvil/Art/Materials/Mat_Map.Mat_Map"));
+	if (MapMaterialFinder.Succeeded())
+	{
+		MapMaterials.Add(MapMaterialFinder.Object);
+	}
+
+	// A placeholder so the globe is textured out of the box; swap for the scenario's own province-ID
+	// texture in the editor once one is authored.
+	static ConstructorHelpers::FObjectFinder<UTexture2D> ProvinceIdTextureFinder(TEXT("/BloodAnvil/Demo/Data/Map/ProvID/T_ProvID_Game.T_ProvID_Game"));
+	if (ProvinceIdTextureFinder.Succeeded())
+	{
+		ProvinceIdTexture = ProvinceIdTextureFinder.Object;
+	}
 }
 
 void ARtsWorldMap::BeginPlay()
@@ -167,6 +182,8 @@ void ARtsWorldMap::OnConstruction(const FTransform& Transform)
 
 	RebuildDynamicMaterials();
 	ConfigureMesh();
+	// Also outside Play so the globe already shows its province colors in the editor viewport.
+	EnsureLuts();
 }
 
 void ARtsWorldMap::RebuildDynamicMaterials()
@@ -220,41 +237,42 @@ FVector2D ARtsWorldMap::VectorToUV(const FVector InImpactPoint) const
 
 bool ARtsWorldMap::EnsureLuts()
 {
-	if (PrimaryLut)
-	{
-		return true;
-	}
-
 	EnsureMapDataLookup();
 	if (MapIdToPixelId.IsEmpty() || ProvinceIdTexture == nullptr)
 	{
 		return false;
 	}
 
-	// Height comes from the highest green channel in use, not from the number of provinces: with
-	// gaps in the id colors a row count would come out too small and the provinces above it would
-	// silently fall out of the lookup.
-	const int32 Height = HighestPixelRow + 1;
-	if (Height > MaxLutHeight)
+	if (PrimaryLut == nullptr)
 	{
-		UE_LOG(LogRtsWorldMap, Error,
-			TEXT("%s: province ids reach row %d, but a lookup texture holds at most %d."),
-			*GetName(), HighestPixelRow, MaxLutHeight - 1);
-		return false;
+		// Height comes from the highest green channel in use, not from the number of provinces:
+		// with gaps in the id colors a row count would come out too small and the provinces above
+		// it would silently fall out of the lookup.
+		const int32 Height = HighestPixelRow + 1;
+		if (Height > MaxLutHeight)
+		{
+			UE_LOG(LogRtsWorldMap, Error,
+				TEXT("%s: province ids reach row %d, but a lookup texture holds at most %d."),
+				*GetName(), HighestPixelRow, MaxLutHeight - 1);
+			return false;
+		}
+
+		PrimaryLut = CreateLut(this, Height);
+		SecondaryLut = CreateLut(this, Height);
+		NationalLut = CreateLut(this, Height);
+		VfxLut = CreateLut(this, Height);
+
+		if (PrimaryLut == nullptr || SecondaryLut == nullptr || NationalLut == nullptr || VfxLut == nullptr)
+		{
+			UE_LOG(LogRtsWorldMap, Error, TEXT("%s could not create its lookup textures."), *GetName());
+			PrimaryLut = nullptr;
+			return false;
+		}
 	}
 
-	PrimaryLut = CreateLut(this, Height);
-	SecondaryLut = CreateLut(this, Height);
-	NationalLut = CreateLut(this, Height);
-	VfxLut = CreateLut(this, Height);
-
-	if (PrimaryLut == nullptr || SecondaryLut == nullptr || NationalLut == nullptr || VfxLut == nullptr)
-	{
-		UE_LOG(LogRtsWorldMap, Error, TEXT("%s could not create its lookup textures."), *GetName());
-		PrimaryLut = nullptr;
-		return false;
-	}
-
+	// Runs every call, not just when the LUTs are first created: RebuildDynamicMaterials replaces
+	// MapDynamicMaterials with fresh instances on every construction, and a fresh dynamic material
+	// starts out with none of its texture parameters set.
 	for (UMaterialInstanceDynamic* Material : MapDynamicMaterials)
 	{
 		if (Material == nullptr)
