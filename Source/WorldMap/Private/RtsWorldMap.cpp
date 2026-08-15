@@ -328,8 +328,10 @@ void ARtsWorldMap::EnsureMapDataLookup()
 		PixelId.R = MapData->Color.R;
 		PixelId.G = MapData->Color.G;
 
-		MapIdToPixelId.Add(MapData->Name, PixelId);
-		PixelIdToMapId.Add(PackPixelId(PixelId.R, PixelId.G), MapData->Name);
+		// Keyed on the row name, not the row's own Name field: that field holds the map editor's
+		// label ("Arnhem"), while a province's MapId is the row key ("1893").
+		MapIdToPixelId.Add(Row.Key, PixelId);
+		PixelIdToMapId.Add(PackPixelId(PixelId.R, PixelId.G), Row.Key);
 		HighestPixelRow = FMath::Max(HighestPixelRow, static_cast<int32>(PixelId.G));
 	}
 }
