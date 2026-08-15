@@ -54,4 +54,7 @@ private:
 	 * textures in full — so a nation losing twenty provinces in one tick must not cost twenty of
 	 * those. */
 	bool bProvinceVisualsDirty = false;
+
+	/** So the missing-map-widget error is reported once, not per repaint. */
+	bool bMissingMapWidgetLogged = false;
 };

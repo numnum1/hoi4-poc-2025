@@ -142,4 +142,7 @@ private:
 
 	/** So a map missing its assets is reported once, not per click. */
 	bool bLookupFailureLogged = false;
+
+	/** Likewise for painting, which is retried on every repaint. */
+	bool bPaintFailureLogged = false;
 };

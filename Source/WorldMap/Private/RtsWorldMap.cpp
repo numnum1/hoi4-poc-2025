@@ -153,6 +153,10 @@ ARtsWorldMap::ARtsWorldMap()
 		GlobeMesh = GlobeMeshFinder.Object;
 	}
 
+	// Has to happen here, not only in ConfigureMesh: RebuildDynamicMaterials reads
+	// MapMesh->GetNumMaterials(), which is 0 until a static mesh is assigned.
+	MapMesh->SetStaticMesh(GlobeMesh);
+
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> MapMaterialFinder(TEXT("/BloodAnvil/Art/Materials/Mat_Map.Mat_Map"));
 	if (MapMaterialFinder.Succeeded())
 	{
@@ -180,6 +184,9 @@ void ARtsWorldMap::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
+	// Has to happen before RebuildDynamicMaterials: it reads MapMesh->GetNumMaterials(), which is 0
+	// until a static mesh is assigned, so the dynamic materials would never reach any mesh slot.
+	MapMesh->SetStaticMesh(GlobeMesh);
 	RebuildDynamicMaterials();
 	ConfigureMesh();
 	// Also outside Play so the globe already shows its province colors in the editor viewport.
@@ -350,6 +357,15 @@ void ARtsWorldMap::EnsureProvinceLookup()
 			ProvinceIdToPixelId.Add(ProvinceId, Entry.Value);
 		}
 	}
+
+	// A table whose names match no province leaves the map unpainted with nothing else to show for
+	// it, so the mismatch is called out rather than left to look like a rendering problem.
+	if (ProvinceIdToPixelId.IsEmpty())
+	{
+		UE_LOG(LogRtsWorldMap, Error,
+			TEXT("%s: none of the %d names in ProvinceMapData match a province MapId of the loaded scenario."),
+			*GetName(), MapIdToPixelId.Num());
+	}
 }
 
 FProvinceId ARtsWorldMap::ResolveProvinceAt(const FVector2D InUV)
@@ -378,8 +394,16 @@ void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>&
 {
 	EnsureProvinceLookup();
 
-	if (!EnsureLuts() || ProvinceIdToPixelId.IsEmpty())
+	const bool bHasLuts = EnsureLuts();
+	if (!bHasLuts || ProvinceIdToPixelId.IsEmpty())
 	{
+		if (!bPaintFailureLogged)
+		{
+			bPaintFailureLogged = true;
+			UE_LOG(LogRtsWorldMap, Error,
+				TEXT("%s cannot paint: lookup textures %s, province lookup holds %d entries."),
+				*GetName(), bHasLuts ? TEXT("ready") : TEXT("missing"), ProvinceIdToPixelId.Num());
+		}
 		return;
 	}
 
@@ -404,6 +428,13 @@ void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>&
 
 	if (Rows.IsEmpty())
 	{
+		if (!bPaintFailureLogged && !InVisuals.IsEmpty())
+		{
+			bPaintFailureLogged = true;
+			UE_LOG(LogRtsWorldMap, Error,
+				TEXT("%s: none of the %d provinces handed in are in the province-ID table."),
+				*GetName(), InVisuals.Num());
+		}
 		return;
 	}
 

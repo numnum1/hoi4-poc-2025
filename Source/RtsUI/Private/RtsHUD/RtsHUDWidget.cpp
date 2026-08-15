@@ -51,7 +51,21 @@ void URtsHUDWidget::HandleProvinceVisualsChanged(UObject* InViewModel, UE::Field
 
 void URtsHUDWidget::PushProvinceVisuals()
 {
-	if (WorldMapWidget && HUDViewModel)
+	// BindWidgetOptional leaves this null without complaint, and a HUD Blueprint whose map widget is
+	// named anything else then shows an unpainted map with nothing pointing at the cause.
+	if (WorldMapWidget == nullptr)
+	{
+		if (!bMissingMapWidgetLogged)
+		{
+			bMissingMapWidgetLogged = true;
+			UE_LOG(LogTemp, Error,
+				TEXT("%s has no widget named WorldMapWidget, so the map is never handed its colors."),
+				*GetName());
+		}
+		return;
+	}
+
+	if (HUDViewModel)
 	{
 		WorldMapWidget->SetProvinceVisuals(HUDViewModel->GetProvinceVisuals());
 	}
