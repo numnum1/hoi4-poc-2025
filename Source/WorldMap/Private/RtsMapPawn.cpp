@@ -54,12 +54,6 @@ void ARtsMapPawn::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 
 	MapReference = ARtsWorldMap::GetRtsWorldMap(this);
-	if (MapReference == nullptr)
-	{
-		return;
-	}
-
-	FrameCamera();
 }
 
 void ARtsMapPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -78,6 +72,11 @@ void ARtsMapPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::LockInFullscreen);
 	InputModeData.SetHideCursorDuringCapture(false);
 	PlayerController->SetInputMode(InputModeData);
+
+	// Only safe here, not in PossessedBy: AController::OnPossess overwrites the control rotation
+	// with the pawn's actor rotation right after PossessedBy returns, which clobbers anything set
+	// there. SetupPlayerInputComponent runs later, from PawnClientRestart, after that overwrite.
+	FrameCamera();
 
 	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);

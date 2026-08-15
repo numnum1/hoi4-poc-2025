@@ -77,7 +77,7 @@ public:
 	TObjectPtr<UInputAction> InputSelect;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings")
-	FRotator StartRotationGlobe = FRotator(-48.0f, -95.0f, 0.0f);
+	FRotator StartRotationGlobe = FRotator(-50.0f, -100.0f, 0.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings")
 	float MoveSpeedGlobe = 10.0f;
