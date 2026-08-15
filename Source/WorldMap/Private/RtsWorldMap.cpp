@@ -22,10 +22,11 @@ DEFINE_LOG_CATEGORY_STATIC(LogRtsWorldMap, Log, All);
 
 namespace
 {
-	/** Red picks the column, green the row, so the lookup textures are always this wide and a
-	 * province's green channel decides how tall they have to be. */
+	/** Red picks the column, green the row. Both are full 8-bit channels and the material feeds them
+	 * in as G/255 without rescaling, so the lookup textures have to span the whole range in both
+	 * directions — a shorter texture would fold every row above zero back onto row zero. */
 	constexpr int32 LutWidth = 256;
-	constexpr int32 MaxLutHeight = 256;
+	constexpr int32 LutHeight = 256;
 
 	int32 PackPixelId(const uint8 InRed, const uint8 InGreen)
 	{
@@ -109,10 +110,10 @@ namespace
 			});
 	}
 
-	UCanvasRenderTarget2D* CreateLut(UObject* InOuter, const int32 InHeight)
+	UCanvasRenderTarget2D* CreateLut(UObject* InOuter)
 	{
 		UCanvasRenderTarget2D* Lut = UCanvasRenderTarget2D::CreateCanvasRenderTarget2D(
-			InOuter, UCanvasRenderTarget2D::StaticClass(), LutWidth, InHeight);
+			InOuter, UCanvasRenderTarget2D::StaticClass(), LutWidth, LutHeight);
 		if (Lut == nullptr)
 		{
 			return nullptr;
@@ -252,22 +253,10 @@ bool ARtsWorldMap::EnsureLuts()
 
 	if (PrimaryLut == nullptr)
 	{
-		// Height comes from the highest green channel in use, not from the number of provinces:
-		// with gaps in the id colors a row count would come out too small and the provinces above
-		// it would silently fall out of the lookup.
-		const int32 Height = HighestPixelRow + 1;
-		if (Height > MaxLutHeight)
-		{
-			UE_LOG(LogRtsWorldMap, Error,
-				TEXT("%s: province ids reach row %d, but a lookup texture holds at most %d."),
-				*GetName(), HighestPixelRow, MaxLutHeight - 1);
-			return false;
-		}
-
-		PrimaryLut = CreateLut(this, Height);
-		SecondaryLut = CreateLut(this, Height);
-		NationalLut = CreateLut(this, Height);
-		VfxLut = CreateLut(this, Height);
+		PrimaryLut = CreateLut(this);
+		SecondaryLut = CreateLut(this);
+		NationalLut = CreateLut(this);
+		VfxLut = CreateLut(this);
 
 		if (PrimaryLut == nullptr || SecondaryLut == nullptr || NationalLut == nullptr || VfxLut == nullptr)
 		{
@@ -332,7 +321,6 @@ void ARtsWorldMap::EnsureMapDataLookup()
 		// label ("Arnhem"), while a province's MapId is the row key ("1893").
 		MapIdToPixelId.Add(Row.Key, PixelId);
 		PixelIdToMapId.Add(PackPixelId(PixelId.R, PixelId.G), Row.Key);
-		HighestPixelRow = FMath::Max(HighestPixelRow, static_cast<int32>(PixelId.G));
 	}
 }
 

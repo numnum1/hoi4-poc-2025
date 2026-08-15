@@ -96,8 +96,8 @@ private:
 	void ConfigureMesh();
 
 	/** Creates the lookup textures and binds them, along with the province-ID texture, to the map
-	 * material. Runs once, and only once the province table can be read — the textures' height comes
-	 * out of it. */
+	 * material. The textures are created once; the binding is redone on every call, because
+	 * RebuildDynamicMaterials hands out fresh instances that carry no parameters. */
 	bool EnsureLuts();
 
 	/** Reads the province table once. Nothing authored there changes at runtime, so this never has
@@ -136,9 +136,6 @@ private:
 	/** What painting actually goes through, so a repaint does not copy a whole FProvinceDisplayInfo
 	 * — FText, FSlateBrush and two object pointers — once per province just to read its MapId. */
 	TMap<FProvinceId, FMapPixelId> ProvinceIdToPixelId;
-
-	/** The tallest row any province occupies, which is what decides the lookup textures' height. */
-	int32 HighestPixelRow = 0;
 
 	/** So a map missing its assets is reported once, not per click. */
 	bool bLookupFailureLogged = false;
