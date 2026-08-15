@@ -68,9 +68,6 @@ public:
 	TObjectPtr<UCameraComponent> Camera;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
-	bool DontScrollOnSelect = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<UInputMappingContext> InputMapping;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
@@ -83,19 +80,10 @@ public:
 	FRotator StartRotationGlobe = FRotator(-48.0f, -95.0f, 0.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings")
-	FVector2D StartLocationFlat = FVector2D(1250.0f, -12890.0f);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings")
 	float MoveSpeedGlobe = 10.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings", meta=(Units="CentimetersPerSecond"))
-	float MoveSpeedFlat = 10000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings", meta=(Units="Centimeters"))
 	float StartHeight = 5000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings", meta=(Units="Centimeters"))
-	FVector2D FrustumClampOffset = FVector2D(-10.0f, -10.0f);
 
 	/** How much of the input translates into movement at the lowest and the highest altitude — the
 	 * camera has to crawl when zoomed in and sweep when zoomed out. */
@@ -132,9 +120,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings|Height", meta=(Units="Degrees"))
 	float HeightPitch = 25.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings|Edge Scrolling")
-	float EdgeMovementSpeed = 1.0f;
-
 protected:
 	UFUNCTION(BlueprintCallable, Category="Movement")
 	float ComputeMovementScale(float InDeltaTime) const;
@@ -143,21 +128,13 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Movement")
 	void AddMovement(float InDeltaTime, const FVector& InDirections);
 
-	UFUNCTION(BlueprintCallable, Category="Movement")
-	void ClampCameraPosition();
-
 private:
-	/** Frames the camera for the map's projection. Bound to ARtsWorldMap::MapTypeChanged. */
-	UFUNCTION()
-	void HandleMapTypeChanged(ARtsWorldMap* InMap);
+	/** Frames the camera on the globe at its starting height. Called once the pawn has a map and a
+	 * controller to frame it for. */
+	void FrameCamera();
 
 	void HandleSelectStarted();
-	void HandleSelectCompleted();
 
 	/** Interp target for the spring arm, kept separate so zooming stays smooth. */
 	float ArmLength = 0.0f;
-
-	/** Whether the select button is held — the pawn drags the map instead of edge-scrolling while
-	 * it is. */
-	bool bSelectDown = false;
 };

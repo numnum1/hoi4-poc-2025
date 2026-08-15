@@ -151,19 +151,13 @@ ARtsWorldMap::ARtsWorldMap()
 	{
 		GlobeMesh = GlobeMeshFinder.Object;
 	}
-
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> FlatMeshFinder(TEXT("/BloodAnvil/Art/Meshes/SM_Plane.SM_Plane"));
-	if (FlatMeshFinder.Succeeded())
-	{
-		FlatMesh = FlatMeshFinder.Object;
-	}
 }
 
 void ARtsWorldMap::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetMapType(MapType);
+	ConfigureMesh();
 	EnsureLuts();
 }
 
@@ -172,7 +166,7 @@ void ARtsWorldMap::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	RebuildDynamicMaterials();
-	SetMapType(MapType);
+	ConfigureMesh();
 }
 
 void ARtsWorldMap::RebuildDynamicMaterials()
@@ -202,39 +196,26 @@ void ARtsWorldMap::RebuildDynamicMaterials()
 	}
 }
 
-void ARtsWorldMap::SetMapType(const EWorldMapType InMapType)
+void ARtsWorldMap::ConfigureMesh()
 {
-	MapType = InMapType;
-
-	const bool bIsGlobe = MapType == EWorldMapType::Globe;
-	MapMesh->SetStaticMesh(bIsGlobe ? GlobeMesh : FlatMesh);
-	MapMesh->SetRelativeScale3D(bIsGlobe
-		? FVector(MapRadius, MapRadius, MapRadius) / 100.0f
-		// Z comes from the radius either way so the tessellation stays consistent between the two.
-		: FVector(MapDimensions.X, MapDimensions.Y, MapRadius) / 100.0f);
+	MapMesh->SetStaticMesh(GlobeMesh);
+	MapMesh->SetRelativeScale3D(FVector(MapRadius, MapRadius, MapRadius) / 100.0f);
 
 	for (UMaterialInstanceDynamic* Material : MapDynamicMaterials)
 	{
 		if (Material)
 		{
-			Material->SetScalarParameterValue(FName("SphericalUVs"), bIsGlobe ? 0.0f : 1.0f);
+			Material->SetScalarParameterValue(FName("SphericalUVs"), 0.0f);
 		}
 	}
-
-	MapTypeChanged.Broadcast(this);
 }
 
 FVector2D ARtsWorldMap::VectorToUV(const FVector InImpactPoint) const
 {
-	if (MapType == EWorldMapType::Globe)
-	{
-		const FVector Normal = InImpactPoint.GetSafeNormal();
-		return FVector2D(
-			FMath::Atan2(Normal.X, Normal.Y) / (2.0f * PI) + 0.5f,
-			FMath::Asin(-Normal.Z) / PI + 0.5f);
-	}
-
-	return (FVector2D(InImpactPoint.X, InImpactPoint.Y) + MapDimensions * 0.5) / MapDimensions;
+	const FVector Normal = InImpactPoint.GetSafeNormal();
+	return FVector2D(
+		FMath::Atan2(Normal.X, Normal.Y) / (2.0f * PI) + 0.5f,
+		FMath::Asin(-Normal.Z) / PI + 0.5f);
 }
 
 bool ARtsWorldMap::EnsureLuts()

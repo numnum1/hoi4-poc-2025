@@ -4,20 +4,6 @@
 #include "MapTypes.generated.h"
 
 /**
- * Globe is a sphere, FlatClamped a plane the camera cannot leave.
- *
- * The BloodAnvil plugin also had a looping "Flat" mode, which is deliberately not carried over: it
- * only worked alongside a second ghost actor mirroring the mesh at the seam, and nothing in this
- * game uses it.
- */
-UENUM(BlueprintType)
-enum class EWorldMapType : uint8
-{
-	Globe,
-	FlatClamped,
-};
-
-/**
  * A province's identity as the province-ID texture stores it: red and green carry the id, blue and
  * alpha are unused. Also the key the lookup textures are indexed by — red picks the column, green
  * the row, which is why those textures are always 256 wide.

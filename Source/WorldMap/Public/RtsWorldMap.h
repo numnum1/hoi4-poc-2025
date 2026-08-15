@@ -15,10 +15,6 @@ class UStaticMesh;
 class UStaticMeshComponent;
 class UTexture2D;
 
-class ARtsWorldMap;
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMapTypeChanged, ARtsWorldMap*, Map);
-
 /**
  * The map actor: the single source of truth for the province-ID lookup, and a renderer for colors
  * someone else decided on.
@@ -61,16 +57,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="World Map", meta=(WorldContext="WorldContextObject"))
 	static ARtsWorldMap* GetRtsWorldMap(const UObject* WorldContextObject);
 
-	UFUNCTION(BlueprintCallable, Category="World Map")
-	void SetMapType(EWorldMapType InMapType);
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category="World Map")
-	EWorldMapType GetMapType() const { return MapType; }
-
-	/** The camera pawn follows this to reset its framing when the projection changes. */
-	UPROPERTY(BlueprintAssignable, Category="World Map")
-	FMapTypeChanged MapTypeChanged;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> MapMesh;
 
@@ -86,20 +72,11 @@ public:
 	TObjectPtr<UDataTable> ProvinceMapData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map Settings")
-	EWorldMapType MapType = EWorldMapType::Globe;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map Settings")
 	TObjectPtr<UStaticMesh> GlobeMesh;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map Settings")
-	TObjectPtr<UStaticMesh> FlatMesh;
-
-	/** Use r = sqrt((x*y)/4*pi) to give the globe the same surface area as the plane. */
+	/** Use r = sqrt((x*y)/4*pi) to give the globe the same surface area as the plane it replaced. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map Settings", meta=(Units="Centimeters"))
 	float MapRadius = 19947.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map Settings", meta=(Units="Centimeters"))
-	FVector2D MapDimensions = FVector2D(100000.0f, 50000.0f);
 
 	/** One per material slot on the mesh; anything beyond that is kept for transition or distance
 	 * variants. */
@@ -114,6 +91,10 @@ protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 
 private:
+	/** Sizes the mesh to MapRadius and points the dynamic materials at it. Runs on every
+	 * construction, not just once, so radius/mesh edits in the editor show up immediately. */
+	void ConfigureMesh();
+
 	/** Creates the lookup textures and binds them, along with the province-ID texture, to the map
 	 * material. Runs once, and only once the province table can be read — the textures' height comes
 	 * out of it. */
