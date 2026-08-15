@@ -9,6 +9,7 @@
 #include "Nations.h"
 #include "Organizations.h"
 #include "Populations.h"
+#include "PopulationEntitySubsystem.h"
 #include "Provinces.h"
 #include "Races.h"
 #include "ScenarioLoading.h"
@@ -64,6 +65,11 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 	UPopulations* PopulationsContainer = RtsGameState->GetPopulationsContainer();
 	PopulationsContainer->SetupEthnicities(Ethnicities);
 	PopulationsContainer->Setup(Pops);
+
+	if (UPopulationEntitySubsystem* PopulationEntities = GetWorld()->GetSubsystem<UPopulationEntitySubsystem>())
+	{
+		PopulationEntities->BindToTime(RtsGameState->GetTime());
+	}
 
 	// Banks first: independent of everything else, and characters/organizations below may open an
 	// account with one, so the FBankId their FBankAccountAsset resolves to must already exist.

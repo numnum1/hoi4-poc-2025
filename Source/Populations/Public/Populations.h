@@ -38,6 +38,9 @@ class POPULATIONS_API UPopulations : public UActorComponent
 public:
 	UPopulations();
 
+	virtual void InitializeComponent() override;
+	virtual void UninitializeComponent() override;
+
 	/** Fired once after Setup created every pop of the scenario. Create() alone stays silent — a
 	 * listener that wants the finished world would otherwise rebuild itself once per pop during
 	 * scenario load, the same reason UProvinces::OnProvincesSetup exists. */
@@ -51,6 +54,11 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FPopulationsEvent OnPopDestroyed;
+
+	/** Fired once per game hour that grew at least one pop — not once per pop. A listener that
+	 * cares about a specific pop's new size re-reads it through GetPopInfo/CollectPops. */
+	UPROPERTY(BlueprintAssignable)
+	FPopulationsSetupEvent OnPopulationsGrown;
 
 	//~ Ethnicity library ---------------------------------------------------------------------------
 
@@ -113,4 +121,6 @@ private:
 	TArray<FEthnicityInfo> Ethnicities;
 
 	UPopulationEntitySubsystem* GetEntities() const;
+
+	void HandlePopulationsGrown();
 };

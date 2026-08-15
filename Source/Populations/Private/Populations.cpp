@@ -23,12 +23,38 @@ UPopulations::UPopulations()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
+	bWantsInitializeComponent = true;
+}
+
+void UPopulations::InitializeComponent()
+{
+	Super::InitializeComponent();
+
+	if (UPopulationEntitySubsystem* Entities = GetEntities())
+	{
+		Entities->OnPopulationsGrown.AddUObject(this, &UPopulations::HandlePopulationsGrown);
+	}
+}
+
+void UPopulations::UninitializeComponent()
+{
+	if (UPopulationEntitySubsystem* Entities = GetEntities())
+	{
+		Entities->OnPopulationsGrown.RemoveAll(this);
+	}
+
+	Super::UninitializeComponent();
 }
 
 UPopulationEntitySubsystem* UPopulations::GetEntities() const
 {
 	const UWorld* World = GetWorld();
 	return World ? World->GetSubsystem<UPopulationEntitySubsystem>() : nullptr;
+}
+
+void UPopulations::HandlePopulationsGrown()
+{
+	OnPopulationsGrown.Broadcast();
 }
 
 void UPopulations::SetupEthnicities(const TArray<FEthnicityInfo>& InEthnicities)
@@ -99,7 +125,13 @@ FEthnicityId UPopulations::GetDominantEthnicity(const FProvinceId InProvinceId) 
 FPopId UPopulations::Create(const FPopSpawnData& InSpawnData)
 {
 	UPopulationEntitySubsystem* Entities = GetEntities();
-	return Entities ? Entities->CreatePop(InSpawnData) : FPopId();
+	if (Entities == nullptr)
+	{
+		return FPopId();
+	}
+
+	const float AnnualBirthRate = GetEthnicityInfo(InSpawnData.EthnicityId).AnnualBirthRate;
+	return Entities->CreatePop(InSpawnData, AnnualBirthRate);
 }
 
 void UPopulations::Setup(const TArray<FPopSpawnData>& InSpawnData)

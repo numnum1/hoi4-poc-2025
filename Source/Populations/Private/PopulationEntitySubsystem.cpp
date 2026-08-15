@@ -1,11 +1,15 @@
 #include "PopulationEntitySubsystem.h"
 
+#include "PopGrowthProcessor.h"
 #include "PopulationFragments.h"
+#include "Time.h"
 #include "MassEntityBuilder.h"
 #include "MassEntityManager.h"
 #include "MassEntitySubsystem.h"
 #include "MassEntityView.h"
 #include "MassExecutionContext.h"
+#include "MassExecutor.h"
+#include "MassProcessingContext.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRtsPopulations, Log, All);
 
@@ -30,8 +34,15 @@ void UPopulationEntitySubsystem::Initialize(FSubsystemCollectionBase& Collection
 
 void UPopulationEntitySubsystem::Deinitialize()
 {
+	if (Time)
+	{
+		Time->OnHourElapsed.RemoveDynamic(this, &UPopulationEntitySubsystem::HandleHourElapsed);
+		Time = nullptr;
+	}
+
 	EntityByIndex.Reset();
 	AliveIds.Reset();
+	SimProcessor = nullptr;
 	EntitySubsystem = nullptr;
 
 	Super::Deinitialize();
@@ -43,7 +54,7 @@ FMassEntityManager& UPopulationEntitySubsystem::GetEntityManager() const
 	return EntitySubsystem->GetMutableEntityManager();
 }
 
-FPopId UPopulationEntitySubsystem::CreatePop(const FPopSpawnData& InSpawnData)
+FPopId UPopulationEntitySubsystem::CreatePop(const FPopSpawnData& InSpawnData, const float InAnnualBirthRate)
 {
 	const FPopId NewId(EntityByIndex.Num());
 
@@ -60,12 +71,16 @@ FPopId UPopulationEntitySubsystem::CreatePop(const FPopSpawnData& InSpawnData)
 	FPopSizeFragment SizeFragment;
 	SizeFragment.Size = InSpawnData.Size;
 
+	FPopGrowthSharedFragment GrowthFragment;
+	GrowthFragment.AnnualBirthRate = InAnnualBirthRate;
+
 	UE::Mass::FEntityBuilder Builder = GetEntityManager().MakeEntityBuilder();
 	Builder.Add<FPopTag>()
 	       .Add<FPopIndexFragment>(IndexFragment)
 	       .Add<FPopProvinceFragment>(ProvinceFragment)
 	       .Add<FPopEthnicityFragment>(EthnicityFragment)
-	       .Add<FPopSizeFragment>(SizeFragment);
+	       .Add<FPopSizeFragment>(SizeFragment)
+	       .Add<FPopGrowthSharedFragment>(GrowthFragment);
 
 	EntityByIndex.Add(Builder.Commit());
 	AliveIds.Add(NewId);
@@ -83,6 +98,66 @@ void UPopulationEntitySubsystem::DestroyPop(const FPopId InPopId)
 	GetEntityManager().DestroyEntity(Entity);
 	EntityByIndex[InPopId.Value] = FMassEntityHandle();
 	AliveIds.RemoveSingle(InPopId);
+}
+
+void UPopulationEntitySubsystem::BindToTime(UTime* InTime)
+{
+	if (Time == InTime)
+	{
+		return;
+	}
+
+	if (Time)
+	{
+		Time->OnHourElapsed.RemoveDynamic(this, &UPopulationEntitySubsystem::HandleHourElapsed);
+	}
+
+	Time = InTime;
+
+	if (Time)
+	{
+		Time->OnHourElapsed.AddDynamic(this, &UPopulationEntitySubsystem::HandleHourElapsed);
+		// Baseline: the first crossed month applies growth for the time since binding, not since
+		// the epoch.
+		LastGrowthTime = Time->GetCurrentTime();
+	}
+}
+
+void UPopulationEntitySubsystem::HandleHourElapsed(const int32 InHoursElapsed)
+{
+	if (InHoursElapsed <= 0 || AliveIds.Num() == 0 || !Time)
+	{
+		return;
+	}
+
+	const FDateTime CurrentTime = Time->GetCurrentTime();
+
+	// Growth runs once per crossed calendar month, not every hour — at Speed 1000 that is the
+	// difference between one Mass query per month and one per hour. A jump of several months in one
+	// call (high Speed) is fine: the growth formula is continuous in elapsed hours regardless of how
+	// many month boundaries that spans.
+	const bool bCrossedMonth = CurrentTime.GetYear() != LastGrowthTime.GetYear()
+		|| CurrentTime.GetMonth() != LastGrowthTime.GetMonth();
+	if (!bCrossedMonth)
+	{
+		return;
+	}
+
+	const float ElapsedHours = static_cast<float>((CurrentTime - LastGrowthTime).GetTotalHours());
+	LastGrowthTime = CurrentTime;
+
+	if (!SimProcessor)
+	{
+		SimProcessor = NewObject<UPopGrowthProcessor>(this);
+		SimProcessor->CallInitialize(this, GetEntityManager().AsShared());
+	}
+
+	SimProcessor->SetElapsedHours(ElapsedHours);
+
+	UE::Mass::FProcessingContext ProcessingContext(GetEntityManager(), /*DeltaSeconds=*/0.f, /*bFlushCommandBuffer=*/true);
+	UE::Mass::Executor::Run(*SimProcessor, ProcessingContext);
+
+	OnPopulationsGrown.Broadcast();
 }
 
 namespace

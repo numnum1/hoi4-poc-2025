@@ -56,3 +56,17 @@ struct POPULATIONS_API FPopTag : public FMassTag
 {
 	GENERATED_BODY()
 };
+
+/**
+ * The annual birth rate for this pop's ethnicity. Const-shared rather than a per-entity fragment:
+ * every pop of the same ethnicity has the same rate, and Mass dedupes the fragment across them
+ * automatically. Resolved from FEthnicityInfo::AnnualBirthRate once, at CreatePop.
+ */
+USTRUCT()
+struct POPULATIONS_API FPopGrowthSharedFragment : public FMassConstSharedFragment
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	float AnnualBirthRate = 0.f;
+};

@@ -28,4 +28,9 @@ struct POPULATIONS_API FEthnicityInfo
 	/** Into URaces' library — the biology behind the culture. Invalid if the asset named no race. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FRaceId RaceId;
+
+	/** Net growth per year (births minus deaths) as a fraction — 0.02 means 2%/year. Shared by
+	 * every pop of this ethnicity via FPopGrowthSharedFragment. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AnnualBirthRate = 0.f;
 };

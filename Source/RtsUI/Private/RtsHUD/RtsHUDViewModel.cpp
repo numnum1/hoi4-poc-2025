@@ -153,6 +153,11 @@ void URtsHUDViewModel::HandlePopulationsSetup()
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
 }
 
+void URtsHUDViewModel::HandlePopulationsGrown()
+{
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+}
+
 void URtsHUDViewModel::HandlePopChanged(FPopId InPopId)
 {
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
@@ -186,6 +191,7 @@ void URtsHUDViewModel::BindFacades()
 	if (Populations)
 	{
 		Populations->OnPopulationsSetup.AddDynamic(this, &URtsHUDViewModel::HandlePopulationsSetup);
+		Populations->OnPopulationsGrown.AddDynamic(this, &URtsHUDViewModel::HandlePopulationsGrown);
 		Populations->OnPopSizeChanged.AddDynamic(this, &URtsHUDViewModel::HandlePopChanged);
 		Populations->OnPopDestroyed.AddDynamic(this, &URtsHUDViewModel::HandlePopChanged);
 	}
@@ -215,6 +221,7 @@ void URtsHUDViewModel::UnbindFacades()
 	if (Populations)
 	{
 		Populations->OnPopulationsSetup.RemoveAll(this);
+		Populations->OnPopulationsGrown.RemoveAll(this);
 		Populations->OnPopSizeChanged.RemoveAll(this);
 		Populations->OnPopDestroyed.RemoveAll(this);
 	}

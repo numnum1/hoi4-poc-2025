@@ -100,6 +100,9 @@ private:
 	void HandlePopulationsSetup();
 
 	UFUNCTION()
+	void HandlePopulationsGrown();
+
+	UFUNCTION()
 	void HandlePopChanged(FPopId InPopId);
 
 	void BindFacades();

@@ -9,6 +9,8 @@
 #include "PopulationEntitySubsystem.generated.h"
 
 class UMassEntitySubsystem;
+class UPopGrowthProcessor;
+class UTime;
 struct FMassEntityManager;
 
 /**
@@ -28,13 +30,18 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	/** Spawns one pop entity and returns the id it claims. Ids are never reused. */
-	FPopId CreatePop(const FPopSpawnData& InSpawnData);
+	/** Spawns one pop entity and returns the id it claims. Ids are never reused. InAnnualBirthRate
+	 * is the resolved rate for this pop's ethnicity — this subsystem does not know the ethnicity
+	 * library, so the caller (UPopulations::Create) looks it up first. */
+	FPopId CreatePop(const FPopSpawnData& InSpawnData, float InAnnualBirthRate);
 
 	/** Destroys the entity. The id's slot stays reserved and reports not-alive from then on. */
 	void DestroyPop(FPopId InPopId);
 
 	bool IsAlive(FPopId InPopId) const { return GetEntity(InPopId).IsValid(); }
+
+	/** Starts driving hourly growth off InTime. Safe to call once per scenario load. */
+	void BindToTime(UTime* InTime);
 
 	FMassEntityHandle GetEntity(FPopId InPopId) const
 	{
@@ -64,6 +71,16 @@ public:
 	/** Logs one pop's fragments. Backs the Rts.DumpPops console command. */
 	void LogPop(FPopId InPopId) const;
 
+	/**
+	 * Fired once per HandleHourElapsed run that touched at least one pop — not per pop. Growth can
+	 * move every pop in the world at once, and a payload-per-pop event would fire a whole world's
+	 * worth of broadcasts every game hour. Not a UPROPERTY — this is a world subsystem, not the
+	 * Blueprint-facing facade; UPopulations subscribes once and re-broadcasts as its own
+	 * BlueprintAssignable event, same relay shape as UCharacterEntitySubsystem::OnCharacterSimulated.
+	 */
+	DECLARE_MULTICAST_DELEGATE(FOnPopulationsGrown);
+	FOnPopulationsGrown OnPopulationsGrown;
+
 	FMassEntityManager& GetEntityManager() const;
 
 private:
@@ -71,8 +88,22 @@ private:
 	 * three collect-style getters cannot drift apart in what they consider a pop. */
 	void ForEachPop(TFunctionRef<void(const FPopInfo&)> InVisitor) const;
 
+	UFUNCTION()
+	void HandleHourElapsed(int32 InHoursElapsed);
+
 	UPROPERTY()
 	TObjectPtr<UMassEntitySubsystem> EntitySubsystem;
+
+	UPROPERTY()
+	TObjectPtr<UPopGrowthProcessor> SimProcessor;
+
+	UPROPERTY()
+	TObjectPtr<UTime> Time;
+
+	/** Growth is applied once per crossed calendar month, not every hour — see HandleHourElapsed.
+	 * This is the timestamp growth was last applied at; the gap to the current time is what the
+	 * growth formula treats as elapsed. */
+	FDateTime LastGrowthTime;
 
 	/** Id -> entity. The inverse lives on each entity as FPopIndexFragment. An invalid handle means
 	 * that slot's pop entity is gone; the slot itself is never removed. */

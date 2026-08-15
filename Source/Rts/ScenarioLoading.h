@@ -212,6 +212,7 @@ namespace ScenarioLoader
 			Info.EthnicityName = Ethnicity->GetEthnicityName();
 			Info.MapColor = Ethnicity->GetMapColor();
 			Info.RaceId = FRaceId(InRaceIndex.Find(Ethnicity->GetRace()));
+			Info.AnnualBirthRate = Ethnicity->GetAnnualBirthRate();
 			Res.Key.Add(MoveTemp(Info));
 		}
 

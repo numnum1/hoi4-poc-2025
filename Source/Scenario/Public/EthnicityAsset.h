@@ -39,10 +39,16 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	TObjectPtr<URaceAsset> Race;
 
+	/** Net growth per year (births minus deaths), as a fraction — 0.02 means 2%/year. Negative
+	 * values are a legal decline. No separate death rate in this first pass. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess, ClampMin="-1.0"))
+	float AnnualBirthRate = 0.f;
+
 public:
 	FORCEINLINE const FText& GetEthnicityName() const { return EthnicityName; }
 	FORCEINLINE const FColor& GetMapColor() const { return MapColor; }
 	FORCEINLINE URaceAsset* GetRace() const { return Race; }
+	FORCEINLINE float GetAnnualBirthRate() const { return AnnualBirthRate; }
 };
 
 /** One ethnicity's share of a province's people, authored on the province. */

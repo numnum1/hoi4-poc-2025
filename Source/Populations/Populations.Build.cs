@@ -14,7 +14,9 @@ public class Populations : ModuleRules
 				// does not depend on Provinces
 				"RtsCore",
 				"MassCore",
-				"MassEntity"
+				"MassEntity",
+				// UPopulationEntitySubsystem drives its growth processor off UTime::OnHourElapsed
+				"Time"
 			}
 		);
 
