@@ -4,8 +4,14 @@
 #include "Engine/DataAsset.h"
 #include "EthnicityAsset.generated.h"
 
+class URaceAsset;
+
 /**
  * One authored ethnicity — Dutch, German, Englishman.
+ *
+ * An ethnicity is a cultural subdivision of a race: many ethnicities share one race, and the race
+ * is what carries the biology (species, life type, ability modifiers). Dutch and German are both
+ * Human; a pop's abilities come from Race, its map color and identity from here.
  *
  * Data only, never behavior: what an ethnicity *does* (assimilation, unrest, migration pull) is
  * code, not an asset. The scenario discovers these through the province assets that place people of
@@ -28,9 +34,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
 	FColor MapColor;
 
+	/** The race these people are. Leaving it unset costs the pops their biology, so every authored
+	 * ethnicity should name one. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess))
+	TObjectPtr<URaceAsset> Race;
+
 public:
 	FORCEINLINE const FText& GetEthnicityName() const { return EthnicityName; }
 	FORCEINLINE const FColor& GetMapColor() const { return MapColor; }
+	FORCEINLINE URaceAsset* GetRace() const { return Race; }
 };
 
 /** One ethnicity's share of a province's people, authored on the province. */

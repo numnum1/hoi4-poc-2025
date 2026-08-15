@@ -11,7 +11,7 @@
  * game uses it.
  */
 UENUM(BlueprintType)
-enum class EMapType : uint8
+enum class EWorldMapType : uint8
 {
 	Globe,
 	FlatClamped,

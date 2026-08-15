@@ -109,7 +109,7 @@ bool ARtsMapPawn::TraceUnderCursor(FHitResult& OutHitResult)
 	const FVector Start = MousePosition;
 	// On a plane the ray has to be stretched by how steeply it comes in, or a shallow angle stops
 	// short of the ground; on the globe the arm length is already the distance to the surface.
-	const FVector End = MapReference->GetMapType() == EMapType::Globe
+	const FVector End = MapReference->GetMapType() == EWorldMapType::Globe
 		? MouseDirection * SpringArm->TargetArmLength + Start
 		: MouseDirection * (SpringArm->TargetArmLength / FMath::Abs(MouseDirection.Z)) + Start;
 
@@ -149,7 +149,7 @@ void ARtsMapPawn::AddMovement(const float InDeltaTime, const FVector& InDirectio
 		FVector2D(MinHeightRelativeMovementScale, MaxHeightRelativeMovementScale),
 		ArmLength - MapReference->MapRadius) * InDeltaTime;
 
-	if (MapReference->GetMapType() == EMapType::Globe)
+	if (MapReference->GetMapType() == EWorldMapType::Globe)
 	{
 		// Moving over a globe is rotating the camera around it, not translating it.
 		AddControllerYawInput(-InDirections.X * MovementScale * MoveSpeedGlobe);
@@ -219,7 +219,7 @@ void ARtsMapPawn::HandleMapTypeChanged(ARtsWorldMap* InMap)
 		return;
 	}
 
-	if (InMap->GetMapType() == EMapType::Globe)
+	if (InMap->GetMapType() == EWorldMapType::Globe)
 	{
 		GetController()->SetControlRotation(StartRotationGlobe);
 		SetActorLocation(FVector::ZeroVector);

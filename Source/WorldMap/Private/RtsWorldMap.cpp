@@ -202,11 +202,11 @@ void ARtsWorldMap::RebuildDynamicMaterials()
 	}
 }
 
-void ARtsWorldMap::SetMapType(const EMapType InMapType)
+void ARtsWorldMap::SetMapType(const EWorldMapType InMapType)
 {
 	MapType = InMapType;
 
-	const bool bIsGlobe = MapType == EMapType::Globe;
+	const bool bIsGlobe = MapType == EWorldMapType::Globe;
 	MapMesh->SetStaticMesh(bIsGlobe ? GlobeMesh : FlatMesh);
 	MapMesh->SetRelativeScale3D(bIsGlobe
 		? FVector(MapRadius, MapRadius, MapRadius) / 100.0f
@@ -226,7 +226,7 @@ void ARtsWorldMap::SetMapType(const EMapType InMapType)
 
 FVector2D ARtsWorldMap::VectorToUV(const FVector InImpactPoint) const
 {
-	if (MapType == EMapType::Globe)
+	if (MapType == EWorldMapType::Globe)
 	{
 		const FVector Normal = InImpactPoint.GetSafeNormal();
 		return FVector2D(

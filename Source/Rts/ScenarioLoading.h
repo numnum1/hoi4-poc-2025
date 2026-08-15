@@ -25,19 +25,23 @@
 
 namespace ScenarioLoader
 {
+	/**
+	 * The race library, discovered from everything that names a race: characters directly, and
+	 * provinces through the ethnicities of the people living in them. Both sources are needed —
+	 * an ethnicity's race that no character happens to have would otherwise be missing from the
+	 * library, and FEthnicityInfo::RaceId would come out invalid for it.
+	 */
 	__inline TTuple<TArray<FRaceCategory>, TArray<FLifeType>, TArray<FSpecies>, TArray<FRace>, TArray<URaceAsset*>>
-	ExtractRaces(const TArray<UCharacterAsset*>& InCharacters)
+	ExtractRaces(const TArray<UCharacterAsset*>& InCharacters, const TArray<UProvinceAsset*>& InProvinces)
 	{
 		TArray<URaceAsset*>        RaceAssets;
 		TArray<USpeciesAsset*>     SpeciesAssets;
 		TArray<ULifeTypeAsset*>    LifeTypeAssets;
 		TArray<URaceCategoryAsset*> CategoryAssets;
 
-		for (const UCharacterAsset* Char : InCharacters)
+		auto DiscoverRace = [&](URaceAsset* Race)
 		{
-			if (!Char) continue;
-			URaceAsset* Race = Char->GetBaseRace();
-			if (!Race || RaceAssets.Contains(Race)) continue;
+			if (!Race || RaceAssets.Contains(Race)) return;
 			RaceAssets.Add(Race);
 
 			USpeciesAsset* Sp = Race->GetSpecies();
@@ -52,6 +56,22 @@ namespace ScenarioLoader
 				if (URaceCategoryAsset* Cat = Sp->GetCategory())
 					if (!CategoryAssets.Contains(Cat))
 						CategoryAssets.Add(Cat);
+			}
+		};
+
+		for (const UCharacterAsset* Char : InCharacters)
+		{
+			if (!Char) continue;
+			DiscoverRace(Char->GetBaseRace());
+		}
+
+		for (const UProvinceAsset* Province : InProvinces)
+		{
+			if (!Province) continue;
+
+			for (const FProvincePopulationEntry& Entry : Province->GetPopulation())
+			{
+				if (Entry.Ethnicity) DiscoverRace(Entry.Ethnicity->GetRace());
 			}
 		}
 
@@ -163,9 +183,11 @@ namespace ScenarioLoader
 	 *
 	 * InProvinces must be the same array ExtractNationsAndProvinces was given: province ids are
 	 * positions in it, so the null-skipping below has to match that function's exactly or every pop
-	 * would land in the wrong province.
+	 * would land in the wrong province. InRaceIndex is the asset array ExtractRaces returned, so an
+	 * ethnicity's race resolves to the same FRaceId URaces stores it under.
 	 */
-	__inline TTuple<TArray<FEthnicityInfo>, TArray<FPopSpawnData>> ExtractPopulations(const TArray<UProvinceAsset*>& InProvinces)
+	__inline TTuple<TArray<FEthnicityInfo>, TArray<FPopSpawnData>> ExtractPopulations(const TArray<UProvinceAsset*>& InProvinces,
+	                                                                                  const TArray<URaceAsset*>& InRaceIndex)
 	{
 		TTuple<TArray<FEthnicityInfo>, TArray<FPopSpawnData>> Res;
 
@@ -189,6 +211,7 @@ namespace ScenarioLoader
 			FEthnicityInfo Info;
 			Info.EthnicityName = Ethnicity->GetEthnicityName();
 			Info.MapColor = Ethnicity->GetMapColor();
+			Info.RaceId = FRaceId(InRaceIndex.Find(Ethnicity->GetRace()));
 			Res.Key.Add(MoveTemp(Info));
 		}
 

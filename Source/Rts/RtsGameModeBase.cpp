@@ -45,7 +45,8 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 		return;
 	}
 	
-	const auto [Categories, LifeTypes, Species, Races, RaceIndexes] = ScenarioLoader::ExtractRaces(InScenario->GetCharacters());
+	const auto [Categories, LifeTypes, Species, Races, RaceIndexes] =
+		ScenarioLoader::ExtractRaces(InScenario->GetCharacters(), InScenario->GetProvinces());
 	URaces* RacesContainer = RtsGameState->GetRacesContainer();
 	RacesContainer->SetCategories(Categories);
 	RacesContainer->SetLifeTypes(LifeTypes);
@@ -59,7 +60,7 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 
 	// After the provinces: a pop names its province by id, and those ids are only handed out by the
 	// Setup above.
-	auto [Ethnicities, Pops] = ScenarioLoader::ExtractPopulations(InScenario->GetProvinces());
+	auto [Ethnicities, Pops] = ScenarioLoader::ExtractPopulations(InScenario->GetProvinces(), RaceIndexes);
 	UPopulations* PopulationsContainer = RtsGameState->GetPopulationsContainer();
 	PopulationsContainer->SetupEthnicities(Ethnicities);
 	PopulationsContainer->Setup(Pops);

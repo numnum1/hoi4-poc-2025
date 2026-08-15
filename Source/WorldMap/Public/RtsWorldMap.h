@@ -62,10 +62,10 @@ public:
 	static ARtsWorldMap* GetRtsWorldMap(const UObject* WorldContextObject);
 
 	UFUNCTION(BlueprintCallable, Category="World Map")
-	void SetMapType(EMapType InMapType);
+	void SetMapType(EWorldMapType InMapType);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="World Map")
-	EMapType GetMapType() const { return MapType; }
+	EWorldMapType GetMapType() const { return MapType; }
 
 	/** The camera pawn follows this to reset its framing when the projection changes. */
 	UPROPERTY(BlueprintAssignable, Category="World Map")
@@ -86,7 +86,7 @@ public:
 	TObjectPtr<UDataTable> ProvinceMapData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map Settings")
-	EMapType MapType = EMapType::Globe;
+	EWorldMapType MapType = EWorldMapType::Globe;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map Settings")
 	TObjectPtr<UStaticMesh> GlobeMesh;
