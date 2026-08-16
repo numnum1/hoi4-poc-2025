@@ -36,11 +36,6 @@ namespace
 	constexpr int32 LutWidth = 256;
 	constexpr int32 MaxLutHeight = 256;
 
-	int32 PackPixelId(const uint8 InRed, const uint8 InGreen)
-	{
-		return (static_cast<int32>(InRed) << 8) | static_cast<int32>(InGreen);
-	}
-
 	/** Patches individual pixels of a lookup texture on the render thread.
 	 *
 	 * Reading the whole texture back before writing it looks wasteful, and is: the cost sits in the
@@ -359,12 +354,11 @@ void ARtsWorldMap::EnsureMapDataLookup() const
 		// Keyed on the row name, not the row's own Name field: that field holds the map editor's
 		// label ("Arnhem"), while a province's MapId is the row key ("1893").
 		MapIdToPixelId.Add(Row.Key, PixelId);
-		PixelIdToMapId.Add(PackPixelId(PixelId.R, PixelId.G), Row.Key);
 		HighestPixelRow = FMath::Max(HighestPixelRow, static_cast<int32>(PixelId.G));
 	}
 }
 
-void ARtsWorldMap::EnsureProvinceLookup()
+void ARtsWorldMap::EnsureProvinceLookup() const
 {
 	EnsureMapDataLookup();
 
@@ -385,6 +379,7 @@ void ARtsWorldMap::EnsureProvinceLookup()
 		if (ProvinceId.IsValid())
 		{
 			ProvinceIdToPixelId.Add(ProvinceId, Entry.Value);
+			PixelIdToProvinceId.Add(Entry.Value, ProvinceId);
 		}
 	}
 
@@ -400,32 +395,27 @@ void ARtsWorldMap::EnsureProvinceLookup()
 
 FProvinceId ARtsWorldMap::ResolveProvinceAt(const FVector2D InUV)
 {
-	EnsureMapDataLookup();
-
-	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
-	if (ProvinceIdLookupTexture == nullptr || Provinces == nullptr || PixelIdToMapId.IsEmpty())
-	{
-		if (!bLookupFailureLogged)
-		{
-			bLookupFailureLogged = true;
-			UE_LOG(LogRtsWorldMap, Error,
-			       TEXT("%s cannot resolve clicks: ProvinceIdLookupTexture %s, provinces %s, %d known province colors."),
-			       *GetName(),
-			       ProvinceIdLookupTexture ? TEXT("set") : TEXT("missing"),
-			       Provinces ? TEXT("found") : TEXT("missing"),
-			       PixelIdToMapId.Num());
-		}
-		return FProvinceId();
-	}
-
 	FColor PixelColor;
 	if (!ReadLookupPixel(InUV, PixelColor))
 	{
 		return FProvinceId();
 	}
 
-	const FName* MapId = PixelIdToMapId.Find(PackPixelId(PixelColor.R, PixelColor.G));
-	return MapId ? Provinces->FindByMapId(*MapId) : FProvinceId();
+	return FindProvinceByColor(PixelColor);
+}
+
+FProvinceId ARtsWorldMap::FindProvinceByColor(const FColor& InProvinceColor) const
+{
+	EnsureProvinceLookup();
+
+	// Only red and green carry the id. A pixel read off the texture brings a blue and an alpha the
+	// table never declares, so those two channels are dropped rather than compared.
+	FMapPixelId PixelId;
+	PixelId.R = InProvinceColor.R;
+	PixelId.G = InProvinceColor.G;
+
+	const FProvinceId* ProvinceId = PixelIdToProvinceId.Find(PixelId);
+	return ProvinceId ? *ProvinceId : FProvinceId();
 }
 
 bool ARtsWorldMap::ReadLookupPixel(const FVector2D InUV, FColor& OutColor) const
@@ -677,21 +667,7 @@ void ARtsWorldMap::EnsureNationOwnershipLookup() const
 
 FNationId ARtsWorldMap::FindOwnerNationIdForProvinceColor(const FColor& InProvinceColor) const
 {
-	EnsureMapDataLookup();
-
-	const FName* MapId = PixelIdToMapId.Find(PackPixelId(InProvinceColor.R, InProvinceColor.G));
-	if (MapId == nullptr)
-	{
-		return FNationId();
-	}
-
-	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
-	if (Provinces == nullptr)
-	{
-		return FNationId();
-	}
-
-	const FProvinceId ProvinceId = Provinces->FindByMapId(*MapId);
+	const FProvinceId ProvinceId = FindProvinceByColor(InProvinceColor);
 	if (!ProvinceId.IsValid())
 	{
 		return FNationId();

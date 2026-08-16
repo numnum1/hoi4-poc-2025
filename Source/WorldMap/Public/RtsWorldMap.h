@@ -45,6 +45,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Province Lookup")
 	FProvinceId ResolveProvinceAt(FVector2D InUV);
 
+	/** The province a province-ID color belongs to, or an invalid id for water and for colors the
+	 * table does not list. Blue and alpha are ignored — only red and green carry the id. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Province Lookup")
+	FProvinceId FindProvinceByColor(const FColor& InProvinceColor) const;
+
 	/** The map table's Unit Position column for a province, straight off ProvinceMapData rather than
 	 * anything derived from the province-ID texture. False if the province or its row is unknown. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Province Lookup")
@@ -160,8 +165,9 @@ private:
 
 	/** Resolves the table against the loaded scenario, which is the only reason this is separate:
 	 * the table can be read the moment the map exists, but province ids only exist once the
-	 * scenario has been loaded. Stays empty and is retried until then. */
-	void EnsureProvinceLookup();
+	 * scenario has been loaded. Stays empty and is retried until then. Const (and its caches
+	 * mutable) so plain queries like FindProvinceByColor can use it without claiming to mutate. */
+	void EnsureProvinceLookup() const;
 
 	/** Translates the map table's adjacency lists into province ids once. Separate from
 	 * EnsureProvinceLookup for the same reason that one is separate: it needs the loaded scenario. */
@@ -202,13 +208,13 @@ private:
 	 * lazily by the const EnsureMapDataLookup. */
 	mutable TMap<FName, FMapPixelId> MapIdToPixelId;
 
-	/** The reverse, keyed on the red and green channels packed together: those two carry the id,
-	 * and a pixel sampled off the texture brings along a blue and alpha the table never declares. */
-	mutable TMap<int32, FName> PixelIdToMapId;
-
 	/** What painting actually goes through, so a repaint does not copy a whole FProvinceDisplayInfo
 	 * — FText, FSlateBrush and two object pointers — once per province just to read its MapId. */
-	TMap<FProvinceId, FMapPixelId> ProvinceIdToPixelId;
+	mutable TMap<FProvinceId, FMapPixelId> ProvinceIdToPixelId;
+
+	/** The reverse, and the whole of the resolve direction: a color sampled off the province-ID
+	 * texture straight to the province holding it, without the MapId hop in between. */
+	mutable TMap<FMapPixelId, FProvinceId> PixelIdToProvinceId;
 
 	/** Who borders whom, as the map table's FName adjacency lists resolve to province ids. Neighbours
 	 * outside the loaded scenario are dropped rather than kept as invalid ids. */
