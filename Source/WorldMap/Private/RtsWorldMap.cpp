@@ -22,11 +22,12 @@ DEFINE_LOG_CATEGORY_STATIC(LogRtsWorldMap, Log, All);
 
 namespace
 {
-	/** Red picks the column, green the row. Both are full 8-bit channels and the material feeds them
-	 * in as G/255 without rescaling, so the lookup textures have to span the whole range in both
-	 * directions — a shorter texture would fold every row above zero back onto row zero. */
+	/** Red picks the column, green the row, so the lookup textures are always this wide and a
+	 * province's green channel decides how tall they have to be. The height is not free to choose:
+	 * the map material derives the row from it, so a texture taller than the rows in use samples
+	 * empty space instead of the province's color. */
 	constexpr int32 LutWidth = 256;
-	constexpr int32 LutHeight = 256;
+	constexpr int32 MaxLutHeight = 256;
 
 	int32 PackPixelId(const uint8 InRed, const uint8 InGreen)
 	{
@@ -110,10 +111,10 @@ namespace
 			});
 	}
 
-	UCanvasRenderTarget2D* CreateLut(UObject* InOuter)
+	UCanvasRenderTarget2D* CreateLut(UObject* InOuter, const int32 InHeight)
 	{
 		UCanvasRenderTarget2D* Lut = UCanvasRenderTarget2D::CreateCanvasRenderTarget2D(
-			InOuter, UCanvasRenderTarget2D::StaticClass(), LutWidth, LutHeight);
+			InOuter, UCanvasRenderTarget2D::StaticClass(), LutWidth, InHeight);
 		if (Lut == nullptr)
 		{
 			return nullptr;
@@ -256,10 +257,22 @@ bool ARtsWorldMap::EnsureLuts()
 
 	if (PrimaryLut == nullptr)
 	{
-		PrimaryLut = CreateLut(this);
-		SecondaryLut = CreateLut(this);
-		NationalLut = CreateLut(this);
-		VfxLut = CreateLut(this);
+		// Exactly the rows in use, matching the plugin's ceil(NumProvinces / 256): the material reads
+		// the row off the texture's own height, so padding it out to 256 makes every province sample
+		// an empty row instead of its color.
+		const int32 Height = HighestPixelRow + 1;
+		if (Height > MaxLutHeight)
+		{
+			UE_LOG(LogRtsWorldMap, Error,
+				TEXT("%s: province ids reach row %d, but a lookup texture holds at most %d."),
+				*GetName(), HighestPixelRow, MaxLutHeight - 1);
+			return false;
+		}
+
+		PrimaryLut = CreateLut(this, Height);
+		SecondaryLut = CreateLut(this, Height);
+		NationalLut = CreateLut(this, Height);
+		VfxLut = CreateLut(this, Height);
 
 		if (PrimaryLut == nullptr || SecondaryLut == nullptr || NationalLut == nullptr || VfxLut == nullptr)
 		{
@@ -324,6 +337,7 @@ void ARtsWorldMap::EnsureMapDataLookup()
 		// label ("Arnhem"), while a province's MapId is the row key ("1893").
 		MapIdToPixelId.Add(Row.Key, PixelId);
 		PixelIdToMapId.Add(PackPixelId(PixelId.R, PixelId.G), Row.Key);
+		HighestPixelRow = FMath::Max(HighestPixelRow, static_cast<int32>(PixelId.G));
 	}
 }
 
@@ -431,45 +445,8 @@ void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>&
 		return;
 	}
 
-	if (!bPaintSuccessLogged)
-	{
-		bPaintSuccessLogged = true;
-		UE_LOG(LogRtsWorldMap, Log,
-			TEXT("%s paints %d of %d provinces; first is pixel (R=%d, G=%d) in %s."),
-			*GetName(), Rows.Num(), InVisuals.Num(), Rows[0].Id.R, Rows[0].Id.G, *Rows[0].Primary.ToString());
-	}
-
 	// Nothing is cleared first: the caller sends the provinces it wants changed, not the whole
 	// world, and clearing would black out every province missing from this batch.
-	WriteLutTexture(PrimaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Primary; });
-	WriteLutTexture(SecondaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Secondary; });
-	WriteLutTexture(NationalLut, Rows, [](const FMapLutEntry& InRow) { return InRow.National; });
-}
-
-void ARtsWorldMap::DebugPaintRandomColors()
-{
-	EnsureMapDataLookup();
-	if (!EnsureLuts())
-	{
-		UE_LOG(LogRtsWorldMap, Error, TEXT("%s: DebugPaintRandomColors could not ensure the LUTs."), *GetName());
-		return;
-	}
-
-	TArray<FMapLutEntry> Rows;
-	Rows.Reserve(MapIdToPixelId.Num());
-
-	for (const TPair<FName, FMapPixelId>& Entry : MapIdToPixelId)
-	{
-		FMapLutEntry Row;
-		Row.Id = Entry.Value;
-		Row.Primary = FColor::MakeRandomColor();
-		Row.Secondary = Row.Primary;
-		Row.National = Row.Primary;
-		Rows.Add(Row);
-	}
-
-	UE_LOG(LogRtsWorldMap, Log, TEXT("%s: DebugPaintRandomColors writing %d rows."), *GetName(), Rows.Num());
-
 	WriteLutTexture(PrimaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Primary; });
 	WriteLutTexture(SecondaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Secondary; });
 	WriteLutTexture(NationalLut, Rows, [](const FMapLutEntry& InRow) { return InRow.National; });
