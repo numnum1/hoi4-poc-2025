@@ -9,9 +9,13 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "PixelFormat.h"
 #include "RHICommandList.h"
 #include "RenderingThread.h"
 #include "TextureResource.h"
+#if WITH_EDITOR
+#include "TextureCompiler.h"
+#endif
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -177,6 +181,12 @@ ARtsWorldMap::ARtsWorldMap()
 	if (ProvinceIdTextureFinder.Succeeded())
 	{
 		ProvinceIdTexture = ProvinceIdTextureFinder.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UTexture2D> ProvinceIdLookupTextureFinder(TEXT("/BloodAnvil/Demo/Data/Map/ProvID/T_ProvID_Game_CPU.T_ProvID_Game_CPU"));
+	if (ProvinceIdLookupTextureFinder.Succeeded())
+	{
+		ProvinceIdLookupTexture = ProvinceIdLookupTextureFinder.Object;
 	}
 }
 
@@ -393,21 +403,108 @@ FProvinceId ARtsWorldMap::ResolveProvinceAt(const FVector2D InUV)
 	EnsureMapDataLookup();
 
 	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
-	if (ProvinceIdTexture == nullptr || Provinces == nullptr || PixelIdToMapId.IsEmpty())
+	if (ProvinceIdLookupTexture == nullptr || Provinces == nullptr || PixelIdToMapId.IsEmpty())
+	{
+		if (!bLookupFailureLogged)
+		{
+			bLookupFailureLogged = true;
+			UE_LOG(LogRtsWorldMap, Error,
+			       TEXT("%s cannot resolve clicks: ProvinceIdLookupTexture %s, provinces %s, %d known province colors."),
+			       *GetName(),
+			       ProvinceIdLookupTexture ? TEXT("set") : TEXT("missing"),
+			       Provinces ? TEXT("found") : TEXT("missing"),
+			       PixelIdToMapId.Num());
+		}
+		return FProvinceId();
+	}
+
+	FColor PixelColor;
+	if (!ReadLookupPixel(InUV, PixelColor))
 	{
 		return FProvinceId();
 	}
 
-	const int32 Width = ProvinceIdTexture->GetSizeX();
-	const int32 Height = ProvinceIdTexture->GetSizeY();
+	const FName* MapId = PixelIdToMapId.Find(PackPixelId(PixelColor.R, PixelColor.G));
+	return MapId ? Provinces->FindByMapId(*MapId) : FProvinceId();
+}
+
+bool ARtsWorldMap::ReadLookupPixel(const FVector2D InUV, FColor& OutColor) const
+{
+	if (ProvinceIdLookupTexture == nullptr)
+	{
+		LogLookupTextureUnreadable(TEXT("is not assigned"));
+		return false;
+	}
+
+	// A texture still being built hands out a 4x4 DXT1 placeholder rather than its real pixels, which
+	// would otherwise be reported as the wrong compression settings and send whoever reads that
+	// message off to change settings that were already correct.
+	if (ProvinceIdLookupTexture->IsDefaultTexture())
+	{
+#if WITH_EDITOR
+		FTextureCompilingManager::Get().FinishCompilation({ ProvinceIdLookupTexture.Get() });
+#endif
+		if (ProvinceIdLookupTexture->IsDefaultTexture())
+		{
+			LogLookupTextureUnreadable(TEXT("is still showing its placeholder — the texture never finished building"));
+			return false;
+		}
+	}
+
+	FTexturePlatformData* PlatformData = ProvinceIdLookupTexture->GetPlatformData();
+	if (PlatformData == nullptr || PlatformData->Mips.Num() == 0)
+	{
+		LogLookupTextureUnreadable(TEXT("has no platform data"));
+		return false;
+	}
+
+	// The pixels are indexed as FColor, so anything but BGRA8 would read neighbouring channels as a
+	// province id and silently resolve to the wrong province rather than to none.
+	if (PlatformData->PixelFormat != PF_B8G8R8A8)
+	{
+		LogLookupTextureUnreadable(*FString::Printf(
+			TEXT("is %s at %dx%d, not uncompressed BGRA8 — it needs Compression Settings VectorDisplacementmap (RGBA8) and a rebuild"),
+			GetPixelFormatString(PlatformData->PixelFormat),
+			PlatformData->Mips[0].SizeX, PlatformData->Mips[0].SizeY));
+		return false;
+	}
+
+	FTexture2DMipMap& Mip = PlatformData->Mips[0];
+	const void* Data = Mip.BulkData.LockReadOnly();
+	if (Data == nullptr)
+	{
+		// Unlocked even though there is nothing to read: the lock is taken either way, and leaving it
+		// held would make every later read fail too.
+		Mip.BulkData.Unlock();
+
+		// The usual cause is a texture that streams its mips: the bulk data is then owned by the
+		// streamer and simply not here to read.
+		LogLookupTextureUnreadable(TEXT("keeps no CPU copy of its pixels — tick Never Stream and turn mipmaps off"));
+		return false;
+	}
+
+	const int32 Width = Mip.SizeX;
+	const int32 Height = Mip.SizeY;
 	const int32 X = FMath::Clamp(FMath::FloorToInt(InUV.X * Width), 0, Width - 1);
 	const int32 Y = FMath::Clamp(FMath::FloorToInt(InUV.Y * Height), 0, Height - 1);
 
-	FColor PixelColor;
-	UBA_DataFunctions::FindColor(ProvinceIdTexture, X, Y, PixelColor);
+	OutColor = static_cast<const FColor*>(Data)[Y * Width + X];
+	Mip.BulkData.Unlock();
 
-	const FName* MapId = PixelIdToMapId.Find(PackPixelId(PixelColor.R, PixelColor.G));
-	return MapId ? Provinces->FindByMapId(*MapId) : FProvinceId();
+	return true;
+}
+
+void ARtsWorldMap::LogLookupTextureUnreadable(const TCHAR* InReason) const
+{
+	if (bLookupTextureFailureLogged)
+	{
+		return;
+	}
+
+	bLookupTextureFailureLogged = true;
+	UE_LOG(LogRtsWorldMap, Error,
+	       TEXT("%s: ProvinceIdLookupTexture (%s) %s, so no click can be resolved to a province."),
+	       *GetName(), *GetNameSafe(ProvinceIdLookupTexture), InReason);
 }
 
 void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals)

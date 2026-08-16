@@ -14,6 +14,8 @@
 #include "UObject/ConstructorHelpers.h"
 #include "UnrealClient.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogRtsMapPawn, Log, All);
+
 ARtsMapPawn::ARtsMapPawn()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -191,9 +193,17 @@ void ARtsMapPawn::HandleSelectStarted()
 	FHitResult HitResult;
 	if (!TraceUnderCursor(HitResult))
 	{
+		UE_LOG(LogRtsMapPawn, Verbose, TEXT("Click missed the globe entirely."));
 		OnProvinceClicked.Broadcast(FProvinceId());
 		return;
 	}
 
-	OnProvinceClicked.Broadcast(MapReference->ResolveProvinceAt(MapReference->VectorToUV(HitResult.ImpactPoint)));
+	const FVector2D UV = MapReference->VectorToUV(HitResult.ImpactPoint);
+	const FProvinceId ResolvedId = MapReference->ResolveProvinceAt(UV);
+	UE_LOG(LogRtsMapPawn, Verbose,
+	       TEXT("Click on %s at %s -> UV (%f, %f) -> province %d"),
+	       *GetNameSafe(HitResult.GetActor()), *HitResult.ImpactPoint.ToString(),
+	       UV.X, UV.Y, ResolvedId.Value);
+
+	OnProvinceClicked.Broadcast(ResolvedId);
 }

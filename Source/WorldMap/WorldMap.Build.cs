@@ -31,10 +31,9 @@ public class WorldMap : ModuleRules
 				// ARtsMapPawn binds the select action itself; only the .cpp needs the input types
 				"EnhancedInput",
 				// All that is left of the BloodAnvil plugin dependency: the DataTable row format its
-				// map editor writes (FProvinceMapDataGame) and the pixel read that resolves a click
-				// against the province-ID texture. The map and camera classes used to derive from the
-				// plugin's and no longer do — see ARtsWorldMap's class comment. Removable once the
-				// scenario converts that table into project data at load time.
+				// map editor writes (FProvinceMapDataGame). The map and camera classes used to derive
+				// from the plugin's and no longer do — see ARtsWorldMap's class comment. Removable once
+				// the scenario converts that table into project data at load time.
 				"BloodAnvil",
 				// Both directions of ARtsWorldMap's province lookup go through
 				// FProvinceDisplayInfo::MapId — an id to the pixel color the lookup tables are keyed

@@ -97,11 +97,21 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> MapMesh;
 
-	/** Sampled per pixel by the map material to tell provinces apart, and read on the CPU to resolve
-	 * clicks. Must stay uncompressed and CPU-readable (VectorDisplacementmap, sRGB off, no mips) —
-	 * ResolveProvinceAt reads its mip 0 directly. */
+	/** Sampled per pixel by the map material to tell provinces apart. This one is for the GPU only —
+	 * it may be compressed, streamed and mipped however the material needs, and nothing reads its
+	 * pixels on the CPU. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Province Lookup")
 	TObjectPtr<UTexture2D> ProvinceIdTexture;
+
+	/** The same province ids again, as a texture ResolveProvinceAt can read pixels out of.
+	 *
+	 * Separate from ProvinceIdTexture because the two have opposite requirements: the material wants
+	 * whatever format renders best, while a CPU read needs the mip 0 bulk data to still be there and
+	 * to be uncompressed BGRA8 — so this one must be VectorDisplacementmap, sRGB off, no mips, and
+	 * must not be streamed. Sampling goes through UVs, so it does not have to match the GPU texture's
+	 * resolution, only its layout. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Province Lookup")
+	TObjectPtr<UTexture2D> ProvinceIdLookupTexture;
 
 	/** Rows of FProvinceMapDataGame as the plugin's map editor writes them, keyed by the same names
 	 * FProvinceDisplayInfo::MapId carries. */
@@ -165,6 +175,12 @@ private:
 	 * other Ensure* lookups: NationNames is already pushed-in province ids, nothing to resolve. */
 	void EnsureNationOwnershipLookup() const;
 
+	/** The province-ID pixel at a map UV, straight off ProvinceIdLookupTexture's mip 0. False — with a
+	 * one-time explanation — when that texture is set up in a way the CPU cannot read. */
+	bool ReadLookupPixel(FVector2D InUV, FColor& OutColor) const;
+
+	void LogLookupTextureUnreadable(const TCHAR* InReason) const;
+
 	void RebuildDynamicMaterials();
 
 	UPROPERTY(Transient)
@@ -213,6 +229,10 @@ private:
 
 	/** So a map missing its assets is reported once, not per click. */
 	mutable bool bLookupFailureLogged = false;
+
+	/** Likewise for a lookup texture that is present but unreadable — a separate flag, because that is
+	 * a different fix than a missing asset and both would otherwise silence each other. */
+	mutable bool bLookupTextureFailureLogged = false;
 
 	/** Likewise for painting, which is retried on every repaint. */
 	bool bPaintFailureLogged = false;
