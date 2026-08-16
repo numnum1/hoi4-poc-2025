@@ -44,7 +44,15 @@ protected:
 private:
 	void HandleProvinceVisualsChanged(UObject* InViewModel, UE::FieldNotification::FFieldId InFieldId);
 
+	void HandleNationDataChanged(UObject* InViewModel, UE::FieldNotification::FFieldId InFieldId);
+
 	void PushProvinceVisuals();
+
+	void PushNationData();
+
+	/** The map widget, or null with a one-time error. Shared by both pushes so a HUD Blueprint whose
+	 * map widget is misnamed reports the cause once rather than once per pushed value. */
+	UWorldMapWidget* ResolveMapWidget();
 
 	UPROPERTY(Transient)
 	TObjectPtr<URtsHUDViewModel> HUDViewModel;
@@ -54,6 +62,10 @@ private:
 	 * textures in full — so a nation losing twenty provinces in one tick must not cost twenty of
 	 * those. */
 	bool bProvinceVisualsDirty = false;
+
+	/** Same coalescing as bProvinceVisualsDirty, and for the same reason: rebuilding the country
+	 * labels walks every nation's provinces. */
+	bool bNationDataDirty = false;
 
 	/** So the missing-map-widget error is reported once, not per repaint. */
 	bool bMissingMapWidgetLogged = false;

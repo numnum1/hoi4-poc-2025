@@ -468,6 +468,7 @@ void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>&
 void ARtsWorldMap::SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData)
 {
 	NationNames = InNationData;
+	GenerateCountryNames();
 }
 
 void ARtsWorldMap::EnsureAdjacencyLookup()
@@ -506,7 +507,14 @@ void ARtsWorldMap::EnsureAdjacencyLookup()
 			if (AdjacentId.IsValid())
 			{
 				Neighbours.Add(AdjacentId);
+				continue;
 			}
+
+			// Recorded rather than silently dropped: the map table covers the whole world while a
+			// scenario loads a corner of it, so most neighbours resolve to nothing — and a province
+			// whose neighbour the scenario does not know is exactly a province on the outer edge,
+			// which is what the zone border test is looking for.
+			ProvincesAdjacentToUnknown.Add(ProvinceId);
 		}
 	}
 }
@@ -628,7 +636,10 @@ bool ARtsWorldMap::GenerateMapNameZones(const TArray<FProvinceId>& InProvinces, 
 		}
 
 		TArray<int32> NeighbourZones;
-		bool bIsBordering = false;
+
+		// A neighbour outside the loaded scenario has no id to test against ProvinceSet below, so that
+		// case is answered from the set EnsureAdjacencyLookup filled instead.
+		bool bIsBordering = ProvincesAdjacentToUnknown.Contains(Province);
 
 		if (const TArray<FProvinceId>* Neighbours = ProvinceAdjacencies.Find(Province))
 		{
@@ -745,7 +756,16 @@ void ARtsWorldMap::GenerateCountryNameForZone(const FNationId& Id, const FWorldM
 	float LargestDistance = 0;
 	FVector2D Average = {0.f, 0.f};
 	// Find All Locations For Convex Hull & Find Average and Two furthest points
-	for (const FProvinceId& Bordering : Zone.Bordering)
+	// A zone with no border at all (every neighbour is the owner's own) still has to be labelled, so
+	// it falls back to the whole zone rather than dividing by an empty Points below — that produced a
+	// NaN average, and the NaN survived all the way into a texture lookup as an out-of-range index.
+	const TArray<FProvinceId>& Outline = Zone.Bordering.IsEmpty() ? Zone.Provinces : Zone.Bordering;
+	if (Outline.IsEmpty())
+	{
+		return;
+	}
+
+	for (const FProvinceId& Bordering : Outline)
 	{
 		FVector2D WorldPosition;
 		const bool Found = FindUnitPositonOfProvince(Bordering, WorldPosition);

@@ -30,6 +30,7 @@ void URtsHUDViewModel::Initialize()
 	RefreshMapModeEntries();
 
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetNationData);
 }
 
 void URtsHUDViewModel::BeginDestroy()
@@ -90,6 +91,36 @@ TMap<FProvinceId, FProvinceVisuals> URtsHUDViewModel::GetProvinceVisuals() const
 	return URtsMapModes::BuildVisuals(ActiveMapMode, Context);
 }
 
+TMap<FNationId, FWorldMapNationData> URtsHUDViewModel::GetNationData() const
+{
+	TMap<FNationId, FWorldMapNationData> Result;
+	if (Nations == nullptr || Provinces == nullptr)
+	{
+		return Result;
+	}
+
+	for (int32 Index = 0; Index < Nations->Num(); ++Index)
+	{
+		const FNationId NationId(Index);
+		if (!Nations->IsAlive(NationId))
+		{
+			continue;
+		}
+
+		FWorldMapNationData Data;
+		Data.Name = Nations->GetNationInfo(NationId).NationName;
+		Data.OwnedProvinces = Provinces->CollectProvincesOfNation(NationId);
+
+		// A nation without a single province has nothing on the map to label.
+		if (!Data.OwnedProvinces.IsEmpty())
+		{
+			Result.Add(NationId, MoveTemp(Data));
+		}
+	}
+
+	return Result;
+}
+
 void URtsHUDViewModel::RefreshMapModeEntries()
 {
 	const TArray<EMapMode> AvailableModes = URtsMapModes::GetMapModes();
@@ -126,11 +157,15 @@ void URtsHUDViewModel::HandleMapModeClicked(UMapModeEntryViewModel* InClickedEnt
 void URtsHUDViewModel::HandleProvincesSetup()
 {
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetNationData);
 }
 
 void URtsHUDViewModel::HandleProvinceChanged(FProvinceId InProvinceId)
 {
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+	// Which provinces a nation holds is what the country labels are laid out over, so a change of
+	// owner moves the labels, not just the colors.
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetNationData);
 }
 
 void URtsHUDViewModel::HandleOrganizationsChanged()
@@ -163,12 +198,22 @@ void URtsHUDViewModel::HandlePopChanged(FPopId InPopId)
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
 }
 
+void URtsHUDViewModel::HandleNationDestroyed(FNationId InNationId)
+{
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetNationData);
+}
+
 void URtsHUDViewModel::BindFacades()
 {
 	if (Provinces)
 	{
 		Provinces->OnProvincesSetup.AddDynamic(this, &URtsHUDViewModel::HandleProvincesSetup);
 		Provinces->OnOwningNationChanged.AddDynamic(this, &URtsHUDViewModel::HandleProvinceChanged);
+	}
+
+	if (Nations)
+	{
+		Nations->OnNationDestroyed.AddDynamic(this, &URtsHUDViewModel::HandleNationDestroyed);
 	}
 
 	if (Organizations)
@@ -203,6 +248,11 @@ void URtsHUDViewModel::UnbindFacades()
 	{
 		Provinces->OnProvincesSetup.RemoveAll(this);
 		Provinces->OnOwningNationChanged.RemoveAll(this);
+	}
+
+	if (Nations)
+	{
+		Nations->OnNationDestroyed.RemoveAll(this);
 	}
 
 	if (Organizations)

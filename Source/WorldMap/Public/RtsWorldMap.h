@@ -198,6 +198,10 @@ private:
 	 * outside the loaded scenario are dropped rather than kept as invalid ids. */
 	TMap<FProvinceId, TArray<FProvinceId>> ProvinceAdjacencies;
 
+	/** Provinces with at least one neighbour the loaded scenario does not know, which ProvinceAdjacencies
+	 * cannot express — those neighbours have no province id. Counts as bordering. */
+	TSet<FProvinceId> ProvincesAdjacentToUnknown;
+
 	/** Province id -> the map table's Unit Position column. See EnsureUnitPositionLookup. */
 	mutable TMap<FProvinceId, FVector2D> ProvinceUnitPositions;
 

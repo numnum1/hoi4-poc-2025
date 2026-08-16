@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "MapModes/MapModeType.h"
+#include "MapTypes.h"
 #include "MVVMViewModelBase.h"
 #include "PlayedCharacterView/PlayerCharacterViewModel.h"
 #include "ProvinceVisuals.h"
@@ -54,6 +55,11 @@ public:
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
 	TMap<FProvinceId, FProvinceVisuals> GetProvinceVisuals() const;
 
+	/** Every living nation's name and the provinces it holds, for the map's country labels. Computed
+	 * on demand for the same reason ProvinceVisuals is — see the class comment. */
+	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
+	TMap<FNationId, FWorldMapNationData> GetNationData() const;
+
 protected:
 	virtual void BeginDestroy() override;
 
@@ -104,6 +110,9 @@ private:
 
 	UFUNCTION()
 	void HandlePopChanged(FPopId InPopId);
+
+	UFUNCTION()
+	void HandleNationDestroyed(FNationId InNationId);
 
 	void BindFacades();
 	void UnbindFacades();

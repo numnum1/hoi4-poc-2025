@@ -43,6 +43,14 @@ void UWorldMapWidget::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisual
 	}
 }
 
+void UWorldMapWidget::SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData)
+{
+	if (ARtsWorldMap* WorldMap = ARtsWorldMap::GetRtsWorldMap(this))
+	{
+		WorldMap->SetNationData(InNationData);
+	}
+}
+
 void UWorldMapWidget::HandleProvinceClicked(const FProvinceId InProvinceId)
 {
 	OnProvinceClicked.Broadcast(InProvinceId);
