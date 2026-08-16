@@ -315,7 +315,7 @@ bool ARtsWorldMap::EnsureLuts()
 	return true;
 }
 
-void ARtsWorldMap::EnsureMapDataLookup()
+void ARtsWorldMap::EnsureMapDataLookup() const
 {
 	if (!MapIdToPixelId.IsEmpty())
 	{
@@ -552,6 +552,50 @@ bool ARtsWorldMap::FindUnitPositonOfProvince(const FProvinceId& ProvinceId, FVec
 
 	OutUnitPosition = *Position;
 	return true;
+}
+
+void ARtsWorldMap::EnsureNationOwnershipLookup() const
+{
+	if (!ProvinceOwnerNationId.IsEmpty() || NationNames.IsEmpty())
+	{
+		return;
+	}
+
+	for (const TPair<FNationId, FWorldMapNationData>& Entry : NationNames)
+	{
+		for (const FProvinceId& OwnedProvince : Entry.Value.OwnedProvinces)
+		{
+			ProvinceOwnerNationId.Add(OwnedProvince, Entry.Key);
+		}
+	}
+}
+
+FNationId ARtsWorldMap::FindOwnerNationIdForProvinceColor(const FColor& InProvinceColor) const
+{
+	EnsureMapDataLookup();
+
+	const FName* MapId = PixelIdToMapId.Find(PackPixelId(InProvinceColor.R, InProvinceColor.G));
+	if (MapId == nullptr)
+	{
+		return FNationId();
+	}
+
+	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
+	if (Provinces == nullptr)
+	{
+		return FNationId();
+	}
+
+	const FProvinceId ProvinceId = Provinces->FindByMapId(*MapId);
+	if (!ProvinceId.IsValid())
+	{
+		return FNationId();
+	}
+
+	EnsureNationOwnershipLookup();
+
+	const FNationId* NationId = ProvinceOwnerNationId.Find(ProvinceId);
+	return NationId ? *NationId : FNationId();
 }
 
 bool ARtsWorldMap::GenerateMapNameZones(const TArray<FProvinceId>& InProvinces, TArray<FMapNameZone>& OutZones)

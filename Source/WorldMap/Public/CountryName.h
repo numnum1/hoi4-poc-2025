@@ -35,4 +35,8 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category="Country Name")
 	TArray<FNationId> OwnerTags;
+	
+protected:
+	UFUNCTION(BlueprintImplementableEvent)
+	void Refresh();
 };

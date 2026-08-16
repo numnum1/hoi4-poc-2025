@@ -13,4 +13,6 @@ void ACountryName::Initialize(const TArray<FVector>& InPoints, const FText& InNa
 	Name = InName;
 	Map = InMap;
 	OwnerTags = InOwnerTags;
+	
+	Refresh();
 }

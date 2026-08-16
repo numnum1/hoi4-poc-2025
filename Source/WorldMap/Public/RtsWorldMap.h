@@ -50,6 +50,11 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Province Lookup")
 	bool FindUnitPositonOfProvince(const FProvinceId& ProvinceId, FVector2D& OutUnitPosition) const;
 
+	/** The nation owning the province a province-ID texture pixel belongs to, or an invalid id for
+	 * water and for provinces no nation in NationNames claims. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Province Lookup")
+	FNationId FindOwnerNationIdForProvinceColor(const FColor& InProvinceColor) const;
+
 	/** Paints the given provinces and leaves every other province untouched. A province the table
 	 * does not know is skipped rather than painted black. */
 	UFUNCTION(BlueprintCallable, Category="World Map")
@@ -138,8 +143,10 @@ private:
 	bool EnsureLuts();
 
 	/** Reads the province table once. Nothing authored there changes at runtime, so this never has
-	 * to be rebuilt. */
-	void EnsureMapDataLookup();
+	 * to be rebuilt. Const (and its caches mutable) so const lookups like
+	 * FindOwnerNationIdForProvinceColor can use the same pixel resolution as everything else, instead
+	 * of duplicating it. */
+	void EnsureMapDataLookup() const;
 
 	/** Resolves the table against the loaded scenario, which is the only reason this is separate:
 	 * the table can be read the moment the map exists, but province ids only exist once the
@@ -153,6 +160,10 @@ private:
 	/** Reads the map table's Unit Position column once, keyed by province id. Kept const (and its
 	 * cache mutable) since FindUnitPositonOfProvince is a plain query, not a mutation. */
 	void EnsureUnitPositionLookup() const;
+
+	/** Builds the reverse of NationNames' OwnedProvinces once. No scenario dependency, unlike the
+	 * other Ensure* lookups: NationNames is already pushed-in province ids, nothing to resolve. */
+	void EnsureNationOwnershipLookup() const;
 
 	void RebuildDynamicMaterials();
 
@@ -171,12 +182,13 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UCanvasRenderTarget2D> VfxLut;
 
-	/** MapId -> the province-ID pixel the lookup textures key their rows on. */
-	TMap<FName, FMapPixelId> MapIdToPixelId;
+	/** MapId -> the province-ID pixel the lookup textures key their rows on. Mutable: populated
+	 * lazily by the const EnsureMapDataLookup. */
+	mutable TMap<FName, FMapPixelId> MapIdToPixelId;
 
 	/** The reverse, keyed on the red and green channels packed together: those two carry the id,
 	 * and a pixel sampled off the texture brings along a blue and alpha the table never declares. */
-	TMap<int32, FName> PixelIdToMapId;
+	mutable TMap<int32, FName> PixelIdToMapId;
 
 	/** What painting actually goes through, so a repaint does not copy a whole FProvinceDisplayInfo
 	 * — FText, FSlateBrush and two object pointers — once per province just to read its MapId. */
@@ -189,11 +201,14 @@ private:
 	/** Province id -> the map table's Unit Position column. See EnsureUnitPositionLookup. */
 	mutable TMap<FProvinceId, FVector2D> ProvinceUnitPositions;
 
+	/** Province id -> the nation owning it, per NationNames. See EnsureNationOwnershipLookup. */
+	mutable TMap<FProvinceId, FNationId> ProvinceOwnerNationId;
+
 	/** The tallest row any province occupies, which is what decides the lookup textures' height. */
-	int32 HighestPixelRow = 0;
+	mutable int32 HighestPixelRow = 0;
 
 	/** So a map missing its assets is reported once, not per click. */
-	bool bLookupFailureLogged = false;
+	mutable bool bLookupFailureLogged = false;
 
 	/** Likewise for painting, which is retried on every repaint. */
 	bool bPaintFailureLogged = false;
