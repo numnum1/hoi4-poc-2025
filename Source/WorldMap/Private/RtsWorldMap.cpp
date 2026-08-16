@@ -158,7 +158,10 @@ ARtsWorldMap::ARtsWorldMap()
 	// MapMesh->GetNumMaterials(), which is 0 until a static mesh is assigned.
 	MapMesh->SetStaticMesh(GlobeMesh);
 
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> MapMaterialFinder(TEXT("/BloodAnvil/Art/Materials/Mat_Map.Mat_Map"));
+	// The instance, not Mat_Map itself: the province view is selected by a static switch, and a
+	// UMaterialInstanceDynamic created from the base material cannot override one — static switches
+	// pick a shader permutation at compile time. Mat_Map alone renders the terrain without provinces.
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> MapMaterialFinder(TEXT("/BloodAnvil/Art/Materials/Instances/Mat_Map_Province.Mat_Map_Province"));
 	if (MapMaterialFinder.Succeeded())
 	{
 		MapMaterials.Add(MapMaterialFinder.Object);
@@ -428,8 +431,45 @@ void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>&
 		return;
 	}
 
+	if (!bPaintSuccessLogged)
+	{
+		bPaintSuccessLogged = true;
+		UE_LOG(LogRtsWorldMap, Log,
+			TEXT("%s paints %d of %d provinces; first is pixel (R=%d, G=%d) in %s."),
+			*GetName(), Rows.Num(), InVisuals.Num(), Rows[0].Id.R, Rows[0].Id.G, *Rows[0].Primary.ToString());
+	}
+
 	// Nothing is cleared first: the caller sends the provinces it wants changed, not the whole
 	// world, and clearing would black out every province missing from this batch.
+	WriteLutTexture(PrimaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Primary; });
+	WriteLutTexture(SecondaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Secondary; });
+	WriteLutTexture(NationalLut, Rows, [](const FMapLutEntry& InRow) { return InRow.National; });
+}
+
+void ARtsWorldMap::DebugPaintRandomColors()
+{
+	EnsureMapDataLookup();
+	if (!EnsureLuts())
+	{
+		UE_LOG(LogRtsWorldMap, Error, TEXT("%s: DebugPaintRandomColors could not ensure the LUTs."), *GetName());
+		return;
+	}
+
+	TArray<FMapLutEntry> Rows;
+	Rows.Reserve(MapIdToPixelId.Num());
+
+	for (const TPair<FName, FMapPixelId>& Entry : MapIdToPixelId)
+	{
+		FMapLutEntry Row;
+		Row.Id = Entry.Value;
+		Row.Primary = FColor::MakeRandomColor();
+		Row.Secondary = Row.Primary;
+		Row.National = Row.Primary;
+		Rows.Add(Row);
+	}
+
+	UE_LOG(LogRtsWorldMap, Log, TEXT("%s: DebugPaintRandomColors writing %d rows."), *GetName(), Rows.Num());
+
 	WriteLutTexture(PrimaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Primary; });
 	WriteLutTexture(SecondaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Secondary; });
 	WriteLutTexture(NationalLut, Rows, [](const FMapLutEntry& InRow) { return InRow.National; });

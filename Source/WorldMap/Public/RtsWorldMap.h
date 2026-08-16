@@ -49,6 +49,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals);
 
+	/** TEMPORARY diagnostic: paints every row of ProvinceMapData a random color, bypassing
+	 * FProvinceId/UProvinces entirely. Isolates the LUT/material rendering from the scenario's
+	 * province lookup, to tell whether the two problems are the same problem or two different ones.
+	 * Runs from the editor toolbar (CallInEditor) without needing PIE. Remove once the map paints. */
+	UFUNCTION(CallInEditor, Category="World Map|Debug")
+	void DebugPaintRandomColors();
+
 	/** Where a world-space hit lands in map UV space. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="World Map")
 	FVector2D VectorToUV(FVector InImpactPoint) const;
@@ -142,4 +149,8 @@ private:
 
 	/** Likewise for painting, which is retried on every repaint. */
 	bool bPaintFailureLogged = false;
+
+	/** The counterpart, so a run that paints nothing can be told from one that paints and is not
+	 * visible — the two look identical on screen. */
+	bool bPaintSuccessLogged = false;
 };
