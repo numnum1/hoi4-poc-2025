@@ -2,6 +2,7 @@
 
 #include "BA_DataFunctions.h"
 #include "Components/StaticMeshComponent.h"
+#include "CountryName.h"
 #include "Engine/CanvasRenderTarget2D.h"
 #include "Engine/DataTable.h"
 #include "Engine/StaticMesh.h"
@@ -450,6 +451,11 @@ void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>&
 	WriteLutTexture(PrimaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Primary; });
 	WriteLutTexture(SecondaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Secondary; });
 	WriteLutTexture(NationalLut, Rows, [](const FMapLutEntry& InRow) { return InRow.National; });
+}
+
+void ARtsWorldMap::GenerateCountryNames()
+{
+	
 }
 
 ARtsWorldMap* ARtsWorldMap::GetRtsWorldMap(const UObject* WorldContextObject)

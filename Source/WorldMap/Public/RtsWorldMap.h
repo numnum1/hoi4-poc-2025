@@ -7,6 +7,7 @@
 #include "RtsIds.h"
 #include "RtsWorldMap.generated.h"
 
+class ACountryName;
 class UCanvasRenderTarget2D;
 class UDataTable;
 class UMaterialInstanceDynamic;
@@ -48,6 +49,11 @@ public:
 	 * does not know is skipped rather than painted black. */
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals);
+
+	/** Spawns one ACountryName per entry and hands it its label points, its text and its owner tags.
+	 * Where the points along a country's shape actually come from is not decided yet. */
+	UFUNCTION(BlueprintCallable, Category="World Map")
+	void GenerateCountryNames();
 
 	/** Where a world-space hit lands in map UV space. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="World Map")
