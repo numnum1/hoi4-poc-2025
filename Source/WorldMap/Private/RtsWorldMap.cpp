@@ -1,5 +1,6 @@
 #include "RtsWorldMap.h"
 
+#include "AssetTypeCategories.h"
 #include "BA_DataFunctions.h"
 #include "Components/StaticMeshComponent.h"
 #include "CountryName.h"
@@ -17,6 +18,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Provinces.h"
 #include "RtsGameStateComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "UObject/ConstructorHelpers.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRtsWorldMap, Log, All);
@@ -42,7 +44,7 @@ namespace
 	 * target has no partial-update path that survives the next frame — which is why callers batch
 	 * their changes into one call instead of writing province by province.
 	 */
-	template<typename ColorGetter>
+	template <typename ColorGetter>
 	void WriteLutTexture(UCanvasRenderTarget2D* InRenderTarget, const TArray<FMapLutEntry>& InRows, ColorGetter InGetColor)
 	{
 		if (InRenderTarget == nullptr)
@@ -248,6 +250,16 @@ FVector2D ARtsWorldMap::VectorToUV(const FVector InImpactPoint) const
 		FMath::Asin(-Normal.Z) / PI + 0.5f);
 }
 
+FVector ARtsWorldMap::UVToLocation(const FVector2D InUV) const
+{
+	const float Theta = InUV.X * 2.0f * PI;
+	const float Phi = InUV.Y * PI;
+	return FVector(
+		-MapRadius * FMath::Sin(Phi) * FMath::Sin(Theta),
+		-MapRadius * FMath::Sin(Phi) * FMath::Cos(Theta),
+		MapRadius * FMath::Cos(Phi));
+}
+
 bool ARtsWorldMap::EnsureLuts()
 {
 	EnsureMapDataLookup();
@@ -265,8 +277,8 @@ bool ARtsWorldMap::EnsureLuts()
 		if (Height > MaxLutHeight)
 		{
 			UE_LOG(LogRtsWorldMap, Error,
-				TEXT("%s: province ids reach row %d, but a lookup texture holds at most %d."),
-				*GetName(), HighestPixelRow, MaxLutHeight - 1);
+			       TEXT("%s: province ids reach row %d, but a lookup texture holds at most %d."),
+			       *GetName(), HighestPixelRow, MaxLutHeight - 1);
 			return false;
 		}
 
@@ -316,8 +328,8 @@ void ARtsWorldMap::EnsureMapDataLookup()
 		{
 			bLookupFailureLogged = true;
 			UE_LOG(LogRtsWorldMap, Error,
-				TEXT("%s has no ProvinceMapData assigned, so no province can be resolved or painted."),
-				*GetName());
+			       TEXT("%s has no ProvinceMapData assigned, so no province can be resolved or painted."),
+			       *GetName());
 		}
 		return;
 	}
@@ -371,8 +383,8 @@ void ARtsWorldMap::EnsureProvinceLookup()
 	if (ProvinceIdToPixelId.IsEmpty())
 	{
 		UE_LOG(LogRtsWorldMap, Error,
-			TEXT("%s: none of the %d names in ProvinceMapData match a province MapId of the loaded scenario."),
-			*GetName(), MapIdToPixelId.Num());
+		       TEXT("%s: none of the %d names in ProvinceMapData match a province MapId of the loaded scenario."),
+		       *GetName(), MapIdToPixelId.Num());
 	}
 }
 
@@ -409,8 +421,8 @@ void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>&
 		{
 			bPaintFailureLogged = true;
 			UE_LOG(LogRtsWorldMap, Error,
-				TEXT("%s cannot paint: lookup textures %s, province lookup holds %d entries."),
-				*GetName(), bHasLuts ? TEXT("ready") : TEXT("missing"), ProvinceIdToPixelId.Num());
+			       TEXT("%s cannot paint: lookup textures %s, province lookup holds %d entries."),
+			       *GetName(), bHasLuts ? TEXT("ready") : TEXT("missing"), ProvinceIdToPixelId.Num());
 		}
 		return;
 	}
@@ -440,8 +452,8 @@ void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>&
 		{
 			bPaintFailureLogged = true;
 			UE_LOG(LogRtsWorldMap, Error,
-				TEXT("%s: none of the %d provinces handed in are in the province-ID table."),
-				*GetName(), InVisuals.Num());
+			       TEXT("%s: none of the %d provinces handed in are in the province-ID table."),
+			       *GetName(), InVisuals.Num());
 		}
 		return;
 	}
@@ -453,9 +465,286 @@ void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>&
 	WriteLutTexture(NationalLut, Rows, [](const FMapLutEntry& InRow) { return InRow.National; });
 }
 
+void ARtsWorldMap::SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData)
+{
+	NationNames = InNationData;
+}
+
+void ARtsWorldMap::EnsureAdjacencyLookup()
+{
+	EnsureProvinceLookup();
+
+	if (!ProvinceAdjacencies.IsEmpty() || ProvinceIdToPixelId.IsEmpty() || ProvinceMapData == nullptr)
+	{
+		return;
+	}
+
+	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
+	if (Provinces == nullptr)
+	{
+		return;
+	}
+
+	for (const TPair<FName, uint8*>& Row : ProvinceMapData->GetRowMap())
+	{
+		const FProvinceMapDataGame* MapData = reinterpret_cast<FProvinceMapDataGame*>(Row.Value);
+		if (MapData == nullptr)
+		{
+			continue;
+		}
+
+		const FProvinceId ProvinceId = Provinces->FindByMapId(Row.Key);
+		if (!ProvinceId.IsValid())
+		{
+			continue;
+		}
+
+		TArray<FProvinceId>& Neighbours = ProvinceAdjacencies.Add(ProvinceId);
+		for (const FName& AdjacentMapId : MapData->Adjacencies.Adjacency)
+		{
+			const FProvinceId AdjacentId = Provinces->FindByMapId(AdjacentMapId);
+			if (AdjacentId.IsValid())
+			{
+				Neighbours.Add(AdjacentId);
+			}
+		}
+	}
+}
+
+void ARtsWorldMap::EnsureUnitPositionLookup() const
+{
+	if (!ProvinceUnitPositions.IsEmpty() || ProvinceMapData == nullptr)
+	{
+		return;
+	}
+
+	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
+	if (Provinces == nullptr)
+	{
+		return;
+	}
+
+	for (const TPair<FName, uint8*>& Row : ProvinceMapData->GetRowMap())
+	{
+		const FProvinceMapDataGame* MapData = reinterpret_cast<FProvinceMapDataGame*>(Row.Value);
+		if (MapData == nullptr)
+		{
+			continue;
+		}
+
+		const FProvinceId ProvinceId = Provinces->FindByMapId(Row.Key);
+		if (ProvinceId.IsValid())
+		{
+			ProvinceUnitPositions.Add(ProvinceId, MapData->UnitPosition);
+		}
+	}
+}
+
+bool ARtsWorldMap::FindUnitPositonOfProvince(const FProvinceId& ProvinceId, FVector2D& OutUnitPosition) const
+{
+	EnsureUnitPositionLookup();
+
+	const FVector2D* Position = ProvinceUnitPositions.Find(ProvinceId);
+	if (Position == nullptr)
+	{
+		return false;
+	}
+
+	OutUnitPosition = *Position;
+	return true;
+}
+
+bool ARtsWorldMap::GenerateMapNameZones(const TArray<FProvinceId>& InProvinces, TArray<FMapNameZone>& OutZones)
+{
+	EnsureAdjacencyLookup();
+	if (ProvinceAdjacencies.IsEmpty())
+	{
+		return false;
+	}
+
+	TMap<FProvinceId, int32> ProvinceToZone;
+
+	// Not TSet<FProvinceId>(InProvinces): that constructor form trips a known MSVC bug, see the note
+	// atop Containers/Set.h.
+	TSet<FProvinceId> ProvinceSet = TSet<FProvinceId>(TArray<FProvinceId>(InProvinces));
+
+	for (int32 ZoneIndex = 0; ZoneIndex < OutZones.Num(); ++ZoneIndex)
+	{
+		for (const FProvinceId& Province : OutZones[ZoneIndex].Provinces)
+		{
+			ProvinceToZone.Add(Province, ZoneIndex);
+		}
+	}
+
+	for (const FProvinceId& Province : InProvinces)
+	{
+		if (ProvinceToZone.Contains(Province))
+		{
+			continue;
+		}
+
+		TArray<int32> NeighbourZones;
+		bool bIsBordering = false;
+
+		if (const TArray<FProvinceId>* Neighbours = ProvinceAdjacencies.Find(Province))
+		{
+			for (const FProvinceId& Neighbour : *Neighbours)
+			{
+				if (const int32* ZoneIndex = ProvinceToZone.Find(Neighbour))
+				{
+					NeighbourZones.AddUnique(*ZoneIndex);
+				}
+
+				if (!ProvinceSet.Contains(Neighbour))
+				{
+					bIsBordering = true;
+				}
+			}
+		}
+
+		if (NeighbourZones.IsEmpty())
+		{
+			FMapNameZone NewZone;
+			NewZone.Provinces.Add(Province);
+			if (bIsBordering)
+			{
+				NewZone.Bordering.Add(Province);
+			}
+
+			ProvinceToZone.Add(Province, OutZones.Num());
+			OutZones.Add(MoveTemp(NewZone));
+			continue;
+		}
+
+		// Bridging two zones that were only separate because nothing had joined them yet: the province
+		// joins the first and every other zone it touches is folded into that one.
+		const int32 PrimaryZone = NeighbourZones[0];
+		OutZones[PrimaryZone].Provinces.Add(Province);
+		ProvinceToZone.Add(Province, PrimaryZone);
+
+		if (bIsBordering)
+		{
+			OutZones[PrimaryZone].Bordering.Add(Province);
+		}
+
+		for (int32 i = 1; i < NeighbourZones.Num(); ++i)
+		{
+			const int32 MergeZone = NeighbourZones[i];
+			if (!OutZones.IsValidIndex(MergeZone) || MergeZone == PrimaryZone)
+			{
+				continue;
+			}
+
+			for (const FProvinceId& MergedProvince : OutZones[MergeZone].Provinces)
+			{
+				OutZones[PrimaryZone].Provinces.Add(MergedProvince);
+				ProvinceToZone[MergedProvince] = PrimaryZone;
+			}
+
+			OutZones[PrimaryZone].Bordering.Append(OutZones[MergeZone].Bordering);
+
+			// Emptied rather than removed: the indices in ProvinceToZone and NeighbourZones would all
+			// shift. The empty zones are dropped in one pass at the end.
+			OutZones[MergeZone].Provinces.Empty();
+			OutZones[MergeZone].Bordering.Empty();
+		}
+	}
+
+	OutZones.RemoveAll([](const FMapNameZone& InZone) { return InZone.Provinces.IsEmpty(); });
+	return true;
+}
+
 void ARtsWorldMap::GenerateCountryNames()
 {
-	
+	for (auto [NationId, WorldMapNationData] : NationNames)
+		GenerateCountryName(NationId, WorldMapNationData);
+}
+
+void ARtsWorldMap::GenerateCountryName(const FNationId& Id, const FWorldMapNationData& Data)
+{
+	TArray<FNationId> TraceOverTags = {};
+	TraceOverTags.Add(Id);
+
+	if (!true) // Placeholder for when not to render a countries name (for example, too small, or subject)
+	{
+		return;
+	}
+
+	TArray<FProvinceId> Provinces = Data.OwnedProvinces;
+	/*
+	 * For later
+	 *
+	 * for (Subject : Data.Subjects) Provinces.Append(Subject.Provinces);
+	 */
+
+	TArray<FMapNameZone> Zones = {};
+	const bool bSuccess = GenerateMapNameZones(Provinces, Zones);
+	if (!bSuccess)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Could not create map name zones"));
+		return;
+	}
+
+	for (const FMapNameZone& Zone : Zones)
+		GenerateCountryNameForZone(Id, Data, Zone, TraceOverTags);
+}
+
+void ARtsWorldMap::GenerateCountryNameForZone(const FNationId& Id, const FWorldMapNationData& Data, const FMapNameZone& Zone, const TArray<FNationId>& TraceOverTags)
+{
+	// Initialize variables
+	int32 LargestIndex = 0;
+	int32 LargestIndex_0 = 0;
+	int32 Num = 0;
+	TArray<FVector2D> Points = {};
+	FVector2D LargestPoint01 = {0.f, 0.f};
+	FVector2D LargestPoint02 = {0.f, 0.f};
+	float LargestDistance = 0;
+	FVector2D Average = {0.f, 0.f};
+	// Find All Locations For Convex Hull & Find Average and Two furthest points
+	for (const FProvinceId& Bordering : Zone.Bordering)
+	{
+		FVector2D WorldPosition;
+		const bool Found = FindUnitPositonOfProvince(Bordering, WorldPosition);
+		if (!Found)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Could not find province's unit position"));
+			return;
+		}
+		Points.Add(WorldPosition);
+	}
+	for (const FVector2D& Point : Points)
+	{
+		Average = Point + Average;
+		for (const FVector2D& InnerPoint : Points)
+		{
+			const float Squared = UKismetMathLibrary::Vector_DistanceSquared(UVToLocation(InnerPoint), UVToLocation(Point));
+			if (Squared > LargestDistance)
+			{
+				LargestDistance = Squared;
+				LargestPoint01 = InnerPoint;
+				LargestPoint02 = Point;
+			}
+		}
+	}
+	Average = Average / FVector2D(Points.Num(), Points.Num());
+	// Add Name
+	{
+		ACountryName* Spawned = SpawnMapName();
+		if (!Spawned)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Could not spawn map name"));
+			return;
+		}
+		
+		const bool OneSmallerTwo = LargestPoint01.X < LargestPoint02.X;
+		const TArray<FVector> PointsArray = {
+			UVToLocation(OneSmallerTwo ? LargestPoint02 : LargestPoint01),
+			UVToLocation(Average),
+			UVToLocation(OneSmallerTwo ? LargestPoint01 : LargestPoint02)
+		};
+		
+		Spawned->Initialize(PointsArray, Data.Name, this, TraceOverTags);
+	}
 }
 
 ARtsWorldMap* ARtsWorldMap::GetRtsWorldMap(const UObject* WorldContextObject)

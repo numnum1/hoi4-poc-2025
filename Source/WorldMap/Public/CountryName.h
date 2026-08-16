@@ -22,7 +22,7 @@ public:
 	 * centerline) in world space; OwnerTags is whatever ARtsWorldMap's caller used to mark the
 	 * country the points belong to, carried along for later filtering (e.g. by nation). */
 	UFUNCTION(BlueprintCallable, Category="Country Name")
-	void Initialize(const TArray<FVector>& InPoints, const FText& InName, ARtsWorldMap* InMap, const TArray<FName>& InOwnerTags);
+	void Initialize(const TArray<FVector>& InPoints, const FText& InName, ARtsWorldMap* InMap, const TArray<FNationId>& InOwnerTags);
 
 	UPROPERTY(BlueprintReadOnly, Category="Country Name")
 	TArray<FVector> Points;
@@ -34,5 +34,5 @@ public:
 	TObjectPtr<ARtsWorldMap> Map;
 
 	UPROPERTY(BlueprintReadOnly, Category="Country Name")
-	TArray<FName> OwnerTags;
+	TArray<FNationId> OwnerTags;
 };

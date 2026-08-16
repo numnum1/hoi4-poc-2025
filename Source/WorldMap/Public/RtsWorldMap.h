@@ -45,19 +45,45 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Province Lookup")
 	FProvinceId ResolveProvinceAt(FVector2D InUV);
 
+	/** The map table's Unit Position column for a province, straight off ProvinceMapData rather than
+	 * anything derived from the province-ID texture. False if the province or its row is unknown. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Province Lookup")
+	bool FindUnitPositonOfProvince(const FProvinceId& ProvinceId, FVector2D& OutUnitPosition) const;
+
 	/** Paints the given provinces and leaves every other province untouched. A province the table
 	 * does not know is skipped rather than painted black. */
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals);
 
+	/** What a nation is called and which provinces it owns, pushed down from whatever resolved
+	 * UNations — WorldMap has no dependency on the Nations module and never asks for this itself. */
+	UFUNCTION(BlueprintCallable, Category="World Map")
+	void SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData);
+
+	/** Groups InProvinces into contiguous zones, so a nation holding two separate landmasses is
+	 * labelled once per landmass. OutZones is grown, not cleared: zones already in it are kept and
+	 * merged into, which is how provinces are folded in batch by batch. */
+	UFUNCTION(BlueprintCallable, Category="World Map")
+	bool GenerateMapNameZones(const TArray<FProvinceId>& InProvinces, TArray<FMapNameZone>& OutZones);
+
 	/** Spawns one ACountryName per entry and hands it its label points, its text and its owner tags.
 	 * Where the points along a country's shape actually come from is not decided yet. */
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void GenerateCountryNames();
-
+	void GenerateCountryName(const FNationId& Id, const FWorldMapNationData& Data);
+	void GenerateCountryNameForZone(const FNationId& Id, const FWorldMapNationData& Data, const FMapNameZone& Zone, const TArray<FNationId>& TraceOverTags);
+protected:
+	UFUNCTION(BlueprintImplementableEvent)
+	ACountryName* SpawnMapName();
+public:
 	/** Where a world-space hit lands in map UV space. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="World Map")
 	FVector2D VectorToUV(FVector InImpactPoint) const;
+
+	/** The inverse of VectorToUV: the point on the globe's surface (relative to the map actor) a map
+	 * UV corresponds to. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="World Map")
+	FVector UVToLocation(FVector2D InUV) const;
 
 	/** The map actor of InWorldContextObject's world. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="World Map", meta=(WorldContext="WorldContextObject"))
@@ -92,6 +118,11 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category="Shading")
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> MapDynamicMaterials;
 
+	/** Set via SetNationData. The world exists once and its nations barely change, so this is a
+	 * plain pushed-down map, not something built for repeated cheap updates. */
+	UPROPERTY(BlueprintReadOnly, Category="World Map")
+	TMap<FNationId, FWorldMapNationData> NationNames;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -114,6 +145,14 @@ private:
 	 * the table can be read the moment the map exists, but province ids only exist once the
 	 * scenario has been loaded. Stays empty and is retried until then. */
 	void EnsureProvinceLookup();
+
+	/** Translates the map table's adjacency lists into province ids once. Separate from
+	 * EnsureProvinceLookup for the same reason that one is separate: it needs the loaded scenario. */
+	void EnsureAdjacencyLookup();
+
+	/** Reads the map table's Unit Position column once, keyed by province id. Kept const (and its
+	 * cache mutable) since FindUnitPositonOfProvince is a plain query, not a mutation. */
+	void EnsureUnitPositionLookup() const;
 
 	void RebuildDynamicMaterials();
 
@@ -142,6 +181,13 @@ private:
 	/** What painting actually goes through, so a repaint does not copy a whole FProvinceDisplayInfo
 	 * — FText, FSlateBrush and two object pointers — once per province just to read its MapId. */
 	TMap<FProvinceId, FMapPixelId> ProvinceIdToPixelId;
+
+	/** Who borders whom, as the map table's FName adjacency lists resolve to province ids. Neighbours
+	 * outside the loaded scenario are dropped rather than kept as invalid ids. */
+	TMap<FProvinceId, TArray<FProvinceId>> ProvinceAdjacencies;
+
+	/** Province id -> the map table's Unit Position column. See EnsureUnitPositionLookup. */
+	mutable TMap<FProvinceId, FVector2D> ProvinceUnitPositions;
 
 	/** The tallest row any province occupies, which is what decides the lookup textures' height. */
 	int32 HighestPixelRow = 0;

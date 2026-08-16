@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RtsIds.h"
 #include "MapTypes.generated.h"
 
 /**
@@ -45,4 +46,36 @@ struct WORLDMAP_API FMapLutEntry
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map")
 	FColor National = FColor::Black;
+};
+
+/** One contiguous block of provinces a single label is laid out over: a nation split by water or by
+ * another nation gets one zone per landmass, so its name is not drawn across the gap. Ported from the
+ * plugin's FZone, with FProvinceId in place of the map editor's FName ids. */
+USTRUCT(BlueprintType)
+struct WORLDMAP_API FMapNameZone
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map")
+	TArray<FProvinceId> Provinces;
+
+	/** The subset of Provinces touching something the zone's owner does not hold — the outline the
+	 * label has to stay inside. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map")
+	TArray<FProvinceId> Bordering;
+};
+
+/** What ARtsWorldMap needs to know about a nation to label it — nothing else, so WorldMap never has
+ * to depend on the Nations module for just an id-to-name lookup. Pushed down from whatever knows
+ * the actual nations (see ARtsWorldMap::NationNames). */
+USTRUCT(BlueprintType)
+struct WORLDMAP_API FWorldMapNationData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map")
+	FText Name;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map")
+	TArray<FProvinceId> OwnedProvinces;
 };
