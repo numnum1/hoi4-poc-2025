@@ -354,11 +354,12 @@ void ARtsWorldMap::EnsureMapDataLookup() const
 		// Keyed on the row name, not the row's own Name field: that field holds the map editor's
 		// label ("Arnhem"), while a province's MapId is the row key ("1893").
 		MapIdToPixelId.Add(Row.Key, PixelId);
+		PixelIdToMapId.Add(PixelId, Row.Key);
 		HighestPixelRow = FMath::Max(HighestPixelRow, static_cast<int32>(PixelId.G));
 	}
 }
 
-void ARtsWorldMap::EnsureProvinceLookup() const
+void ARtsWorldMap::EnsureProvinceLookup()
 {
 	EnsureMapDataLookup();
 
@@ -379,7 +380,6 @@ void ARtsWorldMap::EnsureProvinceLookup() const
 		if (ProvinceId.IsValid())
 		{
 			ProvinceIdToPixelId.Add(ProvinceId, Entry.Value);
-			PixelIdToProvinceId.Add(Entry.Value, ProvinceId);
 		}
 	}
 
@@ -406,19 +406,47 @@ FProvinceId ARtsWorldMap::ResolveProvinceAt(const FVector2D InUV)
 
 FProvinceId ARtsWorldMap::FindProvinceByColor(const FColor& InProvinceColor) const
 {
-	EnsureProvinceLookup();
+	EnsureMapDataLookup();
 
-	// Only red and green carry the id. A pixel read off the texture brings a blue and an alpha the
-	// table never declares, so those two channels are dropped rather than compared.
+	// Only red and green carry the id — a pixel sampled off the texture brings along a blue and an
+	// alpha the table never declares.
 	FMapPixelId PixelId;
 	PixelId.R = InProvinceColor.R;
 	PixelId.G = InProvinceColor.G;
 
-	const FProvinceId* ProvinceId = PixelIdToProvinceId.Find(PixelId);
-	return ProvinceId ? *ProvinceId : FProvinceId();
+	const FName* MapId = PixelIdToMapId.Find(PixelId);
+	if (MapId == nullptr)
+	{
+		return FProvinceId();
+	}
+
+	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
+	return Provinces ? Provinces->FindByMapId(*MapId) : FProvinceId();
 }
 
 bool ARtsWorldMap::ReadLookupPixel(const FVector2D InUV, FColor& OutColor) const
+{
+	if (!IsLookupTextureReadable())
+	{
+		return false;
+	}
+
+	const int32 Width = ProvinceIdLookupTexture->GetSizeX();
+	const int32 Height = ProvinceIdLookupTexture->GetSizeY();
+
+	// Initialized rather than left to FindColor: it leaves its out parameter untouched when the lock
+	// fails, which would hand back whatever was on the stack as a province color.
+	OutColor = FColor::Black;
+	UBA_DataFunctions::FindColor(
+		ProvinceIdLookupTexture.Get(),
+		FMath::Clamp(FMath::FloorToInt(InUV.X * Width), 0, Width - 1),
+		FMath::Clamp(FMath::FloorToInt(InUV.Y * Height), 0, Height - 1),
+		OutColor);
+
+	return true;
+}
+
+bool ARtsWorldMap::IsLookupTextureReadable() const
 {
 	if (ProvinceIdLookupTexture == nullptr)
 	{
@@ -459,27 +487,15 @@ bool ARtsWorldMap::ReadLookupPixel(const FVector2D InUV, FColor& OutColor) const
 		return false;
 	}
 
-	FTexture2DMipMap& Mip = PlatformData->Mips[0];
-	const void* Data = Mip.BulkData.LockReadOnly();
-	if (Data == nullptr)
+	// FindColor locks the bulk data itself, but returns nothing to say the lock failed — so the one
+	// case it cannot report is checked here instead.
+	if (PlatformData->Mips[0].BulkData.GetBulkDataSize() == 0)
 	{
-		// Unlocked even though there is nothing to read: the lock is taken either way, and leaving it
-		// held would make every later read fail too.
-		Mip.BulkData.Unlock();
-
 		// The usual cause is a texture that streams its mips: the bulk data is then owned by the
 		// streamer and simply not here to read.
 		LogLookupTextureUnreadable(TEXT("keeps no CPU copy of its pixels — tick Never Stream and turn mipmaps off"));
 		return false;
 	}
-
-	const int32 Width = Mip.SizeX;
-	const int32 Height = Mip.SizeY;
-	const int32 X = FMath::Clamp(FMath::FloorToInt(InUV.X * Width), 0, Width - 1);
-	const int32 Y = FMath::Clamp(FMath::FloorToInt(InUV.Y * Height), 0, Height - 1);
-
-	OutColor = static_cast<const FColor*>(Data)[Y * Width + X];
-	Mip.BulkData.Unlock();
 
 	return true;
 }

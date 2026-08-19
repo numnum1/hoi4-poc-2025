@@ -165,9 +165,8 @@ private:
 
 	/** Resolves the table against the loaded scenario, which is the only reason this is separate:
 	 * the table can be read the moment the map exists, but province ids only exist once the
-	 * scenario has been loaded. Stays empty and is retried until then. Const (and its caches
-	 * mutable) so plain queries like FindProvinceByColor can use it without claiming to mutate. */
-	void EnsureProvinceLookup() const;
+	 * scenario has been loaded. Stays empty and is retried until then. */
+	void EnsureProvinceLookup();
 
 	/** Translates the map table's adjacency lists into province ids once. Separate from
 	 * EnsureProvinceLookup for the same reason that one is separate: it needs the loaded scenario. */
@@ -181,9 +180,14 @@ private:
 	 * other Ensure* lookups: NationNames is already pushed-in province ids, nothing to resolve. */
 	void EnsureNationOwnershipLookup() const;
 
-	/** The province-ID pixel at a map UV, straight off ProvinceIdLookupTexture's mip 0. False — with a
-	 * one-time explanation — when that texture is set up in a way the CPU cannot read. */
+	/** The province-ID pixel at a map UV, straight off ProvinceIdLookupTexture's mip 0. False when
+	 * that texture is set up in a way the CPU cannot read. */
 	bool ReadLookupPixel(FVector2D InUV, FColor& OutColor) const;
+
+	/** Whether the lookup texture is uncompressed, built and CPU-side. Checked before every read
+	 * because UBA_DataFunctions::FindColor cannot report any of it: handed a compressed texture it
+	 * reads the block bytes as a color and returns a province that was never clicked. */
+	bool IsLookupTextureReadable() const;
 
 	void LogLookupTextureUnreadable(const TCHAR* InReason) const;
 
@@ -204,33 +208,50 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UCanvasRenderTarget2D> VfxLut;
 
+	//~ The lookup caches below are Transient on purpose: every one of them is rebuilt from
+	//~ ProvinceMapData, which is the only place this data is authored. Saving a copy into the map
+	//~ actor would let the two disagree after an edit to the table. They are reflected so they can be
+	//~ read in the details panel while the game runs, not because anything binds them.
+
 	/** MapId -> the province-ID pixel the lookup textures key their rows on. Mutable: populated
 	 * lazily by the const EnsureMapDataLookup. */
+	UPROPERTY(VisibleAnywhere, Transient, Category="Province Lookup")
 	mutable TMap<FName, FMapPixelId> MapIdToPixelId;
+
+	/** The reverse of MapIdToPixelId, and the resolve direction: the color sampled off the
+	 * province-ID texture back to the table row that declared it. Built from the same table pass, so
+	 * it needs no loaded scenario — unlike ProvinceIdToPixelId, which resolves ids as well. */
+	UPROPERTY(VisibleAnywhere, Transient, Category="Province Lookup")
+	mutable TMap<FMapPixelId, FName> PixelIdToMapId;
 
 	/** What painting actually goes through, so a repaint does not copy a whole FProvinceDisplayInfo
 	 * — FText, FSlateBrush and two object pointers — once per province just to read its MapId. */
-	mutable TMap<FProvinceId, FMapPixelId> ProvinceIdToPixelId;
-
-	/** The reverse, and the whole of the resolve direction: a color sampled off the province-ID
-	 * texture straight to the province holding it, without the MapId hop in between. */
-	mutable TMap<FMapPixelId, FProvinceId> PixelIdToProvinceId;
+	UPROPERTY(VisibleAnywhere, Transient, Category="Province Lookup")
+	TMap<FProvinceId, FMapPixelId> ProvinceIdToPixelId;
 
 	/** Who borders whom, as the map table's FName adjacency lists resolve to province ids. Neighbours
-	 * outside the loaded scenario are dropped rather than kept as invalid ids. */
+	 * outside the loaded scenario are dropped rather than kept as invalid ids.
+	 *
+	 * The one lookup that is not reflected: UHT has no property type for a container inside a
+	 * container, so showing this in the details panel would mean wrapping the inner array in a
+	 * USTRUCT and touching every use of it. */
 	TMap<FProvinceId, TArray<FProvinceId>> ProvinceAdjacencies;
 
 	/** Provinces with at least one neighbour the loaded scenario does not know, which ProvinceAdjacencies
 	 * cannot express — those neighbours have no province id. Counts as bordering. */
+	UPROPERTY(VisibleAnywhere, Transient, Category="Province Lookup")
 	TSet<FProvinceId> ProvincesAdjacentToUnknown;
 
 	/** Province id -> the map table's Unit Position column. See EnsureUnitPositionLookup. */
+	UPROPERTY(VisibleAnywhere, Transient, Category="Province Lookup")
 	mutable TMap<FProvinceId, FVector2D> ProvinceUnitPositions;
 
 	/** Province id -> the nation owning it, per NationNames. See EnsureNationOwnershipLookup. */
+	UPROPERTY(VisibleAnywhere, Transient, Category="Province Lookup")
 	mutable TMap<FProvinceId, FNationId> ProvinceOwnerNationId;
 
 	/** The tallest row any province occupies, which is what decides the lookup textures' height. */
+	UPROPERTY(VisibleAnywhere, Transient, Category="Province Lookup")
 	mutable int32 HighestPixelRow = 0;
 
 	/** So a map missing its assets is reported once, not per click. */
