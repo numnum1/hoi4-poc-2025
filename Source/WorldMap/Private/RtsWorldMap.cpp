@@ -393,6 +393,23 @@ void ARtsWorldMap::EnsureProvinceLookup()
 	}
 }
 
+void ARtsWorldMap::NotifyWorldClicked(const FHitResult& InHit)
+{
+	if (!InHit.bBlockingHit)
+	{
+		OnProvinceClicked.Broadcast(FProvinceId());
+		return;
+	}
+
+	const FVector2D UV = VectorToUV(InHit.ImpactPoint);
+	const FProvinceId ProvinceId = ResolveProvinceAt(UV);
+	UE_LOG(LogRtsWorldMap, Verbose,
+	       TEXT("Click on %s at %s -> UV (%f, %f) -> province %d"),
+	       *GetNameSafe(InHit.GetActor()), *InHit.ImpactPoint.ToString(), UV.X, UV.Y, ProvinceId.Value);
+
+	OnProvinceClicked.Broadcast(ProvinceId);
+}
+
 FProvinceId ARtsWorldMap::ResolveProvinceAt(const FVector2D InUV)
 {
 	FColor PixelColor;

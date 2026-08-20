@@ -4,6 +4,11 @@
 #include "RtsIds.h"
 #include "MapTypes.generated.h"
 
+/** A click on the map resolved to a province, or an invalid id when it landed on none. Declared here
+ * rather than next to either user: ARtsWorldMap raises it and UWorldMapWidget passes it on, and one
+ * signature for both keeps that pass-through from needing a conversion. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWorldMapProvinceClicked, FProvinceId, ProvinceId);
+
 /**
  * A province's identity as the province-ID texture stores it: red and green carry the id, blue and
  * alpha are unused. Also the key the lookup textures are indexed by — red picks the column, green

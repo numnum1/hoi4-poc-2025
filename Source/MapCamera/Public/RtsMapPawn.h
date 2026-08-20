@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
-#include "RtsIds.h"
 #include "RtsMapPawn.generated.h"
 
 class ARtsWorldMap;
@@ -11,35 +10,29 @@ class UInputAction;
 class UInputMappingContext;
 class USpringArmComponent;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRtsMapProvinceClicked, FProvinceId, ProvinceId);
-
 /**
- * The map camera pawn, and where a click on the world becomes a province.
+ * The map camera pawn: a camera framed on the globe, and the trace that turns a cursor position
+ * into a point on it.
  *
  * Moved out of the BloodAnvil plugin's ABA_MapPawn for the same reason as ARtsWorldMap — Plugins/ is
  * not in this repository — and because the plugin only offered its click as a
- * BlueprintImplementableEvent, so it could be picked up in an event graph and nowhere else. Here the
- * click is bound natively and leaves through OnProvinceClicked.
+ * BlueprintImplementableEvent, so it could be picked up in an event graph and nowhere else.
  *
  * Camera movement is still driven from the pawn Blueprint's tick through AddMovement, which is why
  * that function and its settings keep their names: the plugin's own Tick was dead code with its
  * whole body commented out, so this has always been the arrangement.
  *
- * It holds no lookup data of its own: the province-ID texture and table live on the map, and the
- * pawn asks it (ARtsWorldMap::ResolveProvinceAt) rather than keeping a second reference to the same
- * assets. It decides nothing either — what a selection means is settled far above, in the HUD.
+ * It resolves nothing. A click leaves as ARtsWorldMap::NotifyWorldClicked and the map decides what
+ * was hit, so the pawn never touches a province id. The dependency runs this way only — WorldMap
+ * must not depend on MapCamera, or the two modules would be a cycle.
  */
 UCLASS()
-class WORLDMAP_API ARtsMapPawn : public APawn
+class MAPCAMERA_API ARtsMapPawn : public APawn
 {
 	GENERATED_BODY()
 
 public:
 	ARtsMapPawn();
-
-	/** Fires for every click, with an invalid id when the player clicked off any province. */
-	UPROPERTY(BlueprintAssignable, Category="Province Lookup")
-	FRtsMapProvinceClicked OnProvinceClicked;
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void PossessedBy(AController* NewController) override;

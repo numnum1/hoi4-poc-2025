@@ -7,9 +7,7 @@
 #include "RtsIds.h"
 #include "WorldMapWidget.generated.h"
 
-class ARtsMapPawn;
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWorldMapProvinceClicked, FProvinceId, ProvinceId);
+class ARtsWorldMap;
 
 /**
  * The world map's interface to the rest of the UI, and nothing else: clicks leave through
@@ -43,8 +41,6 @@ public:
 	void SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData);
 
 protected:
-	/** Bound here rather than in NativeOnInitialized: the pawn has to exist and be possessed first,
-	 * which is not guaranteed while the widget is still being constructed. */
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 
@@ -52,6 +48,14 @@ private:
 	UFUNCTION()
 	void HandleProvinceClicked(FProvinceId InProvinceId);
 
+	/** The map actor, found once and kept. Retried on every call rather than resolved in
+	 * NativeConstruct alone, because a widget built before the level's actors are up would
+	 * otherwise stay pointed at nothing for the rest of its life. */
+	ARtsWorldMap* ResolveWorldMap();
+
 	UPROPERTY(Transient)
-	TObjectPtr<ARtsMapPawn> MapPawn;
+	TObjectPtr<ARtsWorldMap> WorldMap;
+
+	/** So a level without a map actor is reported once, not on every repaint. */
+	bool bMissingMapLogged = false;
 };

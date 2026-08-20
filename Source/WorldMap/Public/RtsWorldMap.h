@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/HitResult.h"
 #include "GameFramework/Actor.h"
 #include "MapTypes.h"
 #include "ProvinceVisuals.h"
@@ -38,6 +39,19 @@ class WORLDMAP_API ARtsWorldMap : public AActor
 
 public:
 	ARtsWorldMap();
+
+	/** Every click the map camera reports, resolved: an invalid id means the click landed on no
+	 * province. This is the only place a click is announced — UWorldMapWidget passes it up to the
+	 * HUD, and nothing raises it a second time. */
+	UPROPERTY(BlueprintAssignable, Category="Province Lookup")
+	FWorldMapProvinceClicked OnProvinceClicked;
+
+	/** Takes a click on the world from ARtsMapPawn and broadcasts what it hit. The pawn traces but
+	 * resolves nothing, so that MapCamera can depend on this module without this module having to
+	 * depend back on it. A miss is announced as an invalid province rather than dropped, because
+	 * clicking off the map is how a selection is cleared. */
+	UFUNCTION(BlueprintCallable, Category="Province Lookup")
+	void NotifyWorldClicked(const FHitResult& InHit);
 
 	/** The province at a map UV, or an invalid id for open water and anything else no province
 	 * claims. Reads the province-ID texture's pixel and resolves it through the province table —

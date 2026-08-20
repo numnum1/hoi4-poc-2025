@@ -1,7 +1,5 @@
 #include "WorldMapWidget.h"
 
-#include "Kismet/GameplayStatics.h"
-#include "RtsMapPawn.h"
 #include "RtsWorldMap.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWorldMapWidget, Log, All);
@@ -10,44 +8,62 @@ void UWorldMapWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	MapPawn = Cast<ARtsMapPawn>(UGameplayStatics::GetPlayerPawn(this, 0));
-	if (MapPawn == nullptr)
-	{
-		// Worth saying out loud: without the pawn the map still draws, it just silently swallows
-		// every click, which looks like a broken selection rather than a missing binding.
-		UE_LOG(LogWorldMapWidget, Error,
-			TEXT("%s found no ARtsMapPawn to take province clicks from — check that the possessed "
-				 "pawn derives from ARtsMapPawn."), *GetName());
-		return;
-	}
-
-	MapPawn->OnProvinceClicked.AddDynamic(this, &UWorldMapWidget::HandleProvinceClicked);
+	ResolveWorldMap();
 }
 
 void UWorldMapWidget::NativeDestruct()
 {
-	if (MapPawn)
+	if (WorldMap)
 	{
-		MapPawn->OnProvinceClicked.RemoveAll(this);
-		MapPawn = nullptr;
+		WorldMap->OnProvinceClicked.RemoveAll(this);
+		WorldMap = nullptr;
 	}
 
 	Super::NativeDestruct();
 }
 
+ARtsWorldMap* UWorldMapWidget::ResolveWorldMap()
+{
+	if (WorldMap)
+	{
+		return WorldMap;
+	}
+
+	WorldMap = ARtsWorldMap::GetRtsWorldMap(this);
+	if (WorldMap == nullptr)
+	{
+		// Worth saying out loud: without the map the widget still lays out, it just swallows every
+		// color and never reports a click, which looks like broken selection rather than a level
+		// missing its map actor.
+		if (!bMissingMapLogged)
+		{
+			bMissingMapLogged = true;
+			UE_LOG(LogWorldMapWidget, Error,
+				TEXT("%s found no ARtsWorldMap in the level, so the map neither paints nor reports clicks."),
+				*GetName());
+		}
+		return nullptr;
+	}
+
+	// Bound where the map is first found rather than in NativeConstruct: the widget can be built
+	// before the level's actors are, and a binding attempted only there would then never happen.
+	WorldMap->OnProvinceClicked.AddDynamic(this, &UWorldMapWidget::HandleProvinceClicked);
+	return WorldMap;
+}
+
 void UWorldMapWidget::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals)
 {
-	if (ARtsWorldMap* WorldMap = ARtsWorldMap::GetRtsWorldMap(this))
+	if (ARtsWorldMap* Map = ResolveWorldMap())
 	{
-		WorldMap->SetProvinceVisuals(InVisuals);
+		Map->SetProvinceVisuals(InVisuals);
 	}
 }
 
 void UWorldMapWidget::SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData)
 {
-	if (ARtsWorldMap* WorldMap = ARtsWorldMap::GetRtsWorldMap(this))
+	if (ARtsWorldMap* Map = ResolveWorldMap())
 	{
-		WorldMap->SetNationData(InNationData);
+		Map->SetNationData(InNationData);
 	}
 }
 

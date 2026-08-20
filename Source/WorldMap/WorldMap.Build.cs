@@ -10,7 +10,7 @@ public class WorldMap : ModuleRules
 			new string[]
 			{
 				"Core",
-				// ARtsWorldMap derives from AActor and ARtsMapPawn from APawn, both in public headers
+				// ARtsWorldMap derives from AActor in a public header
 				"CoreUObject",
 				"Engine",
 				// FProvinceId
@@ -28,8 +28,6 @@ public class WorldMap : ModuleRules
 				// ARtsWorldMap writes its lookup textures from a render command
 				"RenderCore",
 				"RHI",
-				// ARtsMapPawn binds the select action itself; only the .cpp needs the input types
-				"EnhancedInput",
 				// All that is left of the BloodAnvil plugin dependency: the DataTable row format its
 				// map editor writes (FProvinceMapDataGame) and the pixel read that resolves a click
 				// against the province-ID texture. The map and camera classes used to derive from the

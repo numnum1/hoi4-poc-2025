@@ -11,7 +11,7 @@ hier hereingereicht.
 Mass-Fragmente + UXxxEntitySubsystem
   → UXxx (Fassaden auf ARtsGameState)
     → RtsFacades
-      → RtsUI  ── Farben/Nationsdaten runter ──►  WorldMap
+      → RtsUI  ── Farben/Nationsdaten runter ──►  WorldMap  ◄── Klick ── MapCamera
                ◄── Provinzklick hoch ────────────
 ```
 
@@ -19,6 +19,11 @@ Mass-Fragmente + UXxxEntitySubsystem
 Gegenrichtung wäre ein Zyklus; deshalb kommen Farben und Nationsdaten ausschließlich als Push von
 oben (`UWorldMapWidget::SetProvinceVisuals` / `SetNationData`) und Klicks ausschließlich als
 Broadcast nach oben (`UWorldMapWidget::OnProvinceClicked`).
+
+Dieselbe Einbahnstraße gilt nach unten zur Kamera: `MapCamera` hängt privat an `WorldMap`, nie
+umgekehrt. Der Pawn tract und meldet den Treffer per `ARtsWorldMap::NotifyWorldClicked(FHitResult)`
+— **das Auflösen der Provinz passiert hier**, nicht in der Kamera. Deshalb liegt das
+Klick-Delegate auf dem Kartenactor und nicht auf dem Pawn.
 
 Die einzige Domänenabhängigkeit ist `Provinces` (privat, nur `.cpp`): beide Richtungen des
 Provinz-Lookups laufen über `FProvinceDisplayInfo::MapId`, aufgelöst per
@@ -29,15 +34,19 @@ Provinz-Lookups laufen über `FProvinceDisplayInfo::MapId`, aufgelöst per
 **Klick rein:**
 
 ```
-Mausklick  →  ARtsMapPawn::HandleSelectStarted
+Mausklick  →  ARtsMapPawn::HandleSelectStarted        (Modul MapCamera)
            →  TraceUnderCursor          (Linientrace auf das Globus-Mesh)
-           →  ARtsWorldMap::VectorToUV  (Weltpunkt -> Karten-UV)
-           →  ARtsWorldMap::ResolveProvinceAt
-                → ReadLookupPixel       (Pixel aus ProvinceIdLookupTexture, CPU-Seite)
-                → FindProvinceByColor   (R/G -> MapId -> UProvinces::FindByMapId)
-           →  ARtsMapPawn::OnProvinceClicked
+           →  ARtsWorldMap::NotifyWorldClicked        (ab hier Modul WorldMap)
+                → VectorToUV            (Weltpunkt -> Karten-UV)
+                → ResolveProvinceAt
+                    → ReadLookupPixel   (Pixel aus ProvinceIdLookupTexture, CPU-Seite)
+                    → FindProvinceByColor (R/G -> MapId -> UProvinces::FindByMapId)
+           →  ARtsWorldMap::OnProvinceClicked
            →  UWorldMapWidget::OnProvinceClicked  →  RtsUI
 ```
+
+Ein Klick, der den Globus verfehlt, läuft denselben Weg: der Pawn reicht das leere `FHitResult`
+durch, die Karte broadcastet eine ungültige Id. Abwählen ist ein Ergebnis, kein Nichts.
 
 **Farben raus:**
 
@@ -96,23 +105,15 @@ Alle Lookups sind lazy (`Ensure*`) und `Transient`: sie werden aus `ProvinceMapD
 weil das die einzige Stelle ist, an der diese Daten autorisiert werden. Die, die Provinz-Ids
 auflösen, brauchen ein geladenes Szenario und bleiben bis dahin leer.
 
-### `ARtsMapPawn` (`RtsMapPawn.h`)
-
-Die Kamera auf dem Globus, und die Stelle, an der ein Klick zu einer Provinz wird. Bewegung ist
-Rotation *um* die Kugel, nicht Translation; die Bewegungsskalierung hängt an der Kamerahöhe, damit
-sie herangezoomt kriecht und herausgezoomt fegt.
-
-Der Pawn hält **keine eigenen Kartendaten** — er fragt `ARtsWorldMap`. Die Kamerabewegung wird noch
-vom Pawn-Blueprint aus getickt (`AddMovement`), der Klick dagegen ist nativ gebunden und verlässt
-die Klasse über `OnProvinceClicked`.
-
 ### `UWorldMapWidget` (`WorldMapWidget.h`)
 
 Die Schnittstelle der Karte zum Rest der UI, damit die Karte irgendwo in den Widget-Baum des HUD
-gehängt werden kann, ohne dass der Platzierende den Kartenactor oder den Pawn kennen muss. Klicks
-raus über `OnProvinceClicked`, Farben und Nationsdaten rein über `SetProvinceVisuals` /
-`SetNationData`. Bindet sich in `NativeConstruct` an den Pawn, weil der vorher noch nicht besessen
-sein muss.
+gehängt werden kann, ohne dass der Platzierende den Kartenactor kennen muss. Klicks raus über
+`OnProvinceClicked`, Farben und Nationsdaten rein über `SetProvinceVisuals` / `SetNationData`.
+
+Der Kartenactor wird beim ersten Zugriff aufgelöst und dann behalten (`ResolveWorldMap`); das
+Delegate wird genau dort gebunden, wo er zum ersten Mal gefunden wird — nicht in `NativeConstruct`,
+weil das Widget vor den Level-Actors existieren kann und die Bindung dann nie zustande käme.
 
 ### `ACountryName` (`CountryName.h`)
 
@@ -148,11 +149,12 @@ hat, und ruft `Refresh` (BlueprintImplementableEvent) fürs Rendern auf.
 ## Externe Abhängigkeiten
 
 - **BloodAnvil-Plugin** (nicht in diesem Repository): das Zeilenformat `FProvinceMapDataGame`, der
-  Pixel-Read `UBA_DataFunctions::FindColor`, sowie Mesh-/Material-/Input-Assets, die der Konstruktor
-  per Pfad zieht. `ARtsWorldMap` und `ARtsMapPawn` leiteten früher von den Plugin-Klassen ab; das
-  wurde hierher gezogen, damit der Code unter `Source/` versioniert und reviewbar ist. Ablösbar,
-  sobald das Szenario die Tabelle beim Laden in Projektdaten überführt.
+  Pixel-Read `UBA_DataFunctions::FindColor`, sowie Mesh- und Material-Assets, die der Konstruktor
+  per Pfad zieht. `ARtsWorldMap` leitete früher von `ABA_Map` ab; das wurde hierher gezogen, damit
+  der Code unter `Source/` versioniert und reviewbar ist. Ablösbar, sobald das Szenario die Tabelle
+  beim Laden in Projektdaten überführt.
 - **`Provinces`** (privat): `UProvinces::FindByMapId` für beide Richtungen des Lookups.
+- **`MapCamera`** hängt an diesem Modul, nicht umgekehrt — siehe `Source/MapCamera/README.md`.
 
 ## Bekannte Baustellen
 
@@ -169,3 +171,6 @@ hat, und ruft `Refresh` (BlueprintImplementableEvent) fürs Rendern auf.
   Plugin-Tabelle ist. Der Klassenkommentar von `ARtsWorldMap` beschreibt noch den Stand davor.
 - `UFoundOrganizationModalWidgetViewModel` malt über `ARtsWorldMap::GetRtsWorldMap` direkt, statt
   über `UWorldMapWidget` — der "einzige Schnittstelle"-Vertrag des Widgets gilt insofern nicht mehr.
+- `Content/RTS/Player/HUD/RtsHUD_VM.uasset` bindet noch `OnProvinceClicked` am Pawn, den es seit dem
+  Umzug nach `MapCamera` nicht mehr gibt. Muss einmal im Editor entfernt werden, sonst kompiliert
+  das Asset nicht.

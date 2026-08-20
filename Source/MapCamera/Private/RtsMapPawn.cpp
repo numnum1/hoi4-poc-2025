@@ -190,20 +190,13 @@ void ARtsMapPawn::HandleSelectStarted()
 		return;
 	}
 
+	// The miss is handed over too, rather than returned early: a click that landed on nothing is a
+	// deselection, and only the map gets to say so.
 	FHitResult HitResult;
 	if (!TraceUnderCursor(HitResult))
 	{
 		UE_LOG(LogRtsMapPawn, Verbose, TEXT("Click missed the globe entirely."));
-		OnProvinceClicked.Broadcast(FProvinceId());
-		return;
 	}
 
-	const FVector2D UV = MapReference->VectorToUV(HitResult.ImpactPoint);
-	const FProvinceId ResolvedId = MapReference->ResolveProvinceAt(UV);
-	UE_LOG(LogRtsMapPawn, Verbose,
-	       TEXT("Click on %s at %s -> UV (%f, %f) -> province %d"),
-	       *GetNameSafe(HitResult.GetActor()), *HitResult.ImpactPoint.ToString(),
-	       UV.X, UV.Y, ResolvedId.Value);
-
-	OnProvinceClicked.Broadcast(ResolvedId);
+	MapReference->NotifyWorldClicked(HitResult);
 }
