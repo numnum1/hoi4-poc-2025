@@ -1,9 +1,9 @@
 # Modul `WorldMap`
 
-Der Globus: die Kugel, die Kamera darauf, das Auflösen eines Klicks in eine Provinz und das Einfärben
-der Provinzen. Mehr nicht — **das Modul entscheidet nichts**. Es weiß nicht, wem eine Provinz gehört,
-welcher Kartenmodus aktiv ist oder was ein Klick bedeutet. All das wird in `RtsUI` entschieden und
-hier hereingereicht.
+Der Globus: die Kugel, das Einfärben der Provinzen, das Auflösen eines Klicks in eine Provinz und
+die Namenszüge der Länder. Mehr nicht — **das Modul entscheidet nichts**. Es weiß nicht, wem eine
+Provinz gehört, welcher Kartenmodus aktiv ist oder was ein Klick bedeutet. All das wird in `RtsUI`
+entschieden und hier hereingereicht.
 
 ## Rolle in der Schichtung
 
@@ -11,23 +11,37 @@ hier hereingereicht.
 Mass-Fragmente + UXxxEntitySubsystem
   → UXxx (Fassaden auf ARtsGameState)
     → RtsFacades
-      → RtsUI  ── Farben/Nationsdaten runter ──►  WorldMap  ◄── Klick ── MapCamera
+      → RtsUI  ── Farben/Nationsdaten runter ──►  WorldMap
                ◄── Provinzklick hoch ────────────
+
+MapCamera  ── Trefferpunkt ──►  WorldMap
 ```
 
 `WorldMap` hängt **nicht** an `RtsUI` — `RtsUI` hängt privat an `WorldMap`. Eine Abhängigkeit in die
 Gegenrichtung wäre ein Zyklus; deshalb kommen Farben und Nationsdaten ausschließlich als Push von
 oben (`UWorldMapWidget::SetProvinceVisuals` / `SetNationData`) und Klicks ausschließlich als
-Broadcast nach oben (`UWorldMapWidget::OnProvinceClicked`).
-
-Dieselbe Einbahnstraße gilt nach unten zur Kamera: `MapCamera` hängt privat an `WorldMap`, nie
-umgekehrt. Der Pawn tract und meldet den Treffer per `ARtsWorldMap::NotifyWorldClicked(FHitResult)`
-— **das Auflösen der Provinz passiert hier**, nicht in der Kamera. Deshalb liegt das
-Klick-Delegate auf dem Kartenactor und nicht auf dem Pawn.
+Broadcast nach oben (`UWorldMapWidget::OnProvinceClicked`). Dieselbe Einwegrichtung gilt zu
+`MapCamera`: der Pawn ruft `ARtsWorldMap::NotifyWorldClicked`, die Karte kennt das Kameramodul nicht.
 
 Die einzige Domänenabhängigkeit ist `Provinces` (privat, nur `.cpp`): beide Richtungen des
 Provinz-Lookups laufen über `FProvinceDisplayInfo::MapId`, aufgelöst per
 `FindRtsGameStateComponent<UProvinces>`.
+
+## Der Schnitt: Pixel unten, Provinzen oben
+
+Der Kartenactor kennt **keine `FProvinceId`**. Er malt Zeilen, die schon nach Pixel indiziert sind,
+und meldet beim Klick den Pixel, den er gelesen hat. Übersetzt wird ausschließlich in
+`UWorldMapSubsystem`, und zwar in der Schicht darüber:
+
+```
+URtsWorldMapViewModel ── FMapLutEntry (pixelindiziert) ──►  ARtsWorldMap
+                      ◄── FMapPixelId ─────────────────────
+        │
+        └── UWorldMapSubsystem  (FProvinceId ↔ FMapPixelId, Adjazenz, Unit-Positionen)
+```
+
+Das ist die Trennlinie, an der das ganze Modul hängt: **Actor = Textur und Geometrie,
+Subsystem = Tabelle und Id, ViewModel = was gezeigt wird, Widget = die Tür nach draußen.**
 
 ## Datenfluss
 
@@ -35,101 +49,132 @@ Provinz-Lookups laufen über `FProvinceDisplayInfo::MapId`, aufgelöst per
 
 ```
 Mausklick  →  ARtsMapPawn::HandleSelectStarted        (Modul MapCamera)
-           →  TraceUnderCursor          (Linientrace auf das Globus-Mesh)
-           →  ARtsWorldMap::NotifyWorldClicked        (ab hier Modul WorldMap)
-                → VectorToUV            (Weltpunkt -> Karten-UV)
-                → ResolveProvinceAt
-                    → ReadLookupPixel   (Pixel aus ProvinceIdLookupTexture, CPU-Seite)
-                    → FindProvinceByColor (R/G -> MapId -> UProvinces::FindByMapId)
-           →  ARtsWorldMap::OnProvinceClicked
-           →  UWorldMapWidget::OnProvinceClicked  →  RtsUI
+           →  TraceUnderCursor                        (Linientrace auf das Globus-Mesh)
+           →  ARtsWorldMap::NotifyWorldClicked(FHitResult)
+                → MapProjection::VectorToUV           (Weltpunkt → Karten-UV)
+                → ReadLookupPixel                     (Pixel aus ProvinceIdLookupTexture, CPU-Seite)
+                → OnPixelClicked.Broadcast(FMapPixelId)
+           →  UWorldMapWidget::HandlePixelClicked
+                → UWorldMapSubsystem::FindProvince    (Pixel → MapId → FProvinceId)
+           →  UWorldMapWidget::OnProvinceClicked      →  RtsUI
 ```
-
-Ein Klick, der den Globus verfehlt, läuft denselben Weg: der Pawn reicht das leere `FHitResult`
-durch, die Karte broadcastet eine ungültige Id. Abwählen ist ein Ergebnis, kein Nichts.
 
 **Farben raus:**
 
 ```
-RtsUI (URtsHUDViewModel::GetProvinceVisuals)
+RtsUI (URtsHUDViewModel::GetProvinceVisuals über URtsMapModes)
+  →  URtsHUDWidget pusht in sein Kindwidget
   →  UWorldMapWidget::SetProvinceVisuals
-  →  ARtsWorldMap::SetProvinceVisuals
-       → FProvinceId -> FMapPixelId (ProvinceIdToPixelId)
+  →  URtsWorldMapViewModel::SetProvinceVisuals
+       → UWorldMapSubsystem::BuildLutRows            (FProvinceId → FMapPixelId)
+  →  ARtsWorldMap::PaintProvinces
        → WriteLutTexture auf Primary/Secondary/National-LUT (Render-Thread)
   →  Mat_Map_Province sampelt ProvID + die drei LUTs
+```
+
+**Labels raus:**
+
+```
+RtsUI (URtsHUDViewModel::GetNationData)
+  →  UWorldMapWidget::SetNationData
+  →  URtsWorldMapViewModel::SetNationData
+       → Pixel→Nation-Tabelle  →  ARtsWorldMap::SetProvinceOwners
+       → BuildLabels: Zonen (Subsystem) + Schwerpunkt + weitestes Punktepaar  →  UV-Punkte
+  →  ARtsWorldMap::SpawnCountryLabels                (UV → Weltpunkt, SpawnMapName, Initialize)
+  →  ACountryName + CountryName_BP zeichnen den Namenszug
 ```
 
 ## Klassen
 
 ### `ARtsWorldMap` (`RtsWorldMap.h`)
 
-Der Kartenactor. Einer pro Level, gefunden über `GetRtsWorldMap(WorldContextObject)`. Acht
-Zuständigkeiten liegen aktuell in dieser Klasse:
+Der Kartenactor, funktional eine UI-Komponente: er malt, mehr nicht. Einer pro Level, gefunden über
+`GetRtsWorldMap(WorldContextObject)`.
 
-1. **Mesh- und Material-Setup** — `MapMesh`, `GlobeMesh`, `MapRadius`, `MapMaterials`,
-   `MapDynamicMaterials`, `ConfigureMesh`, `RebuildDynamicMaterials`. Skaliert die Kugel auf
-   `MapRadius` und hängt frische Dynamic-Material-Instanzen in die Mesh-Slots. Läuft bei jeder
-   Konstruktion, damit Radius-/Mesh-Änderungen im Editor sofort sichtbar sind.
+- **Mesh und Material** — `MapMesh`, `GlobeMesh`, `MapRadius`, `MapMaterials`, `MapDynamicMaterials`,
+  `ConfigureMesh`, `RebuildDynamicMaterials`. Skaliert die Kugel auf `MapRadius` und hängt frische
+  Dynamic-Material-Instanzen in die Mesh-Slots. Läuft bei jeder Konstruktion, damit Radius- und
+  Mesh-Änderungen im Editor sofort sichtbar sind.
+- **LUT-Malen** — `PrimaryLut` / `SecondaryLut` / `NationalLut` / `VfxLut` (`VfxLut` wird von
+  niemandem beschrieben, ist aber gebunden, weil das Material es sampelt), `EnsureLuts`,
+  `PaintProvinces`. Nimmt ein **Änderungsset**, keine Weltbeschreibung: nicht genannte Zeilen
+  behalten ihre Farbe, es wird nichts vorher geleert.
+- **Pixel lesen** — `ProvinceIdTexture` (nur GPU, vom Material gesampelt), `ProvinceIdLookupTexture`
+  (nur CPU), `ReadLookupPixel`, `IsLookupTextureReadable`, `NotifyWorldClicked`. Rot und Grün eines
+  Pixels tragen die Provinz-Id, Blau und Alpha sind ungenutzt. `IsLookupTextureReadable` prüft vor
+  jedem Read die Texturkonfiguration, weil ein falsch eingestelltes Asset sonst still die falsche
+  Provinz liefert statt gar keine.
+- **Projektion** — `VectorToUV` / `UVToLocation`, beides dünne Weiterleitungen an `MapProjection`.
+  Bleiben als `BlueprintPure` bestehen, weil `CountryName_BP` sie ruft.
+- **Labels spawnen** — `SpawnCountryLabels` projiziert die hereingereichten UV-Punkte und ruft
+  `SpawnMapName` (BlueprintImplementableEvent, implementiert in `RtsMap_BP`).
+- **Besitz-Nachschlag für das Label-BP** — `SetProvinceOwners` / `FindOwnerNationIdForProvinceColor`.
+  Das ViewModel reicht eine fertige Pixel→Nation-Tabelle herunter; der Actor schlägt nur nach. Das
+  ist der Grund, warum der Actor Nationen kennt, ohne Provinzen zu kennen.
 
-2. **UV-Projektion** — `VectorToUV` / `UVToLocation`. Kugelkoordinaten hin und zurück; die
-   Umrechnung zwischen einem Trefferpunkt auf dem Globus und der Position in den Kartentexturen.
+`ProvinceMapData` liegt weiterhin als `EditAnywhere`-Referenz hier, weil das Level die Stelle ist, an
+der ausgewählt wird, welche Welt geladen ist — gelesen wird sie aber vom Subsystem, dem der Actor sie
+per `ConfigureSubsystem` überreicht.
 
-3. **Provinz-Lookup (Pixel -> Id)** — `ProvinceIdTexture` (nur GPU, vom Material gesampelt),
-   `ProvinceIdLookupTexture` (nur CPU, für `ReadLookupPixel`), `ProvinceMapData` (die DataTable des
-   BloodAnvil-Map-Editors). Rot und Grün eines Pixels tragen die Provinz-Id, Blau und Alpha sind
-   ungenutzt. `IsLookupTextureReadable` prüft vor jedem Read die Texturkonfiguration, weil ein
-   falsch eingestelltes Asset sonst still die falsche Provinz liefert statt gar keine.
+### `UWorldMapSubsystem` (`WorldMapSubsystem.h`)
 
-4. **LUT-Malen** — `PrimaryLut` / `SecondaryLut` / `NationalLut` / `VfxLut` (`VfxLut` wird von
-   niemandem beschrieben, ist aber gebunden, weil das Material es sampelt). `SetProvinceVisuals`
-   nimmt ein **Änderungsset**, keine Weltbeschreibung: nicht genannte Provinzen behalten ihre Farbe,
-   es wird nichts vorher geleert.
+Alles, was Tabelle und Id ist: `MapIdToPixelId`, beide Richtungen von
+`FProvinceId` ↔ `FMapPixelId`, der Nachbarschaftsgraph, die Unit-Positionen und `HighestPixelRow`.
 
-5. **Nachbarschaftsgraph** — `ProvinceAdjacencies`, `ProvincesAdjacentToUnknown`,
-   `GenerateMapNameZones`. Gruppiert Provinzen in zusammenhängende Zonen, damit eine Nation auf zwei
-   Landmassen zweimal beschriftet wird statt einmal quer über das Wasser.
+- `BuildLutRows` — die Übersetzung, durch die jedes Malen läuft.
+- `FindProvince` / `FindPixelId` — die beiden Richtungen einzeln.
+- `FindUnitPosition` — der Verankerungspunkt einer Provinz aus der `Unit Position`-Spalte.
+- `BuildNameZones` — gruppiert Provinzen in zusammenhängende Zonen, damit eine Nation auf zwei
+  Landmassen zweimal beschriftet wird statt einmal quer über das Wasser.
+- `HasMapData` — die Tabelle allein reicht, um die LUTs zu dimensionieren; Provinz-Ids brauchen
+  zusätzlich ein geladenes Szenario.
 
-6. **Unit-Positionen** — `FindUnitPositonOfProvince`, aus der `Unit Position`-Spalte der Map-Tabelle.
-   Verankerungspunkte für alles, was auf einer Provinz sitzt; heute nur von der Label-Platzierung
-   benutzt.
+Alle Lookups sind lazy (`Ensure*`) und werden gecacht. Die, die Provinz-Ids auflösen, bleiben leer,
+bis ein Szenario geladen ist, und werden bis dahin bei jedem Zugriff neu versucht.
 
-7. **Nationen-Besitz** — `NationNames` (per `SetNationData` hereingereicht),
-   `FindOwnerNationIdForProvinceColor`. Nur damit `WorldMap` für ein Id-zu-Name-Lookup nicht am
-   Nations-Modul hängen muss.
+### `URtsWorldMapViewModel` (`RtsWorldMapViewModel.h`)
 
-8. **Länder-Labels** — `GenerateCountryNames` / `GenerateCountryName` / `GenerateCountryNameForZone`.
-   Zerlegt jede Nation in Zonen, bestimmt pro Zone Schwerpunkt und weitestes Punktepaar und spawnt
-   darüber eine `ACountryName`.
+Was die Karte zeigt. Gehört `UWorldMapWidget`, das es erzeugt und befüllt. Hält `ProvinceVisuals`
+und `NationData` als gepushten Zustand, übersetzt sie über das Subsystem und ruft den Actor.
 
-Alle Lookups sind lazy (`Ensure*`) und `Transient`: sie werden aus `ProvinceMapData` neu aufgebaut,
-weil das die einzige Stelle ist, an der diese Daten autorisiert werden. Die, die Provinz-Ids
-auflösen, brauchen ein geladenes Szenario und bleiben bis dahin leer.
+Die Label-Berechnung sitzt hier: `BuildLabels` zerlegt jede Nation in Zonen und `BuildLabelForZone`
+bestimmt Schwerpunkt und weitestes Punktepaar. Das Punktepaar wird auf der **Einheitskugel**
+verglichen — das Skalieren aller Abstände mit dem Radius kann die Reihenfolge nicht ändern, also
+kommt die Berechnung ohne `MapRadius` aus.
+
+Es hält **nur Rendering-State**. Welche Provinz ausgewählt ist, warum ein Klick zählt, welches
+Fenster er öffnet — nichts davon gehört hierher, das liegt in `RtsUI`. Es hat auch **keine
+Dispatcher**: als `CreateInstance`-ViewModel hat es kein Eltern-ViewModel, das einen binden könnte
+(siehe `### Callbacks gibt es nur auf Manual-ViewModels` in `CLAUDE.md`).
 
 ### `UWorldMapWidget` (`WorldMapWidget.h`)
 
 Die Schnittstelle der Karte zum Rest der UI, damit die Karte irgendwo in den Widget-Baum des HUD
-gehängt werden kann, ohne dass der Platzierende den Kartenactor kennen muss. Klicks raus über
-`OnProvinceClicked`, Farben und Nationsdaten rein über `SetProvinceVisuals` / `SetNationData`.
+gehängt werden kann, ohne dass der Platzierende Kartenactor, Subsystem oder Pawn kennen muss.
 
-Der Kartenactor wird beim ersten Zugriff aufgelöst und dann behalten (`ResolveWorldMap`); das
-Delegate wird genau dort gebunden, wo er zum ersten Mal gefunden wird — nicht in `NativeConstruct`,
-weil das Widget vor den Level-Actors existieren kann und die Bindung dann nie zustande käme.
+- Erzeugt sein ViewModel in `NativeOnInitialized` und gibt es über `GetWorldMapViewModel` heraus —
+  das Blueprint bindet mit Creation Type „Property Path" darauf, nie mit „Create Instance".
+- Farben und Nationsdaten rein → ViewModel.
+- Pixel-Klick des Actors rein, über das Subsystem übersetzt, als `OnProvinceClicked` raus.
 
 ### `ACountryName` (`CountryName.h`)
 
-Ein Namenszug auf dem Globus. Reines Anzeigeobjekt: `ARtsWorldMap` entscheidet, wo ein Name
-hingehört, spawnt eine dieser Instanzen und ruft `Initialize`; die Klasse hält nur, was sie bekommen
-hat, und ruft `Refresh` (BlueprintImplementableEvent) fürs Rendern auf.
+Ein Namenszug auf dem Globus. Reines Anzeigeobjekt: es hält, was es bekommen hat, und ruft `Refresh`
+(BlueprintImplementableEvent) fürs Rendern. `CountryName_BP` tastet sich dabei selbst über die Kugel
+und fragt pro Punkt `ARtsWorldMap::FindOwnerNationIdForProvinceColor`, ob dort noch dieselbe Nation
+liegt.
 
 ### Typen
 
 | Typ | Datei | Wofür |
 |---|---|---|
-| `FMapPixelId` | `MapTypes.h` | R/G eines Provinz-ID-Pixels. Zugleich der Index in die LUTs — Rot wählt die Spalte, Grün die Zeile. |
+| `FMapPixelId` | `MapTypes.h` | R/G eines Provinz-ID-Pixels. Zugleich der Index in die LUTs — Rot wählt die Spalte, Grün die Zeile. `FromColor` wirft Blau und Alpha weg. |
 | `FMapLutEntry` | `MapTypes.h` | Eine Provinzzeile über alle drei LUTs, damit die Ebenen nie über ihr Pixel uneins werden können. |
 | `FMapNameZone` | `MapTypes.h` | Ein zusammenhängender Provinzblock für genau ein Label, plus dessen Randprovinzen. |
 | `FWorldMapNationData` | `MapTypes.h` | Name + gehaltene Provinzen einer Nation. Das Minimum, das die Beschriftung braucht — der Grund, warum `WorldMap` nicht am Nations-Modul hängt. |
-| `FProvinceVisuals` | `ProvinceVisuals.h` | Die drei Farbebenen einer Provinz. `bUseSecondary/NationalColor` aus heißt "folgt der Primärfarbe", nicht "schwarz". |
+| `FWorldMapLabel` | `MapTypes.h` | Ein fertiges Label: UV-Punkte, Text, Owner-Tags. UVs statt Weltpunkte, damit die Berechnung ohne `MapRadius` auskommt. |
+| `FProvinceVisuals` | `ProvinceVisuals.h` | Die drei Farbebenen einer Provinz. `bUseSecondary/NationalColor` aus heißt „folgt der Primärfarbe", nicht „schwarz". |
+| `MapProjection` | `MapProjection.h` | Kugelkoordinaten hin und zurück, als freie Funktionen. Der Radius ist ein Parameter, kein Zustand. |
 
 ## Verträge, die nicht im Code stehen
 
@@ -145,32 +190,28 @@ hat, und ruft `Refresh` (BlueprintImplementableEvent) fürs Rendern auf.
   UVs), das Layout nicht.
 - **Die Zeilennamen in `ProvinceMapData` sind die `MapId`** der Provinzen ("1893"), nicht das
   `Name`-Feld der Zeile ("Arnhem").
+- **`CountryName_BP` ruft in den Actor zurück** — `FindOwnerNationIdForProvinceColor`, `VectorToUV`
+  und `MapRadius`. Diese drei sind ein Blueprint-Vertrag und dürfen nicht umbenannt werden.
+  `RtsMap_BP` implementiert `SpawnMapName`.
 
 ## Externe Abhängigkeiten
 
-- **BloodAnvil-Plugin** (nicht in diesem Repository): das Zeilenformat `FProvinceMapDataGame`, der
-  Pixel-Read `UBA_DataFunctions::FindColor`, sowie Mesh- und Material-Assets, die der Konstruktor
-  per Pfad zieht. `ARtsWorldMap` leitete früher von `ABA_Map` ab; das wurde hierher gezogen, damit
-  der Code unter `Source/` versioniert und reviewbar ist. Ablösbar, sobald das Szenario die Tabelle
-  beim Laden in Projektdaten überführt.
+- **BloodAnvil-Plugin** (nicht in diesem Repository): das Zeilenformat `FProvinceMapDataGame` (vom
+  Subsystem gelesen), der Pixel-Read `UBA_DataFunctions::FindColor`, sowie Mesh- und
+  Material-Assets, die der Konstruktor per Pfad zieht. `ARtsWorldMap` leitete früher von der
+  Plugin-Klasse ab; das wurde hierher gezogen, damit der Code unter `Source/` versioniert und
+  reviewbar ist. Ablösbar, sobald das Szenario die Tabelle beim Laden in Projektdaten überführt.
 - **`Provinces`** (privat): `UProvinces::FindByMapId` für beide Richtungen des Lookups.
-- **`MapCamera`** hängt an diesem Modul, nicht umgekehrt — siehe `Source/MapCamera/README.md`.
 
 ## Bekannte Baustellen
 
-- `SetNationData` leert `ProvinceOwnerNationId` nicht, obwohl `EnsureNationOwnershipLookup` auf
-  `IsEmpty()` guardet — nach dem ersten Besitzerwechsel liefert `FindOwnerNationIdForProvinceColor`
-  dauerhaft veraltete Nationen.
-- `SetNationData` ruft `GenerateCountryNames`, das `ACountryName`-Actors spawnt, ohne die vorherigen
-  zu zerstören oder sich zu merken. `URtsHUDViewModel` broadcastet `GetNationData` bei jedem
-  Provinzbesitzwechsel, also stapeln sich die Labels.
-- Die Label-Pipeline (Punkt 8) ist unfertig: `GenerateCountryName` enthält einen `if (!true)`-
-  Platzhalter für "diese Nation nicht beschriften", die Subject-Behandlung fehlt, und `SpawnMapName`
-  ist ein `BlueprintImplementableEvent` — das Spawnen liegt damit im Binärasset statt in C++.
-- Punkte 5-8 sind Ableitungen, keine Darstellung, und sitzen nur deshalb hier, weil ihre Quelle die
-  Plugin-Tabelle ist. Der Klassenkommentar von `ARtsWorldMap` beschreibt noch den Stand davor.
-- `UFoundOrganizationModalWidgetViewModel` malt über `ARtsWorldMap::GetRtsWorldMap` direkt, statt
-  über `UWorldMapWidget` — der "einzige Schnittstelle"-Vertrag des Widgets gilt insofern nicht mehr.
-- `Content/RTS/Player/HUD/RtsHUD_VM.uasset` bindet noch `OnProvinceClicked` am Pawn, den es seit dem
-  Umzug nach `MapCamera` nicht mehr gibt. Muss einmal im Editor entfernt werden, sonst kompiliert
-  das Asset nicht.
+- `SpawnCountryLabels` zerstört die vorherigen `ACountryName`-Actors nicht. `URtsHUDViewModel`
+  broadcastet `GetNationData` bei jedem Provinzbesitzwechsel, also stapeln sich die Labels.
+  Bewusst unverändert übernommen — die Label-Pipeline wird als Ganzes angefasst, nicht nebenbei.
+- Die Label-Pipeline ist unfertig: Es gibt keine Regel dafür, welche Nationen ungenannt bleiben (zu
+  klein, Subjekt eines Overlords), die Provinzen eines Subjekts werden nicht in die Zonen des
+  Overlords gefaltet, und `SpawnMapName` ist ein `BlueprintImplementableEvent` — das Spawnen liegt
+  damit im Binärasset statt in C++.
+- `UFoundOrganizationModalWidgetViewModel` malt über `ARtsWorldMap::GetRtsWorldMap` +
+  `UWorldMapSubsystem` direkt, statt über `UWorldMapWidget` — der „einzige Schnittstelle"-Vertrag
+  des Widgets gilt insofern nicht mehr.

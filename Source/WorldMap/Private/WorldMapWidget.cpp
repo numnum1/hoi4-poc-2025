@@ -1,8 +1,23 @@
 #include "WorldMapWidget.h"
 
 #include "RtsWorldMap.h"
+#include "RtsWorldMapViewModel.h"
+#include "WorldMapSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWorldMapWidget, Log, All);
+
+void UWorldMapWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	// Created here rather than left to a "Create Instance" entry in the Blueprint: the Blueprint
+	// binds to this one through GetWorldMapViewModel, and a second instance created by the MVVM
+	// panel would sit there uninitialized and never reach the map.
+	if (WorldMapViewModel == nullptr)
+	{
+		WorldMapViewModel = NewObject<URtsWorldMapViewModel>(this);
+	}
+}
 
 void UWorldMapWidget::NativeConstruct()
 {
@@ -15,7 +30,7 @@ void UWorldMapWidget::NativeDestruct()
 {
 	if (WorldMap)
 	{
-		WorldMap->OnProvinceClicked.RemoveAll(this);
+		WorldMap->OnPixelClicked.RemoveAll(this);
 		WorldMap = nullptr;
 	}
 
@@ -47,27 +62,32 @@ ARtsWorldMap* UWorldMapWidget::ResolveWorldMap()
 
 	// Bound where the map is first found rather than in NativeConstruct: the widget can be built
 	// before the level's actors are, and a binding attempted only there would then never happen.
-	WorldMap->OnProvinceClicked.AddDynamic(this, &UWorldMapWidget::HandleProvinceClicked);
+	WorldMap->OnPixelClicked.AddDynamic(this, &UWorldMapWidget::HandlePixelClicked);
 	return WorldMap;
 }
 
 void UWorldMapWidget::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals)
 {
-	if (ARtsWorldMap* Map = ResolveWorldMap())
+	ResolveWorldMap();
+
+	if (WorldMapViewModel)
 	{
-		Map->SetProvinceVisuals(InVisuals);
+		WorldMapViewModel->SetProvinceVisuals(InVisuals);
 	}
 }
 
 void UWorldMapWidget::SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData)
 {
-	if (ARtsWorldMap* Map = ResolveWorldMap())
+	ResolveWorldMap();
+
+	if (WorldMapViewModel)
 	{
-		Map->SetNationData(InNationData);
+		WorldMapViewModel->SetNationData(InNationData);
 	}
 }
 
-void UWorldMapWidget::HandleProvinceClicked(const FProvinceId InProvinceId)
+void UWorldMapWidget::HandlePixelClicked(const FMapPixelId InPixelId)
 {
-	OnProvinceClicked.Broadcast(InProvinceId);
+	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
+	OnProvinceClicked.Broadcast(Subsystem ? Subsystem->FindProvince(InPixelId) : FProvinceId());
 }

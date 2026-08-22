@@ -1,6 +1,5 @@
 #include "RtsWorldMap.h"
 
-#include "AssetTypeCategories.h"
 #include "BA_DataFunctions.h"
 #include "Components/StaticMeshComponent.h"
 #include "CountryName.h"
@@ -9,6 +8,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "MapProjection.h"
 #include "PixelFormat.h"
 #include "RHICommandList.h"
 #include "RenderingThread.h"
@@ -20,10 +20,8 @@
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
-#include "Provinces.h"
-#include "RtsGameStateComponent.h"
-#include "Kismet/KismetMathLibrary.h"
 #include "UObject/ConstructorHelpers.h"
+#include "WorldMapSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRtsWorldMap, Log, All);
 
@@ -190,6 +188,7 @@ void ARtsWorldMap::BeginPlay()
 	Super::BeginPlay();
 
 	ConfigureMesh();
+	ConfigureSubsystem();
 	EnsureLuts();
 }
 
@@ -202,8 +201,17 @@ void ARtsWorldMap::OnConstruction(const FTransform& Transform)
 	MapMesh->SetStaticMesh(GlobeMesh);
 	RebuildDynamicMaterials();
 	ConfigureMesh();
+	ConfigureSubsystem();
 	// Also outside Play so the globe already shows its province colors in the editor viewport.
 	EnsureLuts();
+}
+
+void ARtsWorldMap::ConfigureSubsystem() const
+{
+	if (UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this))
+	{
+		Subsystem->Configure(ProvinceMapData);
+	}
 }
 
 void ARtsWorldMap::RebuildDynamicMaterials()
@@ -249,26 +257,18 @@ void ARtsWorldMap::ConfigureMesh()
 
 FVector2D ARtsWorldMap::VectorToUV(const FVector InImpactPoint) const
 {
-	const FVector Normal = InImpactPoint.GetSafeNormal();
-	return FVector2D(
-		FMath::Atan2(Normal.X, Normal.Y) / (2.0f * PI) + 0.5f,
-		FMath::Asin(-Normal.Z) / PI + 0.5f);
+	return MapProjection::VectorToUV(InImpactPoint);
 }
 
 FVector ARtsWorldMap::UVToLocation(const FVector2D InUV) const
 {
-	const float Theta = InUV.X * 2.0f * PI;
-	const float Phi = InUV.Y * PI;
-	return FVector(
-		-MapRadius * FMath::Sin(Phi) * FMath::Sin(Theta),
-		-MapRadius * FMath::Sin(Phi) * FMath::Cos(Theta),
-		MapRadius * FMath::Cos(Phi));
+	return MapProjection::UVToLocation(InUV, MapRadius);
 }
 
 bool ARtsWorldMap::EnsureLuts()
 {
-	EnsureMapDataLookup();
-	if (MapIdToPixelId.IsEmpty() || ProvinceIdTexture == nullptr)
+	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
+	if (Subsystem == nullptr || !Subsystem->HasMapData() || ProvinceIdTexture == nullptr)
 	{
 		return false;
 	}
@@ -278,6 +278,7 @@ bool ARtsWorldMap::EnsureLuts()
 		// Exactly the rows in use, matching the plugin's ceil(NumProvinces / 256): the material reads
 		// the row off the texture's own height, so padding it out to 256 makes every province sample
 		// an empty row instead of its color.
+		const int32 HighestPixelRow = Subsystem->GetHighestPixelRow();
 		const int32 Height = HighestPixelRow + 1;
 		if (Height > MaxLutHeight)
 		{
@@ -320,125 +321,29 @@ bool ARtsWorldMap::EnsureLuts()
 	return true;
 }
 
-void ARtsWorldMap::EnsureMapDataLookup() const
-{
-	if (!MapIdToPixelId.IsEmpty())
-	{
-		return;
-	}
-
-	if (ProvinceMapData == nullptr)
-	{
-		if (!bLookupFailureLogged)
-		{
-			bLookupFailureLogged = true;
-			UE_LOG(LogRtsWorldMap, Error,
-			       TEXT("%s has no ProvinceMapData assigned, so no province can be resolved or painted."),
-			       *GetName());
-		}
-		return;
-	}
-
-	for (const TPair<FName, uint8*>& Row : ProvinceMapData->GetRowMap())
-	{
-		const FProvinceMapDataGame* MapData = reinterpret_cast<FProvinceMapDataGame*>(Row.Value);
-		if (MapData == nullptr)
-		{
-			continue;
-		}
-
-		FMapPixelId PixelId;
-		PixelId.R = MapData->Color.R;
-		PixelId.G = MapData->Color.G;
-
-		// Keyed on the row name, not the row's own Name field: that field holds the map editor's
-		// label ("Arnhem"), while a province's MapId is the row key ("1893").
-		MapIdToPixelId.Add(Row.Key, PixelId);
-		PixelIdToMapId.Add(PixelId, Row.Key);
-		HighestPixelRow = FMath::Max(HighestPixelRow, static_cast<int32>(PixelId.G));
-	}
-}
-
-void ARtsWorldMap::EnsureProvinceLookup()
-{
-	EnsureMapDataLookup();
-
-	if (!ProvinceIdToPixelId.IsEmpty() || MapIdToPixelId.IsEmpty())
-	{
-		return;
-	}
-
-	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
-	if (Provinces == nullptr)
-	{
-		return;
-	}
-
-	for (const TPair<FName, FMapPixelId>& Entry : MapIdToPixelId)
-	{
-		const FProvinceId ProvinceId = Provinces->FindByMapId(Entry.Key);
-		if (ProvinceId.IsValid())
-		{
-			ProvinceIdToPixelId.Add(ProvinceId, Entry.Value);
-		}
-	}
-
-	// A table whose names match no province leaves the map unpainted with nothing else to show for
-	// it, so the mismatch is called out rather than left to look like a rendering problem.
-	if (ProvinceIdToPixelId.IsEmpty())
-	{
-		UE_LOG(LogRtsWorldMap, Error,
-		       TEXT("%s: none of the %d names in ProvinceMapData match a province MapId of the loaded scenario."),
-		       *GetName(), MapIdToPixelId.Num());
-	}
-}
-
 void ARtsWorldMap::NotifyWorldClicked(const FHitResult& InHit)
 {
 	if (!InHit.bBlockingHit)
 	{
-		OnProvinceClicked.Broadcast(FProvinceId());
+		OnPixelClicked.Broadcast(FMapPixelId());
 		return;
 	}
 
 	const FVector2D UV = VectorToUV(InHit.ImpactPoint);
-	const FProvinceId ProvinceId = ResolveProvinceAt(UV);
-	UE_LOG(LogRtsWorldMap, Verbose,
-	       TEXT("Click on %s at %s -> UV (%f, %f) -> province %d"),
-	       *GetNameSafe(InHit.GetActor()), *InHit.ImpactPoint.ToString(), UV.X, UV.Y, ProvinceId.Value);
 
-	OnProvinceClicked.Broadcast(ProvinceId);
-}
-
-FProvinceId ARtsWorldMap::ResolveProvinceAt(const FVector2D InUV)
-{
 	FColor PixelColor;
-	if (!ReadLookupPixel(InUV, PixelColor))
+	if (!ReadLookupPixel(UV, PixelColor))
 	{
-		return FProvinceId();
+		OnPixelClicked.Broadcast(FMapPixelId());
+		return;
 	}
 
-	return FindProvinceByColor(PixelColor);
-}
+	const FMapPixelId PixelId = FMapPixelId::FromColor(PixelColor);
+	UE_LOG(LogRtsWorldMap, Verbose,
+	       TEXT("Click on %s at %s -> UV (%f, %f) -> pixel (%d, %d)"),
+	       *GetNameSafe(InHit.GetActor()), *InHit.ImpactPoint.ToString(), UV.X, UV.Y, PixelId.R, PixelId.G);
 
-FProvinceId ARtsWorldMap::FindProvinceByColor(const FColor& InProvinceColor) const
-{
-	EnsureMapDataLookup();
-
-	// Only red and green carry the id — a pixel sampled off the texture brings along a blue and an
-	// alpha the table never declares.
-	FMapPixelId PixelId;
-	PixelId.R = InProvinceColor.R;
-	PixelId.G = InProvinceColor.G;
-
-	const FName* MapId = PixelIdToMapId.Find(PixelId);
-	if (MapId == nullptr)
-	{
-		return FProvinceId();
-	}
-
-	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
-	return Provinces ? Provinces->FindByMapId(*MapId) : FProvinceId();
+	OnPixelClicked.Broadcast(PixelId);
 }
 
 bool ARtsWorldMap::ReadLookupPixel(const FVector2D InUV, FColor& OutColor) const
@@ -530,390 +435,60 @@ void ARtsWorldMap::LogLookupTextureUnreadable(const TCHAR* InReason) const
 	       *GetName(), *GetNameSafe(ProvinceIdLookupTexture), InReason);
 }
 
-void ARtsWorldMap::SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals)
+void ARtsWorldMap::PaintProvinces(const TArray<FMapLutEntry>& InRows)
 {
-	EnsureProvinceLookup();
+	if (InRows.IsEmpty())
+	{
+		return;
+	}
 
-	const bool bHasLuts = EnsureLuts();
-	if (!bHasLuts || ProvinceIdToPixelId.IsEmpty())
+	if (!EnsureLuts())
 	{
 		if (!bPaintFailureLogged)
 		{
 			bPaintFailureLogged = true;
-			UE_LOG(LogRtsWorldMap, Error,
-			       TEXT("%s cannot paint: lookup textures %s, province lookup holds %d entries."),
-			       *GetName(), bHasLuts ? TEXT("ready") : TEXT("missing"), ProvinceIdToPixelId.Num());
-		}
-		return;
-	}
-
-	TArray<FMapLutEntry> Rows;
-	Rows.Reserve(InVisuals.Num());
-
-	for (const TPair<FProvinceId, FProvinceVisuals>& Entry : InVisuals)
-	{
-		const FMapPixelId* PixelId = ProvinceIdToPixelId.Find(Entry.Key);
-		if (PixelId == nullptr)
-		{
-			continue;
-		}
-
-		FMapLutEntry Row;
-		Row.Id = *PixelId;
-		Row.Primary = Entry.Value.PrimaryColor;
-		Row.Secondary = Entry.Value.GetEffectiveSecondaryColor();
-		Row.National = Entry.Value.GetEffectiveNationalColor();
-		Rows.Add(Row);
-	}
-
-	if (Rows.IsEmpty())
-	{
-		if (!bPaintFailureLogged && !InVisuals.IsEmpty())
-		{
-			bPaintFailureLogged = true;
-			UE_LOG(LogRtsWorldMap, Error,
-			       TEXT("%s: none of the %d provinces handed in are in the province-ID table."),
-			       *GetName(), InVisuals.Num());
+			UE_LOG(LogRtsWorldMap, Error, TEXT("%s cannot paint: its lookup textures are missing."), *GetName());
 		}
 		return;
 	}
 
 	// Nothing is cleared first: the caller sends the provinces it wants changed, not the whole
 	// world, and clearing would black out every province missing from this batch.
-	WriteLutTexture(PrimaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Primary; });
-	WriteLutTexture(SecondaryLut, Rows, [](const FMapLutEntry& InRow) { return InRow.Secondary; });
-	WriteLutTexture(NationalLut, Rows, [](const FMapLutEntry& InRow) { return InRow.National; });
+	WriteLutTexture(PrimaryLut, InRows, [](const FMapLutEntry& InRow) { return InRow.Primary; });
+	WriteLutTexture(SecondaryLut, InRows, [](const FMapLutEntry& InRow) { return InRow.Secondary; });
+	WriteLutTexture(NationalLut, InRows, [](const FMapLutEntry& InRow) { return InRow.National; });
 }
 
-void ARtsWorldMap::SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData)
+void ARtsWorldMap::SetProvinceOwners(const TMap<FMapPixelId, FNationId>& InOwners)
 {
-	NationNames = InNationData;
-	GenerateCountryNames();
-}
-
-void ARtsWorldMap::EnsureAdjacencyLookup()
-{
-	EnsureProvinceLookup();
-
-	if (!ProvinceAdjacencies.IsEmpty() || ProvinceIdToPixelId.IsEmpty() || ProvinceMapData == nullptr)
-	{
-		return;
-	}
-
-	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
-	if (Provinces == nullptr)
-	{
-		return;
-	}
-
-	for (const TPair<FName, uint8*>& Row : ProvinceMapData->GetRowMap())
-	{
-		const FProvinceMapDataGame* MapData = reinterpret_cast<FProvinceMapDataGame*>(Row.Value);
-		if (MapData == nullptr)
-		{
-			continue;
-		}
-
-		const FProvinceId ProvinceId = Provinces->FindByMapId(Row.Key);
-		if (!ProvinceId.IsValid())
-		{
-			continue;
-		}
-
-		TArray<FProvinceId>& Neighbours = ProvinceAdjacencies.Add(ProvinceId);
-		for (const FName& AdjacentMapId : MapData->Adjacencies.Adjacency)
-		{
-			const FProvinceId AdjacentId = Provinces->FindByMapId(AdjacentMapId);
-			if (AdjacentId.IsValid())
-			{
-				Neighbours.Add(AdjacentId);
-				continue;
-			}
-
-			// Recorded rather than silently dropped: the map table covers the whole world while a
-			// scenario loads a corner of it, so most neighbours resolve to nothing — and a province
-			// whose neighbour the scenario does not know is exactly a province on the outer edge,
-			// which is what the zone border test is looking for.
-			ProvincesAdjacentToUnknown.Add(ProvinceId);
-		}
-	}
-}
-
-void ARtsWorldMap::EnsureUnitPositionLookup() const
-{
-	if (!ProvinceUnitPositions.IsEmpty() || ProvinceMapData == nullptr)
-	{
-		return;
-	}
-
-	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
-	if (Provinces == nullptr)
-	{
-		return;
-	}
-
-	for (const TPair<FName, uint8*>& Row : ProvinceMapData->GetRowMap())
-	{
-		const FProvinceMapDataGame* MapData = reinterpret_cast<FProvinceMapDataGame*>(Row.Value);
-		if (MapData == nullptr)
-		{
-			continue;
-		}
-
-		const FProvinceId ProvinceId = Provinces->FindByMapId(Row.Key);
-		if (ProvinceId.IsValid())
-		{
-			ProvinceUnitPositions.Add(ProvinceId, MapData->UnitPosition);
-		}
-	}
-}
-
-bool ARtsWorldMap::FindUnitPositonOfProvince(const FProvinceId& ProvinceId, FVector2D& OutUnitPosition) const
-{
-	EnsureUnitPositionLookup();
-
-	const FVector2D* Position = ProvinceUnitPositions.Find(ProvinceId);
-	if (Position == nullptr)
-	{
-		return false;
-	}
-
-	OutUnitPosition = *Position;
-	return true;
-}
-
-void ARtsWorldMap::EnsureNationOwnershipLookup() const
-{
-	if (!ProvinceOwnerNationId.IsEmpty() || NationNames.IsEmpty())
-	{
-		return;
-	}
-
-	for (const TPair<FNationId, FWorldMapNationData>& Entry : NationNames)
-	{
-		for (const FProvinceId& OwnedProvince : Entry.Value.OwnedProvinces)
-		{
-			ProvinceOwnerNationId.Add(OwnedProvince, Entry.Key);
-		}
-	}
+	PixelOwnerNationId = InOwners;
 }
 
 FNationId ARtsWorldMap::FindOwnerNationIdForProvinceColor(const FColor& InProvinceColor) const
 {
-	const FProvinceId ProvinceId = FindProvinceByColor(InProvinceColor);
-	if (!ProvinceId.IsValid())
-	{
-		return FNationId();
-	}
-
-	EnsureNationOwnershipLookup();
-
-	const FNationId* NationId = ProvinceOwnerNationId.Find(ProvinceId);
+	const FNationId* NationId = PixelOwnerNationId.Find(FMapPixelId::FromColor(InProvinceColor));
 	return NationId ? *NationId : FNationId();
 }
 
-bool ARtsWorldMap::GenerateMapNameZones(const TArray<FProvinceId>& InProvinces, TArray<FMapNameZone>& OutZones)
+void ARtsWorldMap::SpawnCountryLabels(const TArray<FWorldMapLabel>& InLabels)
 {
-	EnsureAdjacencyLookup();
-	if (ProvinceAdjacencies.IsEmpty())
-	{
-		return false;
-	}
-
-	TMap<FProvinceId, int32> ProvinceToZone;
-
-	// Not TSet<FProvinceId>(InProvinces): that constructor form trips a known MSVC bug, see the note
-	// atop Containers/Set.h.
-	TSet<FProvinceId> ProvinceSet = TSet<FProvinceId>(TArray<FProvinceId>(InProvinces));
-
-	for (int32 ZoneIndex = 0; ZoneIndex < OutZones.Num(); ++ZoneIndex)
-	{
-		for (const FProvinceId& Province : OutZones[ZoneIndex].Provinces)
-		{
-			ProvinceToZone.Add(Province, ZoneIndex);
-		}
-	}
-
-	for (const FProvinceId& Province : InProvinces)
-	{
-		if (ProvinceToZone.Contains(Province))
-		{
-			continue;
-		}
-
-		TArray<int32> NeighbourZones;
-
-		// A neighbour outside the loaded scenario has no id to test against ProvinceSet below, so that
-		// case is answered from the set EnsureAdjacencyLookup filled instead.
-		bool bIsBordering = ProvincesAdjacentToUnknown.Contains(Province);
-
-		if (const TArray<FProvinceId>* Neighbours = ProvinceAdjacencies.Find(Province))
-		{
-			for (const FProvinceId& Neighbour : *Neighbours)
-			{
-				if (const int32* ZoneIndex = ProvinceToZone.Find(Neighbour))
-				{
-					NeighbourZones.AddUnique(*ZoneIndex);
-				}
-
-				if (!ProvinceSet.Contains(Neighbour))
-				{
-					bIsBordering = true;
-				}
-			}
-		}
-
-		if (NeighbourZones.IsEmpty())
-		{
-			FMapNameZone NewZone;
-			NewZone.Provinces.Add(Province);
-			if (bIsBordering)
-			{
-				NewZone.Bordering.Add(Province);
-			}
-
-			ProvinceToZone.Add(Province, OutZones.Num());
-			OutZones.Add(MoveTemp(NewZone));
-			continue;
-		}
-
-		// Bridging two zones that were only separate because nothing had joined them yet: the province
-		// joins the first and every other zone it touches is folded into that one.
-		const int32 PrimaryZone = NeighbourZones[0];
-		OutZones[PrimaryZone].Provinces.Add(Province);
-		ProvinceToZone.Add(Province, PrimaryZone);
-
-		if (bIsBordering)
-		{
-			OutZones[PrimaryZone].Bordering.Add(Province);
-		}
-
-		for (int32 i = 1; i < NeighbourZones.Num(); ++i)
-		{
-			const int32 MergeZone = NeighbourZones[i];
-			if (!OutZones.IsValidIndex(MergeZone) || MergeZone == PrimaryZone)
-			{
-				continue;
-			}
-
-			for (const FProvinceId& MergedProvince : OutZones[MergeZone].Provinces)
-			{
-				OutZones[PrimaryZone].Provinces.Add(MergedProvince);
-				ProvinceToZone[MergedProvince] = PrimaryZone;
-			}
-
-			OutZones[PrimaryZone].Bordering.Append(OutZones[MergeZone].Bordering);
-
-			// Emptied rather than removed: the indices in ProvinceToZone and NeighbourZones would all
-			// shift. The empty zones are dropped in one pass at the end.
-			OutZones[MergeZone].Provinces.Empty();
-			OutZones[MergeZone].Bordering.Empty();
-		}
-	}
-
-	OutZones.RemoveAll([](const FMapNameZone& InZone) { return InZone.Provinces.IsEmpty(); });
-	return true;
-}
-
-void ARtsWorldMap::GenerateCountryNames()
-{
-	for (auto [NationId, WorldMapNationData] : NationNames)
-		GenerateCountryName(NationId, WorldMapNationData);
-}
-
-void ARtsWorldMap::GenerateCountryName(const FNationId& Id, const FWorldMapNationData& Data)
-{
-	TArray<FNationId> TraceOverTags = {};
-	TraceOverTags.Add(Id);
-
-	if (!true) // Placeholder for when not to render a countries name (for example, too small, or subject)
-	{
-		return;
-	}
-
-	TArray<FProvinceId> Provinces = Data.OwnedProvinces;
-	/*
-	 * For later
-	 *
-	 * for (Subject : Data.Subjects) Provinces.Append(Subject.Provinces);
-	 */
-
-	TArray<FMapNameZone> Zones = {};
-	const bool bSuccess = GenerateMapNameZones(Provinces, Zones);
-	if (!bSuccess)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Could not create map name zones"));
-		return;
-	}
-
-	for (const FMapNameZone& Zone : Zones)
-		GenerateCountryNameForZone(Id, Data, Zone, TraceOverTags);
-}
-
-void ARtsWorldMap::GenerateCountryNameForZone(const FNationId& Id, const FWorldMapNationData& Data, const FMapNameZone& Zone, const TArray<FNationId>& TraceOverTags)
-{
-	// Initialize variables
-	int32 LargestIndex = 0;
-	int32 LargestIndex_0 = 0;
-	int32 Num = 0;
-	TArray<FVector2D> Points = {};
-	FVector2D LargestPoint01 = {0.f, 0.f};
-	FVector2D LargestPoint02 = {0.f, 0.f};
-	float LargestDistance = 0;
-	FVector2D Average = {0.f, 0.f};
-	// Find All Locations For Convex Hull & Find Average and Two furthest points
-	// A zone with no border at all (every neighbour is the owner's own) still has to be labelled, so
-	// it falls back to the whole zone rather than dividing by an empty Points below — that produced a
-	// NaN average, and the NaN survived all the way into a texture lookup as an out-of-range index.
-	const TArray<FProvinceId>& Outline = Zone.Bordering.IsEmpty() ? Zone.Provinces : Zone.Bordering;
-	if (Outline.IsEmpty())
-	{
-		return;
-	}
-
-	for (const FProvinceId& Bordering : Outline)
-	{
-		FVector2D WorldPosition;
-		const bool Found = FindUnitPositonOfProvince(Bordering, WorldPosition);
-		if (!Found)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Could not find province's unit position"));
-			return;
-		}
-		Points.Add(WorldPosition);
-	}
-	for (const FVector2D& Point : Points)
-	{
-		Average = Point + Average;
-		for (const FVector2D& InnerPoint : Points)
-		{
-			const float Squared = UKismetMathLibrary::Vector_DistanceSquared(UVToLocation(InnerPoint), UVToLocation(Point));
-			if (Squared > LargestDistance)
-			{
-				LargestDistance = Squared;
-				LargestPoint01 = InnerPoint;
-				LargestPoint02 = Point;
-			}
-		}
-	}
-	Average = Average / FVector2D(Points.Num(), Points.Num());
-	// Add Name
+	for (const FWorldMapLabel& Label : InLabels)
 	{
 		ACountryName* Spawned = SpawnMapName();
-		if (!Spawned)
+		if (Spawned == nullptr)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Could not spawn map name"));
+			UE_LOG(LogRtsWorldMap, Warning, TEXT("%s could not spawn a country name."), *GetName());
 			return;
 		}
-		
-		const bool OneSmallerTwo = LargestPoint01.X < LargestPoint02.X;
-		const TArray<FVector> PointsArray = {
-			UVToLocation(OneSmallerTwo ? LargestPoint02 : LargestPoint01),
-			UVToLocation(Average),
-			UVToLocation(OneSmallerTwo ? LargestPoint01 : LargestPoint02)
-		};
-		
-		Spawned->Initialize(PointsArray, Data.Name, this, TraceOverTags);
+
+		TArray<FVector> Points;
+		Points.Reserve(Label.UVPoints.Num());
+		for (const FVector2D& UVPoint : Label.UVPoints)
+		{
+			Points.Add(UVToLocation(UVPoint));
+		}
+
+		Spawned->Initialize(Points, Label.Name, this, Label.OwnerTags);
 	}
 }
 

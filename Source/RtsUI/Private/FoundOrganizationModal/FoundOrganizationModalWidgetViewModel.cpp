@@ -9,6 +9,7 @@
 #include "Provinces.h"
 #include "RtsGameStateComponent.h"
 #include "RtsWorldMap.h"
+#include "WorldMapSubsystem.h"
 
 #define LOCTEXT_NAMESPACE "FoundOrganizationModalWidgetViewModel"
 
@@ -169,7 +170,8 @@ FNationId UFoundOrganizationModalWidgetViewModel::GetActingNationId() const
 void UFoundOrganizationModalWidgetViewModel::RefreshProvinceOverlay() const
 {
 	ARtsWorldMap* WorldMap = ARtsWorldMap::GetRtsWorldMap(this);
-	if (WorldMap == nullptr || Provinces == nullptr)
+	const UWorldMapSubsystem* WorldMapSubsystem = UWorldMapSubsystem::Get(this);
+	if (WorldMap == nullptr || WorldMapSubsystem == nullptr || Provinces == nullptr)
 	{
 		return;
 	}
@@ -222,7 +224,7 @@ void UFoundOrganizationModalWidgetViewModel::RefreshProvinceOverlay() const
 		Visuals.Add(Entry.Key).PrimaryColor = Entry.Value;
 	}
 
-	WorldMap->SetProvinceVisuals(Visuals);
+	WorldMap->PaintProvinces(WorldMapSubsystem->BuildLutRows(Visuals));
 }
 
 void UFoundOrganizationModalWidgetViewModel::ClearProvinceOverlay() const
