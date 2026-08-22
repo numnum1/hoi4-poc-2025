@@ -9,6 +9,7 @@
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "MapProjection.h"
+#include "PixelFormat.h"
 #include "RHICommandList.h"
 #include "RenderingThread.h"
 #include "TextureResource.h"
@@ -366,7 +367,7 @@ bool ARtsWorldMap::ReadLookupPixel(const FVector2D InUV, FColor& OutColor) const
 	const int64 PixelBytes = PlatformData != nullptr && PlatformData->Mips.Num() > 0
 		? PlatformData->Mips[0].BulkData.GetBulkDataSize()
 		: 0;
-	if (PixelBytes < int64(Width) * Height * 4)
+	if (Width <= 0 || Height <= 0 || PixelBytes < int64(Width) * Height * 4)
 	{
 		UE_LOG(LogRtsWorldMap, Error,
 		       TEXT("%s: %s keeps %lld bytes of pixels, not the %lld that a %dx%d BGRA8 read needs."),
@@ -374,14 +375,26 @@ bool ARtsWorldMap::ReadLookupPixel(const FVector2D InUV, FColor& OutColor) const
 		return false;
 	}
 
+	const int32 X = FMath::Clamp(FMath::FloorToInt(InUV.X * Width), 0, Width - 1);
+	const int32 Y = FMath::Clamp(FMath::FloorToInt(InUV.Y * Height), 0, Height - 1);
+
 	// Initialized rather than left to FindColor: it leaves its out parameter untouched when the lock
 	// fails, which would hand back whatever was on the stack as a province color.
 	OutColor = FColor::Black;
-	UBA_DataFunctions::FindColor(
-		ProvinceIdTexture.Get(),
-		FMath::Clamp(FMath::FloorToInt(InUV.X * Width), 0, Width - 1),
-		FMath::Clamp(FMath::FloorToInt(InUV.Y * Height), 0, Height - 1),
-		OutColor);
+	UBA_DataFunctions::FindColor(ProvinceIdTexture.Get(), X, Y, OutColor);
+
+	if (!bLookupDiagnosticsLogged)
+	{
+		bLookupDiagnosticsLogged = true;
+		UE_LOG(LogRtsWorldMap, Warning,
+		       TEXT("Lookup diagnostics: %s is %s, %dx%d (mip0 %dx%d), %d mip(s), %lld bytes. ")
+		       TEXT("UV (%f, %f) -> pixel (%d, %d) -> BGRA (%d, %d, %d, %d). Map at %s."),
+		       *GetNameSafe(ProvinceIdTexture), GetPixelFormatString(PlatformData->PixelFormat),
+		       Width, Height, PlatformData->Mips[0].SizeX, PlatformData->Mips[0].SizeY,
+		       PlatformData->Mips.Num(), PixelBytes,
+		       InUV.X, InUV.Y, X, Y, OutColor.B, OutColor.G, OutColor.R, OutColor.A,
+		       *GetActorTransform().ToString());
+	}
 
 	return true;
 }

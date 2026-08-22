@@ -236,7 +236,55 @@ FProvinceId UWorldMapSubsystem::FindProvince(const FMapPixelId& InPixelId) const
 	EnsureProvinceLookup();
 
 	const FProvinceId* ProvinceId = PixelIdToProvinceId.Find(InPixelId);
+	LogResolvedPixel(InPixelId, ProvinceId ? *ProvinceId : FProvinceId());
 	return ProvinceId ? *ProvinceId : FProvinceId();
+}
+
+void UWorldMapSubsystem::LogResolvedPixel(const FMapPixelId& InPixelId, const FProvinceId InProvinceId) const
+{
+	const FName* MapId = nullptr;
+	for (const TPair<FName, FMapPixelId>& Entry : MapIdToPixelId)
+	{
+		if (Entry.Value == InPixelId)
+		{
+			MapId = &Entry.Key;
+			break;
+		}
+	}
+
+	if (MapId == nullptr)
+	{
+		UE_LOG(LogWorldMapSubsystem, Warning,
+		       TEXT("Clicked pixel (%d, %d): no row of the province map table has this color (%d rows). "
+		            "Either the click landed on water or a border, or the ID texture and the table are "
+		            "from different map generations."),
+		       InPixelId.R, InPixelId.G, MapIdToPixelId.Num());
+		return;
+	}
+
+	FString Label;
+	if (ProvinceMapData != nullptr)
+	{
+		if (const FProvinceMapDataGame* Row = ProvinceMapData->FindRow<FProvinceMapDataGame>(*MapId, TEXT("LogResolvedPixel"), false))
+		{
+			Label = Row->Name.ToString();
+		}
+	}
+
+	if (!InProvinceId.IsValid())
+	{
+		UE_LOG(LogWorldMapSubsystem, Warning,
+		       TEXT("Clicked pixel (%d, %d) is map row '%s' (\"%s\"), but no province of the loaded "
+		            "scenario carries that MapId."),
+		       InPixelId.R, InPixelId.G, *MapId->ToString(), *Label);
+		return;
+	}
+
+	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
+	const FString ProvinceName = Provinces ? Provinces->GetDisplayInfo(InProvinceId).Name.ToString() : FString();
+	UE_LOG(LogWorldMapSubsystem, Display,
+	       TEXT("Clicked pixel (%d, %d) -> map row '%s' (\"%s\") -> province %d (\"%s\")."),
+	       InPixelId.R, InPixelId.G, *MapId->ToString(), *Label, InProvinceId.Value, *ProvinceName);
 }
 
 bool UWorldMapSubsystem::FindUnitPosition(const FProvinceId InProvinceId, FVector2D& OutUnitPosition) const

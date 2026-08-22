@@ -58,6 +58,8 @@ private:
 
 	void EnsureUnitPositionLookup() const;
 
+	void LogResolvedPixel(const FMapPixelId& InPixelId, FProvinceId InProvinceId) const;
+
 	UPROPERTY(Transient)
 	TObjectPtr<UDataTable> ProvinceMapData;
 
