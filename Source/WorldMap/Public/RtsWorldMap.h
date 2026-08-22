@@ -78,9 +78,6 @@ public:
 	TObjectPtr<UTexture2D> ProvinceIdTexture;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Province Lookup")
-	TObjectPtr<UTexture2D> ProvinceIdLookupTexture;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Province Lookup")
 	TObjectPtr<UDataTable> ProvinceMapData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map Settings")
@@ -108,10 +105,6 @@ private:
 
 	bool ReadLookupPixel(FVector2D InUV, FColor& OutColor) const;
 
-	bool IsLookupTextureReadable() const;
-
-	void LogLookupTextureUnreadable(const TCHAR* InReason) const;
-
 	void RebuildDynamicMaterials();
 
 	UPROPERTY(Transient)
@@ -128,8 +121,6 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Transient, Category="World Map")
 	TMap<FMapPixelId, FNationId> PixelOwnerNationId;
-
-	mutable bool bLookupTextureFailureLogged = false;
 
 	bool bPaintFailureLogged = false;
 };
