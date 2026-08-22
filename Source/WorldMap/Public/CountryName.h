@@ -18,9 +18,6 @@ class WORLDMAP_API ACountryName : public AActor
 public:
 	ACountryName();
 
-	/** Points is the path the name is laid out along (e.g. the country's outline or a fitted
-	 * centerline) in world space; OwnerTags is whatever ARtsWorldMap's caller used to mark the
-	 * country the points belong to, carried along for later filtering (e.g. by nation). */
 	UFUNCTION(BlueprintCallable, Category="Country Name")
 	void Initialize(const TArray<FVector>& InPoints, const FText& InName, ARtsWorldMap* InMap, const TArray<FNationId>& InOwnerTags);
 

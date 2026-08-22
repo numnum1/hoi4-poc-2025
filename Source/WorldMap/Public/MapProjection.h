@@ -10,8 +10,6 @@
  */
 namespace MapProjection
 {
-	/** Where a point on the globe's surface lands in map UV space. Independent of the radius: the
-	 * point is normalized first. */
 	inline FVector2D VectorToUV(const FVector& InPoint)
 	{
 		const FVector Normal = InPoint.GetSafeNormal();
@@ -20,7 +18,6 @@ namespace MapProjection
 			FMath::Asin(-Normal.Z) / PI + 0.5f);
 	}
 
-	/** The inverse of VectorToUV, on a sphere of InRadius, relative to the sphere's centre. */
 	inline FVector UVToLocation(const FVector2D& InUV, const float InRadius)
 	{
 		const float Theta = InUV.X * 2.0f * PI;

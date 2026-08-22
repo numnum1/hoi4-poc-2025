@@ -31,18 +31,12 @@ class WORLDMAP_API UWorldMapWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	/** Fires for every click on the map; an invalid id means the player clicked off any province.
-	 * The one way a click leaves this module. */
 	UPROPERTY(BlueprintAssignable, Category="World Map")
 	FWorldMapProvinceClicked OnProvinceClicked;
 
-	/** Paints the given provinces. Provinces left out keep whatever color they had — this is a
-	 * change set, not a whole world, so the caller decides what "reset" means. */
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals);
 
-	/** Hands the map who owns what and what they are called, which is what its country labels are
-	 * built from. Like the colors, this is decided in RtsUI and pushed down. */
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData);
 
@@ -55,14 +49,9 @@ protected:
 	virtual void NativeDestruct() override;
 
 private:
-	/** Turns the pixel the map read into the province it belongs to. The actor reports pixels
-	 * because it has no province lookup of its own — this is where that is undone. */
 	UFUNCTION()
 	void HandlePixelClicked(FMapPixelId InPixelId);
 
-	/** The map actor, found once and kept. Retried on every call rather than resolved in
-	 * NativeConstruct alone, because a widget built before the level's actors are up would
-	 * otherwise stay pointed at nothing for the rest of its life. */
 	ARtsWorldMap* ResolveWorldMap();
 
 	UPROPERTY(Transient)
@@ -71,6 +60,5 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<ARtsWorldMap> WorldMap;
 
-	/** So a level without a map actor is reported once, not on every repaint. */
 	bool bMissingMapLogged = false;
 };
