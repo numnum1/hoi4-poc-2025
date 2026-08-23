@@ -99,7 +99,10 @@ void URtsHUDViewModel::SetSelectedProvinceId(const FProvinceId InSelectedProvinc
 
 void URtsHUDViewModel::SetHoveredProvinceId(const FProvinceId InHoveredProvinceId)
 {
-	UE_MVVM_SET_PROPERTY_VALUE(HoveredProvinceId, InHoveredProvinceId);
+	if (UE_MVVM_SET_PROPERTY_VALUE(HoveredProvinceId, InHoveredProvinceId))
+	{
+		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeTooltip);
+	}
 }
 
 TMap<FProvinceId, FProvinceVisuals> URtsHUDViewModel::GetProvinceVisuals() const
@@ -147,7 +150,16 @@ TMap<FNationId, FWorldMapNationData> URtsHUDViewModel::GetNationData() const
 
 FMapTooltipContent URtsHUDViewModel::ComputeTooltip() const
 {
-	return FMapTooltipContent();
+	FMapTooltipContent Tooltip;
+
+	if (Provinces == nullptr || !Provinces->IsAlive(HoveredProvinceId))
+	{
+		return Tooltip;
+	}
+
+	Tooltip.Headline = Provinces->GetDisplayInfo(HoveredProvinceId).Name;
+
+	return Tooltip;
 }
 
 void URtsHUDViewModel::RefreshMapModeEntries()
