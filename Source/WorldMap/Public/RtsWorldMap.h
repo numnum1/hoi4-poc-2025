@@ -122,7 +122,5 @@ private:
 	UPROPERTY(VisibleAnywhere, Transient, Category="World Map")
 	TMap<FMapPixelId, FNationId> PixelOwnerNationId;
 
-	mutable bool bLookupDiagnosticsLogged = false;
-
 	bool bPaintFailureLogged = false;
 };

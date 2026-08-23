@@ -9,7 +9,6 @@
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "MapProjection.h"
-#include "PixelFormat.h"
 #include "RHICommandList.h"
 #include "RenderingThread.h"
 #include "TextureResource.h"
@@ -328,13 +327,9 @@ void ARtsWorldMap::NotifyWorldClicked(const FHitResult& InHit)
 	FColor PixelColor;
 	if (!ReadLookupPixel(UV, PixelColor))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Failed to lookup pixel color"));
-		
 		OnPixelClicked.Broadcast(FMapPixelId());
 		return;
 	}
-	
-	UE_LOG(LogTemp, Display, TEXT("Looked up pixel: R: %i|G: %i"), PixelColor.R, PixelColor.G);
 
 	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
 	const FMapPixelId PixelId = Subsystem ? Subsystem->DecodePixel(PixelColor) : FMapPixelId();
@@ -383,24 +378,6 @@ bool ARtsWorldMap::ReadLookupPixel(const FVector2D InUV, FColor& OutColor) const
 	// fails, which would hand back whatever was on the stack as a province color.
 	OutColor = FColor::Black;
 	UBA_DataFunctions::FindColor(ProvinceIdTexture.Get(), X, Y, OutColor);
-
-	if (!bLookupDiagnosticsLogged)
-	{
-		bLookupDiagnosticsLogged = true;
-		UE_LOG(LogRtsWorldMap, Warning,
-		       TEXT("Lookup diagnostics: %s is %s, %dx%d (mip0 %dx%d), %d mip(s), %lld bytes. ")
-		       TEXT("UV (%f, %f) -> pixel (%d, %d) -> BGRA (%d, %d, %d, %d). Map at %s."),
-		       *GetNameSafe(ProvinceIdTexture), GetPixelFormatString(PlatformData->PixelFormat),
-		       Width, Height, PlatformData->Mips[0].SizeX, PlatformData->Mips[0].SizeY,
-		       PlatformData->Mips.Num(), PixelBytes,
-		       InUV.X, InUV.Y, X, Y, OutColor.B, OutColor.G, OutColor.R, OutColor.A,
-		       *GetActorTransform().ToString());
-
-		if (const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this))
-		{
-			Subsystem->LogIdTextureCoverage(ProvinceIdTexture);
-		}
-	}
 
 	return true;
 }

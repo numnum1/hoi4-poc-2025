@@ -2,11 +2,9 @@
 
 #include "BA_DataFunctions.h"
 #include "Engine/DataTable.h"
-#include "Engine/Texture2D.h"
 #include "Engine/World.h"
 #include "Provinces.h"
 #include "RtsGameStateComponent.h"
-#include "TextureResource.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWorldMapSubsystem, Log, All);
 
@@ -77,14 +75,7 @@ void UWorldMapSubsystem::EnsureMapDataLookup() const
 		// label ("Arnhem"), while a province's MapId is the row key ("1893").
 		MapIdToPixelId.Add(Row.Key, PixelId);
 		HighestPixelRow = FMath::Max(HighestPixelRow, static_cast<int32>(PixelId.G));
-		HighestPixelColumn = FMath::Max(HighestPixelColumn, static_cast<int32>(PixelId.R));
 	}
-
-	UE_LOG(LogWorldMapSubsystem, Display,
-	       TEXT("Province map table %s: %d rows, ids up to (%d, %d). A clicked pixel whose green is "
-	            "above %d cannot come from the map this table describes."),
-	       *GetNameSafe(ProvinceMapData), MapIdToPixelId.Num(), HighestPixelColumn, HighestPixelRow,
-	       HighestPixelRow);
 }
 
 void UWorldMapSubsystem::EnsureProvinceLookup() const
@@ -258,128 +249,7 @@ FProvinceId UWorldMapSubsystem::FindProvince(const FMapPixelId& InPixelId) const
 	EnsureProvinceLookup();
 
 	const FProvinceId* ProvinceId = PixelIdToProvinceId.Find(InPixelId);
-	LogResolvedPixel(InPixelId, ProvinceId ? *ProvinceId : FProvinceId());
 	return ProvinceId ? *ProvinceId : FProvinceId();
-}
-
-void UWorldMapSubsystem::LogIdTextureCoverage(UTexture2D* InTexture) const
-{
-	EnsureMapDataLookup();
-
-	if (InTexture == nullptr || MapIdToPixelId.IsEmpty())
-	{
-		return;
-	}
-
-	FTexturePlatformData* PlatformData = InTexture->GetPlatformData();
-	const int32 Width = InTexture->GetSizeX();
-	const int32 Height = InTexture->GetSizeY();
-	const int64 PixelCount = int64(Width) * Height;
-	if (PlatformData == nullptr || PlatformData->Mips.Num() == 0
-		|| PlatformData->Mips[0].BulkData.GetBulkDataSize() < PixelCount * 4)
-	{
-		return;
-	}
-
-	const FColor* Pixels = static_cast<const FColor*>(PlatformData->Mips[0].BulkData.LockReadOnly());
-	if (Pixels == nullptr)
-	{
-		return;
-	}
-
-	// One bit per possible id rather than a set: red and green span exactly 256 values each, so the
-	// whole id space is 8 KB and needs no hashing for 33 million pixels.
-	TBitArray<> SeenIds(false, 256 * 256);
-	for (int64 Index = 0; Index < PixelCount; ++Index)
-	{
-		SeenIds[Pixels[Index].G * 256 + Pixels[Index].R] = true;
-	}
-	PlatformData->Mips[0].BulkData.Unlock();
-
-	TSet<FMapPixelId> TableIds;
-	TableIds.Reserve(MapIdToPixelId.Num());
-	for (const TPair<FName, FMapPixelId>& Entry : MapIdToPixelId)
-	{
-		TableIds.Add(Entry.Value);
-	}
-
-	int32 DistinctIds = 0;
-	int32 KnownIds = 0;
-	int32 MaxRed = 0;
-	int32 MaxGreen = 0;
-	for (int32 Green = 0; Green < 256; ++Green)
-	{
-		for (int32 Red = 0; Red < 256; ++Red)
-		{
-			if (!SeenIds[Green * 256 + Red])
-			{
-				continue;
-			}
-
-			++DistinctIds;
-			MaxRed = FMath::Max(MaxRed, Red);
-			MaxGreen = FMath::Max(MaxGreen, Green);
-
-			FColor Texel;
-			Texel.R = static_cast<uint8>(Red);
-			Texel.G = static_cast<uint8>(Green);
-			KnownIds += TableIds.Contains(DecodePixel(Texel)) ? 1 : 0;
-		}
-	}
-
-	UE_LOG(LogWorldMapSubsystem, Warning,
-	       TEXT("ID texture %s (%dx%d) holds %d distinct ids up to (%d, %d). Table %s describes %d of "
-	            "them. Anything far below the table's %d rows means texture and table are different "
-	            "map generations."),
-	       *GetNameSafe(InTexture), Width, Height, DistinctIds, MaxRed, MaxGreen,
-	       *GetNameSafe(ProvinceMapData), KnownIds, MapIdToPixelId.Num());
-}
-
-void UWorldMapSubsystem::LogResolvedPixel(const FMapPixelId& InPixelId, const FProvinceId InProvinceId) const
-{
-	const FName* MapId = nullptr;
-	for (const TPair<FName, FMapPixelId>& Entry : MapIdToPixelId)
-	{
-		if (Entry.Value == InPixelId)
-		{
-			MapId = &Entry.Key;
-			break;
-		}
-	}
-
-	if (MapId == nullptr)
-	{
-		UE_LOG(LogWorldMapSubsystem, Warning,
-		       TEXT("Clicked id (%d, %d): no row of the province map table has this color (%d rows). "
-		            "Either the click landed on water or a border, or the ID texture and the table are "
-		            "from different map generations."),
-		       InPixelId.R, InPixelId.G, MapIdToPixelId.Num());
-		return;
-	}
-
-	FString Label;
-	if (ProvinceMapData != nullptr)
-	{
-		if (const FProvinceMapDataGame* Row = ProvinceMapData->FindRow<FProvinceMapDataGame>(*MapId, TEXT("LogResolvedPixel"), false))
-		{
-			Label = Row->Name.ToString();
-		}
-	}
-
-	if (!InProvinceId.IsValid())
-	{
-		UE_LOG(LogWorldMapSubsystem, Warning,
-		       TEXT("Clicked id (%d, %d) is map row '%s' (\"%s\"), but no province of the loaded "
-		            "scenario carries that MapId."),
-		       InPixelId.R, InPixelId.G, *MapId->ToString(), *Label);
-		return;
-	}
-
-	const UProvinces* Provinces = FindRtsGameStateComponent<UProvinces>(this);
-	const FString ProvinceName = Provinces ? Provinces->GetDisplayInfo(InProvinceId).Name.ToString() : FString();
-	UE_LOG(LogWorldMapSubsystem, Display,
-	       TEXT("Clicked id (%d, %d) -> map row '%s' (\"%s\") -> province %d (\"%s\")."),
-	       InPixelId.R, InPixelId.G, *MapId->ToString(), *Label, InProvinceId.Value, *ProvinceName);
 }
 
 bool UWorldMapSubsystem::FindUnitPosition(const FProvinceId InProvinceId, FVector2D& OutUnitPosition) const
