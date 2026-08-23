@@ -42,9 +42,6 @@ public:
 	void Initialize();
 
 	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
-	void SetControlledCharacterId(FCharacterId InControlledCharacterId);
-
-	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
 	void SetActiveModal(EPlayerModal InActiveModal);
 
 	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
@@ -83,7 +80,8 @@ public:
 	virtual void BeginDestroy() override;
 
 private:
-	// TODO: Make this computed
+	/** Mirrors ARtsPlayer::ControlledCharacterId — pulled in BindPlayer and kept current by
+	 * HandleControlledCharacterChanged, never pushed in from a widget. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FCharacterId ControlledCharacterId;
 
@@ -147,9 +145,10 @@ private:
 	void UnbindFacades();
 	void RefreshMapModeEntries();
 
-	/** Resolves the local ARtsPlayer and binds HandleControlledCharacterChanged to it — called from
-	 * Initialize(), not from SetControlledCharacterId, so the right-click binding does not depend on
-	 * Blueprint ever pushing a controlled character id in. Idempotent, safe to call again. */
+	/** Resolves the local ARtsPlayer, binds HandleControlledCharacterChanged to it and pulls the
+	 * current controlled character in — called from Initialize(), so neither the id nor the
+	 * right-click binding depends on Blueprint ever pushing anything in. Idempotent, safe to call
+	 * again. */
 	void BindPlayer();
 
 	/** Re-run whenever the controlled character changes, since the pawn can only be resolved once
@@ -186,7 +185,7 @@ private:
 	TObjectPtr<ARtsPlayer> Player;
 
 	/** The pawn OnRightMouseButtonClicked is bound to, tracked separately from Player because the
-	 * pawn can change (or be unpossessed) without SetControlledCharacterId firing. */
+	 * pawn can change (or be unpossessed) without the controlled character changing. */
 	UPROPERTY()
 	TObjectPtr<ARtsMapPawn> Pawn;
 

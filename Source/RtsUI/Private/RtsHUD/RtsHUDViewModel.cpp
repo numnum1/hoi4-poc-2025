@@ -53,11 +53,6 @@ void URtsHUDViewModel::BeginDestroy()
 	Super::BeginDestroy();
 }
 
-void URtsHUDViewModel::SetControlledCharacterId(FCharacterId InControlledCharacterId)
-{
-	UE_MVVM_SET_PROPERTY_VALUE(ControlledCharacterId, InControlledCharacterId);
-}
-
 void URtsHUDViewModel::SetActiveModal(EPlayerModal InActiveModal)
 {
 	if (ActiveModal == InActiveModal)
@@ -301,11 +296,13 @@ void URtsHUDViewModel::BindPlayer()
 		}
 	}
 
-	BindPawnRightClick();
+	HandleControlledCharacterChanged();
 }
 
 void URtsHUDViewModel::HandleControlledCharacterChanged()
 {
+	UE_MVVM_SET_PROPERTY_VALUE(ControlledCharacterId, Player ? Player->GetControlledCharacterId() : FCharacterId());
+
 	BindPawnRightClick();
 }
 
