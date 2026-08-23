@@ -40,6 +40,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData);
 
+	/** Passed straight to the view model, which owns the switch. Here so a HUD Blueprint can reach it
+	 * without knowing about the view model or the map actor. */
+	UFUNCTION(BlueprintCallable, Category="World Map")
+	void SetHoverHighlightEnabled(bool bInEnabled);
+
 	UFUNCTION(BlueprintPure, Category="World Map")
 	URtsWorldMapViewModel* GetWorldMapViewModel() const { return WorldMapViewModel; }
 
@@ -51,6 +56,11 @@ protected:
 private:
 	UFUNCTION()
 	void HandlePixelClicked(FMapPixelId InPixelId);
+
+	/** The hover has no dispatcher going out of the widget: nothing above the map cares which
+	 * province the cursor is over, it only has to be drawn. */
+	UFUNCTION()
+	void HandlePixelHovered(FMapPixelId InPixelId);
 
 	ARtsWorldMap* ResolveWorldMap();
 

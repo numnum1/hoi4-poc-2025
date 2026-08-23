@@ -41,6 +41,10 @@ public:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void PossessedBy(AController* NewController) override;
 
+	/** Traces the cursor onto the map every frame and hands the hit to ARtsWorldMap, which turns it
+	 * into the hovered province. Does nothing at all while the map has its hover highlight off. */
+	virtual void Tick(float InDeltaTime) override;
+
 	/** Traces from the cursor onto the map mesh. Wraps nothing up: the caller decides what a hit
 	 * means. */
 	UFUNCTION(BlueprintCallable, Category="Tracing")

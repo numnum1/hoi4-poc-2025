@@ -31,6 +31,7 @@ void UWorldMapWidget::NativeDestruct()
 	if (WorldMap)
 	{
 		WorldMap->OnPixelClicked.RemoveAll(this);
+		WorldMap->OnPixelHovered.RemoveAll(this);
 		WorldMap = nullptr;
 	}
 
@@ -63,6 +64,7 @@ ARtsWorldMap* UWorldMapWidget::ResolveWorldMap()
 	// Bound where the map is first found rather than in NativeConstruct: the widget can be built
 	// before the level's actors are, and a binding attempted only there would then never happen.
 	WorldMap->OnPixelClicked.AddDynamic(this, &UWorldMapWidget::HandlePixelClicked);
+	WorldMap->OnPixelHovered.AddDynamic(this, &UWorldMapWidget::HandlePixelHovered);
 	return WorldMap;
 }
 
@@ -86,8 +88,27 @@ void UWorldMapWidget::SetNationData(const TMap<FNationId, FWorldMapNationData>& 
 	}
 }
 
+void UWorldMapWidget::SetHoverHighlightEnabled(const bool bInEnabled)
+{
+	ResolveWorldMap();
+
+	if (WorldMapViewModel)
+	{
+		WorldMapViewModel->SetHoverHighlightEnabled(bInEnabled);
+	}
+}
+
 void UWorldMapWidget::HandlePixelClicked(const FMapPixelId InPixelId)
 {
 	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
 	OnProvinceClicked.Broadcast(Subsystem ? Subsystem->FindProvince(InPixelId) : FProvinceId());
+}
+
+void UWorldMapWidget::HandlePixelHovered(const FMapPixelId InPixelId)
+{
+	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
+	if (WorldMapViewModel)
+	{
+		WorldMapViewModel->SetHoveredProvinceId(Subsystem ? Subsystem->FindProvince(InPixelId) : FProvinceId());
+	}
 }

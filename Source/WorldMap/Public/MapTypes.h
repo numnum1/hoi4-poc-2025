@@ -36,8 +36,15 @@ FORCEINLINE uint32 GetTypeHash(const FMapPixelId& InPixelId)
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWorldMapPixelClicked, FMapPixelId, PixelId);
 
-/** One province's row across the lookup textures, which are written together so a province's three
- * layers can never disagree about which pixel they belong to. */
+/** The pixel the cursor is over, or an invalid one when it is over nothing. Broadcast only when it
+ * changes, not once per frame. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWorldMapPixelHovered, FMapPixelId, PixelId);
+
+/** One province's row across the lookup textures, which are written together so a province's layers
+ * can never disagree about which pixel they belong to.
+ *
+ * Vfx is written on its own through PaintProvinceVfx rather than with the other three: it is a
+ * per-frame highlight, and the colors are not. */
 USTRUCT(BlueprintType)
 struct WORLDMAP_API FMapLutEntry
 {
@@ -54,6 +61,32 @@ struct WORLDMAP_API FMapLutEntry
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map")
 	FColor National = FColor::Black;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map")
+	FColor Vfx = FColor::Black;
+
+	/** The same row with its colors lerped toward white, for the hovered province. Vfx is left alone:
+	 * it is a flag for the material, not a color to lighten. */
+	FMapLutEntry Brightened(const float InAmount) const
+	{
+		FMapLutEntry Result = *this;
+		Result.Primary = BrightenColor(Primary, InAmount);
+		Result.Secondary = BrightenColor(Secondary, InAmount);
+		Result.National = BrightenColor(National, InAmount);
+		return Result;
+	}
+
+	/** Toward white rather than scaled up, so a dark province brightens as much as a light one and
+	 * nothing ever clips. */
+	static FColor BrightenColor(const FColor& InColor, const float InAmount)
+	{
+		const float Amount = FMath::Clamp(InAmount, 0.0f, 1.0f);
+		return FColor(
+			static_cast<uint8>(FMath::RoundToInt(InColor.R + (255.0f - InColor.R) * Amount)),
+			static_cast<uint8>(FMath::RoundToInt(InColor.G + (255.0f - InColor.G) * Amount)),
+			static_cast<uint8>(FMath::RoundToInt(InColor.B + (255.0f - InColor.B) * Amount)),
+			InColor.A);
+	}
 };
 
 /** One contiguous block of provinces a single label is laid out over: a nation split by water or by

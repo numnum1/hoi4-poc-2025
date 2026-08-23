@@ -51,6 +51,59 @@ void URtsWorldMapViewModel::SetProvinceVisuals(const TMap<FProvinceId, FProvince
 	Map->PaintProvinces(Rows);
 }
 
+void URtsWorldMapViewModel::SetHoveredProvinceId(const FProvinceId InHoveredProvinceId)
+{
+	if (!bHoverHighlightEnabled || HoveredProvinceId == InHoveredProvinceId)
+	{
+		return;
+	}
+
+	HoveredProvinceId = InHoveredProvinceId;
+
+	ApplyHover();
+}
+
+void URtsWorldMapViewModel::SetHoverHighlightEnabled(const bool bInEnabled)
+{
+	if (bHoverHighlightEnabled == bInEnabled)
+	{
+		return;
+	}
+
+	bHoverHighlightEnabled = bInEnabled;
+
+	if (!bHoverHighlightEnabled)
+	{
+		HoveredProvinceId = FProvinceId();
+	}
+
+	ApplyHover();
+
+	if (ARtsWorldMap* Map = ResolveWorldMap())
+	{
+		Map->SetHoverHighlightEnabled(bHoverHighlightEnabled);
+	}
+}
+
+void URtsWorldMapViewModel::ApplyHover()
+{
+	ARtsWorldMap* Map = ResolveWorldMap();
+	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
+	if (Map == nullptr || Subsystem == nullptr)
+	{
+		return;
+	}
+
+	FMapPixelId PixelId;
+	if (HoveredProvinceId.IsValid() && Subsystem->FindPixelId(HoveredProvinceId, PixelId))
+	{
+		Map->SetHighlightedPixel(PixelId);
+		return;
+	}
+
+	Map->ClearHighlightedPixel();
+}
+
 void URtsWorldMapViewModel::SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData)
 {
 	NationData = InNationData;

@@ -95,10 +95,11 @@ Der Kartenactor, funktional eine UI-Komponente: er malt, mehr nicht. Einer pro L
   `ConfigureMesh`, `RebuildDynamicMaterials`. Skaliert die Kugel auf `MapRadius` und hängt frische
   Dynamic-Material-Instanzen in die Mesh-Slots. Läuft bei jeder Konstruktion, damit Radius- und
   Mesh-Änderungen im Editor sofort sichtbar sind.
-- **LUT-Malen** — `PrimaryLut` / `SecondaryLut` / `NationalLut` / `VfxLut` (`VfxLut` wird von
-  niemandem beschrieben, ist aber gebunden, weil das Material es sampelt), `EnsureLuts`,
-  `PaintProvinces`. Nimmt ein **Änderungsset**, keine Weltbeschreibung: nicht genannte Zeilen
-  behalten ihre Farbe, es wird nichts vorher geleert.
+- **LUT-Malen** — `PrimaryLut` / `SecondaryLut` / `NationalLut` / `VfxLut`, `EnsureLuts`,
+  `PaintProvinces`, `PaintProvinceVfx`. Nimmt ein **Änderungsset**, keine Weltbeschreibung: nicht
+  genannte Zeilen behalten ihre Farbe, es wird nichts vorher geleert. `VfxLut` läuft bewusst über
+  einen eigenen Aufruf: dort steht nur das Hover-Highlight, und das ändert sich mit der Maus, während
+  die drei Farbschichten sich mit der Simulation ändern.
 - **Pixel lesen** — `ProvinceIdTexture` (nur GPU, vom Material gesampelt), `ProvinceIdLookupTexture`
   (nur CPU), `ReadLookupPixel`, `IsLookupTextureReadable`, `NotifyWorldClicked`. Rot und Grün eines
   Pixels tragen die Provinz-Id, Blau und Alpha sind ungenutzt. `IsLookupTextureReadable` prüft vor

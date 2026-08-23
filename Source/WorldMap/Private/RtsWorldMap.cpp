@@ -314,12 +314,13 @@ bool ARtsWorldMap::EnsureLuts()
 	return true;
 }
 
-void ARtsWorldMap::NotifyWorldClicked(const FHitResult& InHit)
+bool ARtsWorldMap::ResolvePixel(const FHitResult& InHit, FMapPixelId& OutPixelId) const
 {
+	OutPixelId = FMapPixelId();
+
 	if (!InHit.bBlockingHit)
 	{
-		OnPixelClicked.Broadcast(FMapPixelId());
-		return;
+		return false;
 	}
 
 	const FVector2D UV = VectorToUV(InHit.ImpactPoint);
@@ -327,17 +328,134 @@ void ARtsWorldMap::NotifyWorldClicked(const FHitResult& InHit)
 	FColor PixelColor;
 	if (!ReadLookupPixel(UV, PixelColor))
 	{
-		OnPixelClicked.Broadcast(FMapPixelId());
-		return;
+		return false;
 	}
 
 	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
-	const FMapPixelId PixelId = Subsystem ? Subsystem->DecodePixel(PixelColor) : FMapPixelId();
-	UE_LOG(LogRtsWorldMap, Verbose,
-	       TEXT("Click on %s at %s -> UV (%f, %f) -> pixel (%d, %d)"),
-	       *GetNameSafe(InHit.GetActor()), *InHit.ImpactPoint.ToString(), UV.X, UV.Y, PixelId.R, PixelId.G);
+	OutPixelId = Subsystem ? Subsystem->DecodePixel(PixelColor) : FMapPixelId();
 
+	UE_LOG(LogRtsWorldMap, Verbose,
+	       TEXT("Hit on %s at %s -> UV (%f, %f) -> pixel (%d, %d)"),
+	       *GetNameSafe(InHit.GetActor()), *InHit.ImpactPoint.ToString(), UV.X, UV.Y, OutPixelId.R, OutPixelId.G);
+
+	return true;
+}
+
+void ARtsWorldMap::NotifyWorldClicked(const FHitResult& InHit)
+{
+	FMapPixelId PixelId;
+	ResolvePixel(InHit, PixelId);
+
+	// The miss is broadcast too, not swallowed: a click on nothing is a deselection.
 	OnPixelClicked.Broadcast(PixelId);
+}
+
+void ARtsWorldMap::NotifyWorldHovered(const FHitResult& InHit)
+{
+	if (!bHoverHighlightEnabled)
+	{
+		return;
+	}
+
+	if (bHasHovered && InHit.bBlockingHit && InHit.ImpactPoint.Equals(LastHoverImpactPoint))
+	{
+		return;
+	}
+
+	FMapPixelId PixelId;
+	ResolvePixel(InHit, PixelId);
+
+	LastHoverImpactPoint = InHit.ImpactPoint;
+
+	if (bHasHovered && PixelId == LastHoveredPixelId)
+	{
+		return;
+	}
+
+	bHasHovered = true;
+	LastHoveredPixelId = PixelId;
+
+	OnPixelHovered.Broadcast(PixelId);
+}
+
+void ARtsWorldMap::SetHighlightedPixel(const FMapPixelId InPixelId)
+{
+	if (bHasHighlight && HighlightedPixelId == InPixelId)
+	{
+		return;
+	}
+
+	const bool bHadPrevious = bHasHighlight;
+	const FMapPixelId PreviousPixelId = HighlightedPixelId;
+
+	HighlightedPixelId = InPixelId;
+	bHasHighlight = true;
+
+	RepaintHighlight(bHadPrevious, PreviousPixelId);
+}
+
+void ARtsWorldMap::ClearHighlightedPixel()
+{
+	if (!bHasHighlight)
+	{
+		return;
+	}
+
+	const FMapPixelId PreviousPixelId = HighlightedPixelId;
+
+	HighlightedPixelId = FMapPixelId();
+	bHasHighlight = false;
+
+	RepaintHighlight(true, PreviousPixelId);
+}
+
+void ARtsWorldMap::RepaintHighlight(const bool bInHadPrevious, const FMapPixelId InPreviousPixelId)
+{
+	TArray<FMapLutEntry> ColorRows;
+	TArray<FMapLutEntry> VfxRows;
+
+	if (bInHadPrevious)
+	{
+		FMapLutEntry ClearedRow;
+		ClearedRow.Id = InPreviousPixelId;
+		VfxRows.Add(ClearedRow);
+
+		// Restored from what was last painted, not from a color computed here: whoever painted it
+		// last - the active map mode, or a modal's own overlay - is the one that gets to decide.
+		if (const FMapLutEntry* PaintedRow = PaintedRows.Find(InPreviousPixelId))
+		{
+			ColorRows.Add(*PaintedRow);
+		}
+	}
+
+	if (bHasHighlight)
+	{
+		FMapLutEntry HighlightRow;
+		HighlightRow.Id = HighlightedPixelId;
+		HighlightRow.Vfx = HoverVfxColor;
+		VfxRows.Add(HighlightRow);
+
+		if (const FMapLutEntry* PaintedRow = PaintedRows.Find(HighlightedPixelId))
+		{
+			ColorRows.Add(PaintedRow->Brightened(HoverHighlightStrength));
+		}
+	}
+
+	PaintProvinceVfx(VfxRows);
+	WriteColorRows(ColorRows);
+}
+
+void ARtsWorldMap::SetHoverHighlightEnabled(const bool bInEnabled)
+{
+	bHoverHighlightEnabled = bInEnabled;
+
+	// Forgotten rather than kept: whatever was highlighted has already been painted away by the
+	// caller, and remembering it would make the next enable skip the province the cursor is on.
+	if (!bHoverHighlightEnabled)
+	{
+		bHasHovered = false;
+		LastHoveredPixelId = FMapPixelId();
+	}
 }
 
 bool ARtsWorldMap::ReadLookupPixel(const FVector2D InUV, FColor& OutColor) const
@@ -399,11 +517,61 @@ void ARtsWorldMap::PaintProvinces(const TArray<FMapLutEntry>& InRows)
 		return;
 	}
 
+	for (const FMapLutEntry& Row : InRows)
+	{
+		PaintedRows.Add(Row.Id, Row);
+	}
+
+	// The caller sends the province's own color, not the highlight, so the highlighted row is
+	// brightened on its way out - otherwise a map mode change would look like the cursor had left.
+	TArray<FMapLutEntry> Rows = InRows;
+	if (bHasHighlight)
+	{
+		for (FMapLutEntry& Row : Rows)
+		{
+			if (Row.Id == HighlightedPixelId)
+			{
+				Row = Row.Brightened(HoverHighlightStrength);
+				break;
+			}
+		}
+	}
+
+	WriteColorRows(Rows);
+}
+
+void ARtsWorldMap::WriteColorRows(const TArray<FMapLutEntry>& InRows)
+{
+	if (InRows.IsEmpty() || !EnsureLuts())
+	{
+		return;
+	}
+
 	// Nothing is cleared first: the caller sends the provinces it wants changed, not the whole
 	// world, and clearing would black out every province missing from this batch.
 	WriteLutTexture(PrimaryLut, InRows, [](const FMapLutEntry& InRow) { return InRow.Primary; });
 	WriteLutTexture(SecondaryLut, InRows, [](const FMapLutEntry& InRow) { return InRow.Secondary; });
 	WriteLutTexture(NationalLut, InRows, [](const FMapLutEntry& InRow) { return InRow.National; });
+}
+
+void ARtsWorldMap::PaintProvinceVfx(const TArray<FMapLutEntry>& InRows)
+{
+	if (InRows.IsEmpty())
+	{
+		return;
+	}
+
+	if (!EnsureLuts())
+	{
+		if (!bPaintFailureLogged)
+		{
+			bPaintFailureLogged = true;
+			UE_LOG(LogRtsWorldMap, Error, TEXT("%s cannot paint: its lookup textures are missing."), *GetName());
+		}
+		return;
+	}
+
+	WriteLutTexture(VfxLut, InRows, [](const FMapLutEntry& InRow) { return InRow.Vfx; });
 }
 
 void ARtsWorldMap::SetProvinceOwners(const TMap<FMapPixelId, FNationId>& InOwners)

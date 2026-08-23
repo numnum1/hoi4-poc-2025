@@ -18,7 +18,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogRtsMapPawn, Log, All);
 
 ARtsMapPawn::ARtsMapPawn()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// The pawn Blueprint's own Event Tick already drives the camera through AddMovement, so this is
+	// not what starts the pawn ticking - it is what gets the hover trace a place to run in C++.
+	PrimaryActorTick.bCanEverTick = true;
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->bDoCollisionTest = false;
@@ -177,6 +179,27 @@ void ARtsMapPawn::FrameCamera()
 	SpringArm->TickComponent(0.0f, ELevelTick::LEVELTICK_PauseTick, nullptr);
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->bEnableCameraRotationLag = true;
+}
+
+void ARtsMapPawn::Tick(const float InDeltaTime)
+{
+	Super::Tick(InDeltaTime);
+
+	if (MapReference == nullptr)
+	{
+		MapReference = ARtsWorldMap::GetRtsWorldMap(this);
+	}
+	if (MapReference == nullptr || !MapReference->IsHoverHighlightEnabled())
+	{
+		return;
+	}
+
+	// The miss is handed over for the same reason the click's is: a cursor that left the globe has to
+	// clear the highlight, and only the map gets to say so.
+	FHitResult HitResult;
+	TraceUnderCursor(HitResult);
+
+	MapReference->NotifyWorldHovered(HitResult);
 }
 
 void ARtsMapPawn::HandleSelectStarted()
