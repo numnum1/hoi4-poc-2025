@@ -97,6 +97,11 @@ void URtsHUDViewModel::SetSelectedProvinceId(const FProvinceId InSelectedProvinc
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceIdValue, InSelectedProvinceId.Value);
 }
 
+void URtsHUDViewModel::SetHoveredProvinceId(const FProvinceId InHoveredProvinceId)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(HoveredProvinceId, InHoveredProvinceId);
+}
+
 TMap<FProvinceId, FProvinceVisuals> URtsHUDViewModel::GetProvinceVisuals() const
 {
 	FRtsMapModeContext Context;

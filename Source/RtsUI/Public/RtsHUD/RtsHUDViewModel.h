@@ -59,6 +59,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
 	void SetSelectedProvinceId(FProvinceId InSelectedProvinceId);
 
+	/** Set from UWorldMapWidget::OnHoveredProvinceIdChanged. Purely for what the HUD wants to say
+	 * about the province under the cursor - the map draws its own highlight and needs nothing from
+	 * here. An invalid id means the cursor is on no province. */
+	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
+	void SetHoveredProvinceId(FProvinceId InHoveredProvinceId);
+
 	/** The color of every living province under the active map mode. Computed on demand — see the
 	 * class comment for why this is not a stored property. */
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
@@ -96,6 +102,9 @@ private:
 	/** SelectedProvinceId as a plain int32, for widgets that cannot bind the id struct. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	int32 SelectedProvinceIdValue = INDEX_NONE;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	FProvinceId HoveredProvinceId;
 
 	/** One row per mode, cached rather than rebuilt: the set of modes is fixed, only which one is
 	 * active changes. */
@@ -188,5 +197,6 @@ public:
 	EMapMode GetActiveMapMode() const { return ActiveMapMode; }
 	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
 	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
+	FProvinceId GetHoveredProvinceId() const { return HoveredProvinceId; }
 	const TArray<TObjectPtr<UMapModeEntryViewModel>>& GetMapModes() const { return MapModes; }
 };
