@@ -52,8 +52,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Tracing")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 
-	/** Broadcast from HandleRightClickStarted. Bound by UPlayerCharacterViewModel to clear the
-	 * current province selection. */
+	/** Broadcast from HandleRightClickStarted. Bound by URtsHUDViewModel to clear the current
+	 * province selection. */
 	UPROPERTY(BlueprintAssignable, Category="Tracing")
 	FMapPawnRightClicked OnRightMouseButtonClicked;
 

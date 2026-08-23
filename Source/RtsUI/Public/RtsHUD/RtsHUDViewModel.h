@@ -8,6 +8,8 @@
 #include "ProvinceVisuals.h"
 #include "RtsHUDViewModel.generated.h"
 
+class ARtsMapPawn;
+class ARtsPlayer;
 class UBuildings;
 class UDepartments;
 class UMapModeEntryViewModel;
@@ -50,6 +52,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
 	void SetActiveMapMode(EMapMode InActiveMapMode);
 
+	/** Set from the world map click — see CLAUDE.md on the world map being *the* province
+	 * interaction. An invalid id (also reached from a right click anywhere on the map, see
+	 * HandleRightMouseButtonClicked) means nothing is selected. */
+	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
+	void SetSelectedProvinceId(FProvinceId InSelectedProvinceId);
+
 	/** The color of every living province under the active map mode. Computed on demand — see the
 	 * class comment for why this is not a stored property. */
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
@@ -76,6 +84,13 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	EMapMode ActiveMapMode = EMapMode::EMM_Political;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	FProvinceId SelectedProvinceId;
+
+	/** SelectedProvinceId as a plain int32, for widgets that cannot bind the id struct. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	int32 SelectedProvinceIdValue = INDEX_NONE;
 
 	/** One row per mode, cached rather than rebuilt: the set of modes is fixed, only which one is
 	 * active changes. */
@@ -118,6 +133,15 @@ private:
 	void UnbindFacades();
 	void RefreshMapModeEntries();
 
+	/** Re-run from SetControlledCharacterId, since the pawn can only be resolved once the player
+	 * controller actually possesses one, and idempotent for the same reason. */
+	void BindPawnRightClick();
+
+	/** Bound to the possessed pawn's OnRightMouseButtonClicked — a right click anywhere on the map
+	 * clears the province selection the same way an invalid pick from the map itself would. */
+	UFUNCTION()
+	void HandleRightMouseButtonClicked();
+
 	UPROPERTY(Transient)
 	TObjectPtr<UProvinces> Provinces;
 
@@ -136,10 +160,20 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UPopulations> Populations;
 
+	UPROPERTY()
+	TObjectPtr<ARtsPlayer> Player;
+
+	/** The pawn OnRightMouseButtonClicked is bound to, tracked separately from Player because the
+	 * pawn can change (or be unpossessed) without SetControlledCharacterId firing. */
+	UPROPERTY()
+	TObjectPtr<ARtsMapPawn> Pawn;
+
 public:
 	FCharacterId GetControlledCharacterId() const { return ControlledCharacterId; }
 	EPlayerModal GetActiveModal() const { return ActiveModal; }
 	int32 GetSelectedPositionIndex() const { return SelectedPositionIndex; }
 	EMapMode GetActiveMapMode() const { return ActiveMapMode; }
+	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
+	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
 	const TArray<TObjectPtr<UMapModeEntryViewModel>>& GetMapModes() const { return MapModes; }
 };

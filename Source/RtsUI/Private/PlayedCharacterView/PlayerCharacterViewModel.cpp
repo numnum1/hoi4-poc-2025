@@ -20,7 +20,6 @@
 #include "Resources/ResourceViewModel.h"
 #include "Resources/RtsResources.h"
 #include "RtsGameStateComponent.h"
-#include "RtsMapPawn.h"
 #include "RtsPlayer.h"
 
 void UPlayerCharacterViewModel::InitializeForPlayer()
@@ -48,37 +47,9 @@ void UPlayerCharacterViewModel::InitializeForPlayer()
 
 void UPlayerCharacterViewModel::HandleControlledCharacterChanged()
 {
-	BindPawnRightClick();
-
 	// Inherited from UCharacterViewModel — resolves the facades, rebinds the Characters events, and
 	// calls Refresh(), which the override below drives the selection and the action list from.
 	Initialize(Player ? Player->GetControlledCharacterId() : FCharacterId());
-}
-
-void UPlayerCharacterViewModel::BindPawnRightClick()
-{
-	ARtsMapPawn* NewPawn = Player ? Cast<ARtsMapPawn>(Player->GetPawn()) : nullptr;
-	if (Pawn == NewPawn)
-	{
-		return;
-	}
-
-	if (Pawn)
-	{
-		Pawn->OnRightMouseButtonClicked.RemoveAll(this);
-	}
-
-	Pawn = NewPawn;
-
-	if (Pawn)
-	{
-		Pawn->OnRightMouseButtonClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleRightMouseButtonClicked);
-	}
-}
-
-void UPlayerCharacterViewModel::HandleRightMouseButtonClicked()
-{
-	SelectProvince(FProvinceId());
 }
 
 void UPlayerCharacterViewModel::Refresh_Implementation()
@@ -185,16 +156,13 @@ void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
 {
 	UProvinces* ProvincesContainer = FindRtsGameStateComponent<UProvinces>(this);
 
-	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceId, InProvinceId);
-	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceIdValue, InProvinceId.Value);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceName,
 		ProvincesContainer && InProvinceId.IsValid() ? ProvincesContainer->GetDisplayInfo(InProvinceId).Name : FText::GetEmpty());
 
 	// While the player is filling in the found-organization form, a map click is that form's site
 	// field. Opening the province modal over it would throw the half-filled form away, so the
-	// selection lands and nothing else moves — the values just written above (bound as
-	// SetSelectedProvinceId/SetSelectedProvinceName on the modal's own view model) are all that form
-	// needs to see the pick.
+	// selection lands and nothing else moves — the value just written above (bound as
+	// SetSelectedProvinceName on the modal's own view model) is all that form needs to see the pick.
 	if (ActiveModal == EPlayerModal::PM_FoundOrganization)
 	{
 		return;
@@ -798,11 +766,6 @@ void UPlayerCharacterViewModel::BeginDestroy()
 	if (Player)
 	{
 		Player->OnControlledCharacterIdChanged.RemoveAll(this);
-	}
-
-	if (Pawn)
-	{
-		Pawn->OnRightMouseButtonClicked.RemoveAll(this);
 	}
 
 	if (Banking)

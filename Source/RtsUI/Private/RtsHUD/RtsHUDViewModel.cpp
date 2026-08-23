@@ -9,6 +9,8 @@
 #include "Populations.h"
 #include "Provinces.h"
 #include "RtsGameStateComponent.h"
+#include "RtsMapPawn.h"
+#include "RtsPlayer.h"
 
 URtsHUDViewModel::URtsHUDViewModel()
 {
@@ -37,12 +39,19 @@ void URtsHUDViewModel::BeginDestroy()
 {
 	UnbindFacades();
 
+	if (Pawn)
+	{
+		Pawn->OnRightMouseButtonClicked.RemoveAll(this);
+	}
+
 	Super::BeginDestroy();
 }
 
 void URtsHUDViewModel::SetControlledCharacterId(FCharacterId InControlledCharacterId)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(ControlledCharacterId, InControlledCharacterId);
+
+	BindPawnRightClick();
 }
 
 void URtsHUDViewModel::SetActiveModal(EPlayerModal InActiveModal)
@@ -76,6 +85,12 @@ void URtsHUDViewModel::SetActiveMapMode(const EMapMode InActiveMapMode)
 
 	RefreshMapModeEntries();
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+}
+
+void URtsHUDViewModel::SetSelectedProvinceId(const FProvinceId InSelectedProvinceId)
+{
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceId, InSelectedProvinceId);
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceIdValue, InSelectedProvinceId.Value);
 }
 
 TMap<FProvinceId, FProvinceVisuals> URtsHUDViewModel::GetProvinceVisuals() const
@@ -240,6 +255,34 @@ void URtsHUDViewModel::BindFacades()
 		Populations->OnPopSizeChanged.AddDynamic(this, &URtsHUDViewModel::HandlePopChanged);
 		Populations->OnPopDestroyed.AddDynamic(this, &URtsHUDViewModel::HandlePopChanged);
 	}
+}
+
+void URtsHUDViewModel::BindPawnRightClick()
+{
+	Player = GetWorld() ? Cast<ARtsPlayer>(GetWorld()->GetFirstPlayerController()) : nullptr;
+
+	ARtsMapPawn* NewPawn = Player ? Cast<ARtsMapPawn>(Player->GetPawn()) : nullptr;
+	if (Pawn == NewPawn)
+	{
+		return;
+	}
+
+	if (Pawn)
+	{
+		Pawn->OnRightMouseButtonClicked.RemoveAll(this);
+	}
+
+	Pawn = NewPawn;
+
+	if (Pawn)
+	{
+		Pawn->OnRightMouseButtonClicked.AddDynamic(this, &URtsHUDViewModel::HandleRightMouseButtonClicked);
+	}
+}
+
+void URtsHUDViewModel::HandleRightMouseButtonClicked()
+{
+	SetSelectedProvinceId(FProvinceId());
 }
 
 void URtsHUDViewModel::UnbindFacades()

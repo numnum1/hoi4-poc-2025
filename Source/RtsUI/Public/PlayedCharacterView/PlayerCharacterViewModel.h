@@ -10,7 +10,6 @@
 #include "Resources/RtsResourceContext.h"
 #include "PlayerCharacterViewModel.generated.h"
 
-class ARtsMapPawn;
 class ARtsPlayer;
 class UActionViewModel;
 class UBuildingType;
@@ -37,8 +36,9 @@ class USelectablePositionViewModel;
  * (typed name, headquarters pick, live validation) lives entirely in its own component,
  * UFoundOrganizationModalWidgetViewModel — a "smart form" CreateInstance view model the widget's
  * Blueprint spawns itself, never pushed into or read from here. This class only reports the one
- * thing that form cannot invent itself (SelectedProvinceId/SelectedProvinceName, picked on the world
- * map) and reacts once, in HandleFoundOrganizationConfirmed, to what the form collected. Note that
+ * thing that form cannot invent itself (SelectedProvinceName, derived from RtsHUDViewModel's
+ * SelectedProvinceId picked on the world map) and reacts once, in HandleFoundOrganizationConfirmed,
+ * to what the form collected. Note that
  * there is no organization type anywhere — an organization is a party because its headquarters is a
  * party office (a UBuildingType asset with bIsHeadquarters set), so picking the building *is*
  * picking what is being founded.
@@ -167,23 +167,14 @@ protected:
 	bool bIsRecruitCharacterModalOpen = false;
 
 	/** The organization PM_ViewOrganization shows. Bound as a CreateInstance UOrganizationViewModel's
-	 * Initialize(FOrganizationId) destination in Blueprint — same shape as SelectedProvinceId. */
+	 * Initialize(FOrganizationId) destination in Blueprint — same shape as RtsHUDViewModel's
+	 * SelectedProvinceId. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	FOrganizationId SelectedOrganizationId;
 
 	/** SelectedOrganizationId as a plain int32, for widgets that cannot bind the id struct. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	int32 SelectedOrganizationIdValue = INDEX_NONE;
-
-	/** The province PM_ViewProvince shows. Bound as a CreateInstance UProvinceViewModel's
-	 * Initialize(FProvinceId) destination in Blueprint — this class holds only the id, never a
-	 * province view model of its own, the same reason CharacterId stays typed here. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
-	FProvinceId SelectedProvinceId;
-
-	/** SelectedProvinceId as a plain int32, for widgets that cannot bind the id struct. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
-	int32 SelectedProvinceIdValue = INDEX_NONE;
 
 	/** The selected province's name, so the found-organization modal can show its site as a label
 	 * without spawning a whole UProvinceViewModel for one string. */
@@ -273,8 +264,6 @@ public:
 	bool IsRecruitCharacterModalOpen() const { return bIsRecruitCharacterModalOpen; }
 	FOrganizationId GetSelectedOrganizationId() const { return SelectedOrganizationId; }
 	int32 GetSelectedOrganizationIdValue() const { return SelectedOrganizationIdValue; }
-	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
-	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
 	FText GetSelectedProvinceName() const { return SelectedProvinceName; }
 	FOrganizationId GetPendingJoinOrganizationId() const { return PendingJoinOrganizationId; }
 	int32 GetPendingJoinOrganizationIdValue() const { return PendingJoinOrganizationIdValue; }
@@ -376,26 +365,11 @@ private:
 	UFUNCTION()
 	void HandleBalanceChanged(FBankAccountId InAccountId);
 
-	/** Same idempotent shape as BindBanking, re-run from HandleControlledCharacterChanged since the
-	 * pawn can only be resolved once the player controller actually possesses one. */
-	void BindPawnRightClick();
-
 	UFUNCTION()
 	void HandleControlledCharacterChanged();
 
-	/** Bound to the possessed pawn's OnRightMouseButtonClicked in InitializeForPlayer — a right click
-	 * anywhere on the map clears the province selection the same way an invalid pick from the map
-	 * itself would (see SelectProvince). */
-	UFUNCTION()
-	void HandleRightMouseButtonClicked();
-
 	UPROPERTY()
 	TObjectPtr<ARtsPlayer> Player;
-
-	/** The pawn OnRightMouseButtonClicked is bound to, tracked separately from Player because the
-	 * pawn can change (or be unpossessed) without OnControlledCharacterIdChanged firing. */
-	UPROPERTY()
-	TObjectPtr<ARtsMapPawn> Pawn;
 
 	/** Reused across refreshes so a rebuild that neither adds nor removes an action keeps the same
 	 * row objects — the widget's list does not churn and the OnClicked binding survives. */
