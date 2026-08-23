@@ -20,11 +20,16 @@ class UTexture2D;
  * The globe, as a thing that draws: a mesh, the map material, the lookup textures its colors come
  * out of, and the province-ID texture a click is read from. Nothing else.
  *
- * It is a view, in the same sense a widget is. It does not know what a province is — colors arrive
- * already keyed by pixel (FMapLutEntry) and a click leaves as the pixel that was read. Turning
- * either into an FProvinceId is UWorldMapSubsystem's job, and deciding what a color or a click
- * means happens far above, in RtsUI. That is what URtsWorldMapViewModel and UWorldMapWidget are
- * for: they own what is shown, this owns how it is drawn.
+ * It is a view, in the same sense a widget is. Colors arrive already keyed by pixel (FMapLutEntry)
+ * and a click leaves as the pixel that was read; deciding what a color or a click means happens far
+ * above, in RtsUI. That is what URtsWorldMapViewModel and UWorldMapWidget are for: they own what is
+ * shown, this owns how it is drawn.
+ *
+ * The hover is the one place where it does resolve a province itself, through UWorldMapSubsystem.
+ * That is deliberate: the highlight is drawn here, so the hovered province has to be remembered here
+ * anyway, and keeping a second copy of it one layer up - to be pushed back down as a pixel - was
+ * three copies of one value kept in step by hand. Anyone who needs to know what is under the cursor
+ * binds OnHoveredProvinceIdChanged instead.
  *
  * This used to derive from the BloodAnvil plugin's ABA_Map. The parts of it this game actually needs
  * were moved in here so they sit in Source/ where they are versioned and reviewable; Plugins/ is not
@@ -43,7 +48,7 @@ public:
 	FWorldMapPixelClicked OnPixelClicked;
 
 	UPROPERTY(BlueprintAssignable, Category="World Map")
-	FWorldMapPixelHovered OnPixelHovered;
+	FWorldMapProvinceHovered OnHoveredProvinceIdChanged;
 
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void NotifyWorldClicked(const FHitResult& InHit);
@@ -63,19 +68,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void PaintProvinceVfx(const TArray<FMapLutEntry>& InRows);
 
-	/** Marks one pixel as the highlighted one: its VFX row is set and its colors are brightened on
-	 * top of whatever was last painted there. Held here rather than by the caller because the actor
-	 * is the only thing that knows what each row currently holds - PaintProvinces would otherwise
-	 * wipe the highlight, and a caller restoring it from its own copy of the colors would fight
-	 * anyone else painting the map. */
-	UFUNCTION(BlueprintCallable, Category="World Map")
-	void SetHighlightedPixel(FMapPixelId InPixelId);
-
-	UFUNCTION(BlueprintCallable, Category="World Map")
-	void ClearHighlightedPixel();
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="World Map")
+	FProvinceId GetHoveredProvinceId() const { return HoveredProvinceId; }
 
 	/** Pushed down from URtsWorldMapViewModel, which owns the switch - this is the copy the pawn's
-	 * trace and NotifyWorldHovered read, not a second opinion about it. */
+	 * trace and NotifyWorldHovered read, not a second opinion about it. Switching it off clears the
+	 * highlight and broadcasts that nothing is hovered. */
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SetHoverHighlightEnabled(bool bInEnabled);
 
@@ -158,7 +156,12 @@ private:
 	 * becomes the province's remembered color. */
 	void WriteColorRows(const TArray<FMapLutEntry>& InRows);
 
-	void RepaintHighlight(bool bInHadPrevious, FMapPixelId InPreviousPixelId);
+	/** The single writer of HoveredProvinceId: repaints both affected rows and broadcasts. */
+	void SetHoveredProvinceId(FProvinceId InProvinceId);
+
+	void RepaintHighlight(FProvinceId InPreviousProvinceId);
+
+	bool FindHoveredPixel(FMapPixelId& OutPixelId) const;
 
 	void RebuildDynamicMaterials();
 
@@ -184,13 +187,11 @@ private:
 	 * this, so it survives a map mode change and does not erase an overlay someone else put there. */
 	TMap<FMapPixelId, FMapLutEntry> PaintedRows;
 
-	FMapPixelId HighlightedPixelId;
+	/** The whole hover state. What is highlighted and what is reported outward are the same value,
+	 * so they cannot drift apart. */
+	FProvinceId HoveredProvinceId;
 
-	bool bHasHighlight = false;
-
-	FMapPixelId LastHoveredPixelId;
-
-	/** The hit the last pixel was read from. A still cursor over a still globe hits the same point
+	/** The hit the province was last read from. A still cursor over a still globe hits the same point
 	 * every frame, and skipping on that spares a texture lock per frame. */
 	FVector LastHoverImpactPoint = FVector::ZeroVector;
 

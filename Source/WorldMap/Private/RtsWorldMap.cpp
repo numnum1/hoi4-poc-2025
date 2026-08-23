@@ -362,80 +362,72 @@ void ARtsWorldMap::NotifyWorldHovered(const FHitResult& InHit)
 		return;
 	}
 
-	FMapPixelId PixelId;
-	ResolvePixel(InHit, PixelId);
-
+	bHasHovered = true;
 	LastHoverImpactPoint = InHit.ImpactPoint;
 
-	if (bHasHovered && PixelId == LastHoveredPixelId)
+	FMapPixelId PixelId;
+	const bool bResolved = ResolvePixel(InHit, PixelId);
+
+	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
+	SetHoveredProvinceId(bResolved && Subsystem ? Subsystem->FindProvince(PixelId) : FProvinceId());
+}
+
+void ARtsWorldMap::SetHoveredProvinceId(const FProvinceId InProvinceId)
+{
+	if (HoveredProvinceId == InProvinceId)
 	{
 		return;
 	}
 
-	bHasHovered = true;
-	LastHoveredPixelId = PixelId;
+	const FProvinceId PreviousProvinceId = HoveredProvinceId;
+	HoveredProvinceId = InProvinceId;
 
-	OnPixelHovered.Broadcast(PixelId);
+	RepaintHighlight(PreviousProvinceId);
+
+	OnHoveredProvinceIdChanged.Broadcast(HoveredProvinceId);
 }
 
-void ARtsWorldMap::SetHighlightedPixel(const FMapPixelId InPixelId)
+bool ARtsWorldMap::FindHoveredPixel(FMapPixelId& OutPixelId) const
 {
-	if (bHasHighlight && HighlightedPixelId == InPixelId)
+	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
+	return HoveredProvinceId.IsValid() && Subsystem != nullptr && Subsystem->FindPixelId(HoveredProvinceId, OutPixelId);
+}
+
+void ARtsWorldMap::RepaintHighlight(const FProvinceId InPreviousProvinceId)
+{
+	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
+	if (Subsystem == nullptr)
 	{
 		return;
 	}
 
-	const bool bHadPrevious = bHasHighlight;
-	const FMapPixelId PreviousPixelId = HighlightedPixelId;
-
-	HighlightedPixelId = InPixelId;
-	bHasHighlight = true;
-
-	RepaintHighlight(bHadPrevious, PreviousPixelId);
-}
-
-void ARtsWorldMap::ClearHighlightedPixel()
-{
-	if (!bHasHighlight)
-	{
-		return;
-	}
-
-	const FMapPixelId PreviousPixelId = HighlightedPixelId;
-
-	HighlightedPixelId = FMapPixelId();
-	bHasHighlight = false;
-
-	RepaintHighlight(true, PreviousPixelId);
-}
-
-void ARtsWorldMap::RepaintHighlight(const bool bInHadPrevious, const FMapPixelId InPreviousPixelId)
-{
 	TArray<FMapLutEntry> ColorRows;
 	TArray<FMapLutEntry> VfxRows;
 
-	if (bInHadPrevious)
+	FMapPixelId PreviousPixelId;
+	if (InPreviousProvinceId.IsValid() && Subsystem->FindPixelId(InPreviousProvinceId, PreviousPixelId))
 	{
 		FMapLutEntry ClearedRow;
-		ClearedRow.Id = InPreviousPixelId;
+		ClearedRow.Id = PreviousPixelId;
 		VfxRows.Add(ClearedRow);
 
 		// Restored from what was last painted, not from a color computed here: whoever painted it
 		// last - the active map mode, or a modal's own overlay - is the one that gets to decide.
-		if (const FMapLutEntry* PaintedRow = PaintedRows.Find(InPreviousPixelId))
+		if (const FMapLutEntry* PaintedRow = PaintedRows.Find(PreviousPixelId))
 		{
 			ColorRows.Add(*PaintedRow);
 		}
 	}
 
-	if (bHasHighlight)
+	FMapPixelId HoveredPixelId;
+	if (FindHoveredPixel(HoveredPixelId))
 	{
 		FMapLutEntry HighlightRow;
-		HighlightRow.Id = HighlightedPixelId;
+		HighlightRow.Id = HoveredPixelId;
 		HighlightRow.Vfx = HoverVfxColor;
 		VfxRows.Add(HighlightRow);
 
-		if (const FMapLutEntry* PaintedRow = PaintedRows.Find(HighlightedPixelId))
+		if (const FMapLutEntry* PaintedRow = PaintedRows.Find(HoveredPixelId))
 		{
 			ColorRows.Add(PaintedRow->Brightened(HoverHighlightStrength));
 		}
@@ -449,12 +441,12 @@ void ARtsWorldMap::SetHoverHighlightEnabled(const bool bInEnabled)
 {
 	bHoverHighlightEnabled = bInEnabled;
 
-	// Forgotten rather than kept: whatever was highlighted has already been painted away by the
-	// caller, and remembering it would make the next enable skip the province the cursor is on.
 	if (!bHoverHighlightEnabled)
 	{
+		// Forgotten rather than kept, so the next enable highlights the province the cursor is on
+		// instead of skipping it as unchanged.
 		bHasHovered = false;
-		LastHoveredPixelId = FMapPixelId();
+		SetHoveredProvinceId(FProvinceId());
 	}
 }
 
@@ -522,14 +514,15 @@ void ARtsWorldMap::PaintProvinces(const TArray<FMapLutEntry>& InRows)
 		PaintedRows.Add(Row.Id, Row);
 	}
 
-	// The caller sends the province's own color, not the highlight, so the highlighted row is
-	// brightened on its way out - otherwise a map mode change would look like the cursor had left.
+	// The caller sends the province's own color, not the highlight, so the hovered row is brightened
+	// on its way out - otherwise a map mode change would look like the cursor had left.
 	TArray<FMapLutEntry> Rows = InRows;
-	if (bHasHighlight)
+	FMapPixelId HoveredPixelId;
+	if (FindHoveredPixel(HoveredPixelId))
 	{
 		for (FMapLutEntry& Row : Rows)
 		{
-			if (Row.Id == HighlightedPixelId)
+			if (Row.Id == HoveredPixelId)
 			{
 				Row = Row.Brightened(HoverHighlightStrength);
 				break;

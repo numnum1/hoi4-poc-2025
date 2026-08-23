@@ -140,6 +140,11 @@ TMap<FNationId, FWorldMapNationData> URtsHUDViewModel::GetNationData() const
 	return Result;
 }
 
+FMapTooltipContent URtsHUDViewModel::ComputeTooltip() const
+{
+	return FMapTooltipContent();
+}
+
 void URtsHUDViewModel::RefreshMapModeEntries()
 {
 	const TArray<EMapMode> AvailableModes = URtsMapModes::GetMapModes();

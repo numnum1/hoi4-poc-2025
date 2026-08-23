@@ -6,6 +6,10 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWorldMapProvinceClicked, FProvinceId, ProvinceId);
 
+/** The province the cursor is over, or an invalid id when it is over none. Broadcast only when it
+ * changes, not once per frame. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWorldMapProvinceHovered, FProvinceId, ProvinceId);
+
 /**
  * A province's identity: red picks the column of the lookup textures, green the row, which is why
  * those textures are always 256 wide.
@@ -35,10 +39,6 @@ FORCEINLINE uint32 GetTypeHash(const FMapPixelId& InPixelId)
 }
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWorldMapPixelClicked, FMapPixelId, PixelId);
-
-/** The pixel the cursor is over, or an invalid one when it is over nothing. Broadcast only when it
- * changes, not once per frame. */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWorldMapPixelHovered, FMapPixelId, PixelId);
 
 /** One province's row across the lookup textures, which are written together so a province's layers
  * can never disagree about which pixel they belong to.

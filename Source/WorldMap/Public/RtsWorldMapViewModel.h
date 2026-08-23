@@ -36,13 +36,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Rts World Map ViewModel")
 	void SetNationData(const TMap<FNationId, FWorldMapNationData>& InNationData);
 
-	/** The province the cursor is over, or an invalid id for none. Repaints two rows of the VFX
-	 * lookup texture rather than the whole map: the highlight moves as fast as the mouse does. */
-	UFUNCTION(BlueprintCallable, Category="Rts World Map ViewModel")
-	void SetHoveredProvinceId(FProvinceId InHoveredProvinceId);
-
 	/** Turns the hover highlight off, here and on the map actor - which is where ARtsMapPawn reads it
-	 * to decide whether to trace at all, so switching it off costs nothing per frame. */
+	 * to decide whether to trace at all, so switching it off costs nothing per frame. Which province
+	 * is hovered is not held here: the map resolves and remembers it, see ARtsWorldMap. */
 	UFUNCTION(BlueprintCallable, Category="Rts World Map ViewModel")
 	void SetHoverHighlightEnabled(bool bInEnabled);
 
@@ -51,10 +47,6 @@ public:
 
 private:
 	ARtsWorldMap* ResolveWorldMap();
-
-	/** Hands the hovered province to the map as a pixel, or clears the highlight. The map keeps the
-	 * highlight from there - it is the only thing that knows what each row currently holds. */
-	void ApplyHover();
 
 	TArray<FWorldMapLabel> BuildLabels(const UWorldMapSubsystem& InSubsystem) const;
 
@@ -68,8 +60,6 @@ private:
 	TMap<FProvinceId, FProvinceVisuals> ProvinceVisuals;
 
 	TMap<FNationId, FWorldMapNationData> NationData;
-
-	FProvinceId HoveredProvinceId;
 
 	bool bHoverHighlightEnabled = true;
 

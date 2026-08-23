@@ -6,6 +6,7 @@
 #include "MVVMViewModelBase.h"
 #include "PlayedCharacterView/PlayerCharacterViewModel.h"
 #include "ProvinceVisuals.h"
+#include "MapTooltip/MapTooltipContent.h"
 #include "RtsHUDViewModel.generated.h"
 
 class ARtsMapPawn;
@@ -68,6 +69,11 @@ public:
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
 	TMap<FNationId, FWorldMapNationData> GetNationData() const;
 
+#pragma region Tooltip
+	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
+	FMapTooltipContent ComputeTooltip() const;
+#pragma endregion 
+	
 	virtual void BeginDestroy() override;
 
 private:

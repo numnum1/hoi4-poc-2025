@@ -34,6 +34,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="World Map")
 	FWorldMapProvinceClicked OnProvinceClicked;
 
+	/** Forwarded from ARtsWorldMap, which resolves and remembers it. The map highlights the province
+	 * on its own - this is only for whoever wants to say something about it. */
+	UPROPERTY(BlueprintAssignable, Category="World Map")
+	FWorldMapProvinceHovered OnHoveredProvinceIdChanged;
+
 	UFUNCTION(BlueprintCallable, Category="World Map")
 	void SetProvinceVisuals(const TMap<FProvinceId, FProvinceVisuals>& InVisuals);
 
@@ -57,10 +62,8 @@ private:
 	UFUNCTION()
 	void HandlePixelClicked(FMapPixelId InPixelId);
 
-	/** The hover has no dispatcher going out of the widget: nothing above the map cares which
-	 * province the cursor is over, it only has to be drawn. */
 	UFUNCTION()
-	void HandlePixelHovered(FMapPixelId InPixelId);
+	void HandleHoveredProvinceIdChanged(FProvinceId InProvinceId);
 
 	ARtsWorldMap* ResolveWorldMap();
 
