@@ -23,6 +23,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Map Tooltip")
 	void SetContent(const FMapTooltipContent& InContent);
 
+	/** Whether the tooltip has anything to say — bind the widget's visibility to this. Computed
+	 * rather than stored so it cannot disagree with what SetContent last pushed in. */
+	UFUNCTION(BlueprintPure, FieldNotify, Category="Map Tooltip")
+	bool ComputeShow() const;
+
 protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Map Tooltip", meta=(AllowPrivateAccess))
 	FText Headline;
