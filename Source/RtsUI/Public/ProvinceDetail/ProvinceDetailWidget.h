@@ -14,8 +14,8 @@ class UPlayerCharacterViewModel;
  *
  * This widget holds no data of its own. What it shows (organizations present, building/character
  * counts) lives on a UProvinceViewModel, which the Blueprint creates itself as a CreateInstance
- * view model and binds via a Destination Binding: Initialize(FProvinceId) <- RtsHUDViewModel's
- * SelectedProvinceId — the same "Kind-ViewModels: Create Instance + Initialize"
+ * view model and binds via a Destination Binding: Initialize(FProvinceId) <- the played character
+ * view model's SelectedProvinceId — the same "Kind-ViewModels: Create Instance + Initialize"
  * pattern UTimezoneViewModel uses. What this class pushes in (SetPlayerViewModel) is only that
  * source: a Property Path the Blueprint's destination binding reads from, exactly like
  * UFoundOrganizationModalWidget::SetPlayerViewModel.

@@ -156,13 +156,16 @@ void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
 {
 	UProvinces* ProvincesContainer = FindRtsGameStateComponent<UProvinces>(this);
 
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceId, InProvinceId);
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceIdValue, InProvinceId.Value);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceName,
 		ProvincesContainer && InProvinceId.IsValid() ? ProvincesContainer->GetDisplayInfo(InProvinceId).Name : FText::GetEmpty());
 
 	// While the player is filling in the found-organization form, a map click is that form's site
 	// field. Opening the province modal over it would throw the half-filled form away, so the
-	// selection lands and nothing else moves — the value just written above (bound as
-	// SetSelectedProvinceName on the modal's own view model) is all that form needs to see the pick.
+	// selection lands and nothing else moves — the values just written above (bound as
+	// SetSelectedProvinceId/SetSelectedProvinceName on the modal's own view model) are all that form
+	// needs to see the pick.
 	if (ActiveModal == EPlayerModal::PM_FoundOrganization)
 	{
 		return;

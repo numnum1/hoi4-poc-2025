@@ -36,9 +36,8 @@ class USelectablePositionViewModel;
  * (typed name, headquarters pick, live validation) lives entirely in its own component,
  * UFoundOrganizationModalWidgetViewModel — a "smart form" CreateInstance view model the widget's
  * Blueprint spawns itself, never pushed into or read from here. This class only reports the one
- * thing that form cannot invent itself (SelectedProvinceName, derived from RtsHUDViewModel's
- * SelectedProvinceId picked on the world map) and reacts once, in HandleFoundOrganizationConfirmed,
- * to what the form collected. Note that
+ * thing that form cannot invent itself (SelectedProvinceId/SelectedProvinceName, picked on the world
+ * map) and reacts once, in HandleFoundOrganizationConfirmed, to what the form collected. Note that
  * there is no organization type anywhere — an organization is a party because its headquarters is a
  * party office (a UBuildingType asset with bIsHeadquarters set), so picking the building *is*
  * picking what is being founded.
@@ -167,14 +166,25 @@ protected:
 	bool bIsRecruitCharacterModalOpen = false;
 
 	/** The organization PM_ViewOrganization shows. Bound as a CreateInstance UOrganizationViewModel's
-	 * Initialize(FOrganizationId) destination in Blueprint — same shape as RtsHUDViewModel's
-	 * SelectedProvinceId. */
+	 * Initialize(FOrganizationId) destination in Blueprint — same shape as SelectedProvinceId. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	FOrganizationId SelectedOrganizationId;
 
 	/** SelectedOrganizationId as a plain int32, for widgets that cannot bind the id struct. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
 	int32 SelectedOrganizationIdValue = INDEX_NONE;
+
+	/** RtsHUDViewModel's copy is the source of truth (it is what a right click clears); this is that
+	 * value pushed down into SelectProvince, kept here as a FieldNotify prop because widgets under
+	 * this view model (ProvinceDetailWidget's CreateInstance UProvinceViewModel, the found-org
+	 * modal's site field) only ever see PlayerCharacterViewModel, never the HUD view model
+	 * directly — the same "data flows down" reason SelectedOrganizationId is stored here too. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	FProvinceId SelectedProvinceId;
+
+	/** SelectedProvinceId as a plain int32, for widgets that cannot bind the id struct. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Modal", meta=(AllowPrivateAccess))
+	int32 SelectedProvinceIdValue = INDEX_NONE;
 
 	/** The selected province's name, so the found-organization modal can show its site as a label
 	 * without spawning a whole UProvinceViewModel for one string. */
@@ -264,6 +274,8 @@ public:
 	bool IsRecruitCharacterModalOpen() const { return bIsRecruitCharacterModalOpen; }
 	FOrganizationId GetSelectedOrganizationId() const { return SelectedOrganizationId; }
 	int32 GetSelectedOrganizationIdValue() const { return SelectedOrganizationIdValue; }
+	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
+	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
 	FText GetSelectedProvinceName() const { return SelectedProvinceName; }
 	FOrganizationId GetPendingJoinOrganizationId() const { return PendingJoinOrganizationId; }
 	int32 GetPendingJoinOrganizationIdValue() const { return PendingJoinOrganizationIdValue; }

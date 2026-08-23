@@ -133,9 +133,17 @@ private:
 	void UnbindFacades();
 	void RefreshMapModeEntries();
 
-	/** Re-run from SetControlledCharacterId, since the pawn can only be resolved once the player
-	 * controller actually possesses one, and idempotent for the same reason. */
+	/** Resolves the local ARtsPlayer and binds HandleControlledCharacterChanged to it — called from
+	 * Initialize(), not from SetControlledCharacterId, so the right-click binding does not depend on
+	 * Blueprint ever pushing a controlled character id in. Idempotent, safe to call again. */
+	void BindPlayer();
+
+	/** Re-run whenever the controlled character changes, since the pawn can only be resolved once
+	 * the player controller actually possesses one, and idempotent for the same reason. */
 	void BindPawnRightClick();
+
+	UFUNCTION()
+	void HandleControlledCharacterChanged();
 
 	/** Bound to the possessed pawn's OnRightMouseButtonClicked — a right click anywhere on the map
 	 * clears the province selection the same way an invalid pick from the map itself would. */

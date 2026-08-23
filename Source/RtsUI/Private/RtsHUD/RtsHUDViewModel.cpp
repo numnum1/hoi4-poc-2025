@@ -30,6 +30,7 @@ void URtsHUDViewModel::Initialize()
 
 	BindFacades();
 	RefreshMapModeEntries();
+	BindPlayer();
 
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetNationData);
@@ -38,6 +39,11 @@ void URtsHUDViewModel::Initialize()
 void URtsHUDViewModel::BeginDestroy()
 {
 	UnbindFacades();
+
+	if (Player)
+	{
+		Player->OnControlledCharacterIdChanged.RemoveAll(this);
+	}
 
 	if (Pawn)
 	{
@@ -50,8 +56,6 @@ void URtsHUDViewModel::BeginDestroy()
 void URtsHUDViewModel::SetControlledCharacterId(FCharacterId InControlledCharacterId)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(ControlledCharacterId, InControlledCharacterId);
-
-	BindPawnRightClick();
 }
 
 void URtsHUDViewModel::SetActiveModal(EPlayerModal InActiveModal)
@@ -257,10 +261,34 @@ void URtsHUDViewModel::BindFacades()
 	}
 }
 
+void URtsHUDViewModel::BindPlayer()
+{
+	ARtsPlayer* NewPlayer = GetWorld() ? Cast<ARtsPlayer>(GetWorld()->GetFirstPlayerController()) : nullptr;
+	if (Player != NewPlayer)
+	{
+		if (Player)
+		{
+			Player->OnControlledCharacterIdChanged.RemoveAll(this);
+		}
+
+		Player = NewPlayer;
+
+		if (Player)
+		{
+			Player->OnControlledCharacterIdChanged.AddDynamic(this, &URtsHUDViewModel::HandleControlledCharacterChanged);
+		}
+	}
+
+	BindPawnRightClick();
+}
+
+void URtsHUDViewModel::HandleControlledCharacterChanged()
+{
+	BindPawnRightClick();
+}
+
 void URtsHUDViewModel::BindPawnRightClick()
 {
-	Player = GetWorld() ? Cast<ARtsPlayer>(GetWorld()->GetFirstPlayerController()) : nullptr;
-
 	ARtsMapPawn* NewPawn = Player ? Cast<ARtsMapPawn>(Player->GetPawn()) : nullptr;
 	if (Pawn == NewPawn)
 	{
