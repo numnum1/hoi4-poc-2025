@@ -68,7 +68,6 @@ public:
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
 	TMap<FNationId, FWorldMapNationData> GetNationData() const;
 
-protected:
 	virtual void BeginDestroy() override;
 
 private:

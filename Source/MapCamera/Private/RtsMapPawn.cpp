@@ -89,11 +89,6 @@ void ARtsMapPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 	Subsystem->AddMappingContext(InputMapping, 0);
 	EnhancedInputComponent->BindAction(InputSelect, ETriggerEvent::Started, this, &ARtsMapPawn::HandleSelectStarted);
-
-	if (InputRightClick != nullptr)
-	{
-		EnhancedInputComponent->BindAction(InputRightClick, ETriggerEvent::Started, this, &ARtsMapPawn::HandleRightClickStarted);
-	}
 }
 
 bool ARtsMapPawn::TraceUnderCursor(FHitResult& OutHitResult)
@@ -206,7 +201,7 @@ void ARtsMapPawn::HandleSelectStarted()
 	MapReference->NotifyWorldClicked(HitResult);
 }
 
-void ARtsMapPawn::HandleRightClickStarted()
+void ARtsMapPawn::NotifyRightMouseButtonClicked()
 {
 	OnRightMouseButtonClicked.Broadcast();
 }

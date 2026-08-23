@@ -52,8 +52,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Tracing")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 
-	/** Broadcast from HandleRightClickStarted. Bound by URtsHUDViewModel to clear the current
-	 * province selection. */
+	/** Bound by URtsHUDViewModel to clear the current province selection. Broadcast from
+	 * NotifyRightMouseButtonClicked, not from a bound Input Action here — the pawn Blueprint's own
+	 * Enhanced Input event graph calls that directly, since an EnhancedInputComponent::BindAction
+	 * here has no way to report a missing/unmapped Input Action back to whoever set it up. */
 	UPROPERTY(BlueprintAssignable, Category="Tracing")
 	FMapPawnRightClicked OnRightMouseButtonClicked;
 
@@ -78,11 +80,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<UInputAction> InputSelect;
 
-	/** No default asset finder for this one — assign the Input Action in the pawn Blueprint's
-	 * defaults, the same way InputMapping/InputMove/InputSelect would if the constructor's
-	 * ConstructorHelpers lookups ever missed. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
-	TObjectPtr<UInputAction> InputRightClick;
+	/** Called from the pawn Blueprint's own Enhanced Input event graph — mapped there, not through a
+	 * TObjectPtr<UInputAction> here, so the right click's Input Action lives entirely in Blueprint. */
+	UFUNCTION(BlueprintCallable, Category="Tracing")
+	void NotifyRightMouseButtonClicked();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings")
 	FRotator StartRotationGlobe = FRotator(-50.0f, -100.0f, 0.0f);
@@ -142,10 +143,6 @@ private:
 	void FrameCamera();
 
 	void HandleSelectStarted();
-
-	/** Broadcasts OnRightMouseButtonClicked. Resolves nothing itself, same as the pawn's class
-	 * comment says about the left click — a listener decides what a right click means. */
-	void HandleRightClickStarted();
 
 	/** Interp target for the spring arm, kept separate so zooming stays smooth. */
 	float ArmLength = 0.0f;
