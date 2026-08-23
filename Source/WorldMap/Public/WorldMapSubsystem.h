@@ -8,6 +8,7 @@
 #include "WorldMapSubsystem.generated.h"
 
 class UDataTable;
+class UTexture2D;
 
 /**
  * Everything the map knows that is a province rather than a pixel: the map table, both directions of
@@ -41,6 +42,10 @@ public:
 
 	TArray<FMapLutEntry> BuildLutRows(const TMap<FProvinceId, FProvinceVisuals>& InVisuals) const;
 
+	/** Turns a texel of the province-ID texture into the id the map table and the lookup textures
+	 * use. Green is scaled back by the highest row in use - see FMapPixelId. */
+	FMapPixelId DecodePixel(const FColor& InTexelColor) const;
+
 	FProvinceId FindProvince(const FMapPixelId& InPixelId) const;
 
 	bool FindUnitPosition(FProvinceId InProvinceId, FVector2D& OutUnitPosition) const;
@@ -48,6 +53,9 @@ public:
 	int32 GetHighestPixelRow() const;
 
 	bool BuildNameZones(const TArray<FProvinceId>& InProvinces, TArray<FMapNameZone>& OutZones) const;
+
+	/** Debug: whether the ID texture the map renders and the province table agree at all. */
+	void LogIdTextureCoverage(UTexture2D* InTexture) const;
 
 private:
 	void EnsureMapDataLookup() const;
@@ -76,6 +84,8 @@ private:
 	mutable TMap<FProvinceId, FVector2D> ProvinceUnitPositions;
 
 	mutable int32 HighestPixelRow = 0;
+
+	mutable int32 HighestPixelColumn = 0;
 
 	mutable bool bMissingTableLogged = false;
 

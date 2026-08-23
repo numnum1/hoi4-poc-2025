@@ -336,7 +336,8 @@ void ARtsWorldMap::NotifyWorldClicked(const FHitResult& InHit)
 	
 	UE_LOG(LogTemp, Display, TEXT("Looked up pixel: R: %i|G: %i"), PixelColor.R, PixelColor.G);
 
-	const FMapPixelId PixelId = FMapPixelId::FromColor(PixelColor);
+	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
+	const FMapPixelId PixelId = Subsystem ? Subsystem->DecodePixel(PixelColor) : FMapPixelId();
 	UE_LOG(LogRtsWorldMap, Verbose,
 	       TEXT("Click on %s at %s -> UV (%f, %f) -> pixel (%d, %d)"),
 	       *GetNameSafe(InHit.GetActor()), *InHit.ImpactPoint.ToString(), UV.X, UV.Y, PixelId.R, PixelId.G);
@@ -394,6 +395,11 @@ bool ARtsWorldMap::ReadLookupPixel(const FVector2D InUV, FColor& OutColor) const
 		       PlatformData->Mips.Num(), PixelBytes,
 		       InUV.X, InUV.Y, X, Y, OutColor.B, OutColor.G, OutColor.R, OutColor.A,
 		       *GetActorTransform().ToString());
+
+		if (const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this))
+		{
+			Subsystem->LogIdTextureCoverage(ProvinceIdTexture);
+		}
 	}
 
 	return true;
@@ -430,7 +436,13 @@ void ARtsWorldMap::SetProvinceOwners(const TMap<FMapPixelId, FNationId>& InOwner
 
 FNationId ARtsWorldMap::FindOwnerNationIdForProvinceColor(const FColor& InProvinceColor) const
 {
-	const FNationId* NationId = PixelOwnerNationId.Find(FMapPixelId::FromColor(InProvinceColor));
+	const UWorldMapSubsystem* Subsystem = UWorldMapSubsystem::Get(this);
+	if (Subsystem == nullptr)
+	{
+		return FNationId();
+	}
+
+	const FNationId* NationId = PixelOwnerNationId.Find(Subsystem->DecodePixel(InProvinceColor));
 	return NationId ? *NationId : FNationId();
 }
 

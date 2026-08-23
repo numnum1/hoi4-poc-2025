@@ -7,9 +7,13 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWorldMapProvinceClicked, FProvinceId, ProvinceId);
 
 /**
- * A province's identity as the province-ID texture stores it: red and green carry the id, blue and
- * alpha are unused. Also the key the lookup textures are indexed by — red picks the column, green
- * the row, which is why those textures are always 256 wide.
+ * A province's identity: red picks the column of the lookup textures, green the row, which is why
+ * those textures are always 256 wide.
+ *
+ * This is NOT what the province-ID texture stores. There, green is stretched over the full byte
+ * range so that it doubles as the V coordinate the material samples the lookup textures with — a
+ * texel's green has to be scaled back by the highest row in use before it means anything here.
+ * UWorldMapSubsystem::DecodePixel does that and is the only way a texel may become an FMapPixelId.
  */
 USTRUCT(BlueprintType)
 struct WORLDMAP_API FMapPixelId
@@ -23,14 +27,6 @@ struct WORLDMAP_API FMapPixelId
 	uint8 G = 0;
 
 	bool operator==(const FMapPixelId& InOther) const { return R == InOther.R && G == InOther.G; }
-
-	static FMapPixelId FromColor(const FColor& InColor)
-	{
-		FMapPixelId PixelId;
-		PixelId.R = InColor.R;
-		PixelId.G = InColor.G;
-		return PixelId;
-	}
 };
 
 FORCEINLINE uint32 GetTypeHash(const FMapPixelId& InPixelId)
