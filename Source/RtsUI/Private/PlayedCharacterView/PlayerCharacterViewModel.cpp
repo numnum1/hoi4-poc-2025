@@ -20,6 +20,7 @@
 #include "Resources/ResourceViewModel.h"
 #include "Resources/RtsResources.h"
 #include "RtsGameStateComponent.h"
+#include "RtsMapPawn.h"
 #include "RtsPlayer.h"
 
 void UPlayerCharacterViewModel::InitializeForPlayer()
@@ -47,9 +48,37 @@ void UPlayerCharacterViewModel::InitializeForPlayer()
 
 void UPlayerCharacterViewModel::HandleControlledCharacterChanged()
 {
+	BindPawnRightClick();
+
 	// Inherited from UCharacterViewModel — resolves the facades, rebinds the Characters events, and
 	// calls Refresh(), which the override below drives the selection and the action list from.
 	Initialize(Player ? Player->GetControlledCharacterId() : FCharacterId());
+}
+
+void UPlayerCharacterViewModel::BindPawnRightClick()
+{
+	ARtsMapPawn* NewPawn = Player ? Cast<ARtsMapPawn>(Player->GetPawn()) : nullptr;
+	if (Pawn == NewPawn)
+	{
+		return;
+	}
+
+	if (Pawn)
+	{
+		Pawn->OnRightMouseButtonClicked.RemoveAll(this);
+	}
+
+	Pawn = NewPawn;
+
+	if (Pawn)
+	{
+		Pawn->OnRightMouseButtonClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleRightMouseButtonClicked);
+	}
+}
+
+void UPlayerCharacterViewModel::HandleRightMouseButtonClicked()
+{
+	SelectProvince(FProvinceId());
 }
 
 void UPlayerCharacterViewModel::Refresh_Implementation()
@@ -769,6 +798,11 @@ void UPlayerCharacterViewModel::BeginDestroy()
 	if (Player)
 	{
 		Player->OnControlledCharacterIdChanged.RemoveAll(this);
+	}
+
+	if (Pawn)
+	{
+		Pawn->OnRightMouseButtonClicked.RemoveAll(this);
 	}
 
 	if (Banking)

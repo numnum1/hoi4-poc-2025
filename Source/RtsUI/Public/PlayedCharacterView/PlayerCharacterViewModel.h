@@ -10,6 +10,7 @@
 #include "Resources/RtsResourceContext.h"
 #include "PlayerCharacterViewModel.generated.h"
 
+class ARtsMapPawn;
 class ARtsPlayer;
 class UActionViewModel;
 class UBuildingType;
@@ -375,11 +376,26 @@ private:
 	UFUNCTION()
 	void HandleBalanceChanged(FBankAccountId InAccountId);
 
+	/** Same idempotent shape as BindBanking, re-run from HandleControlledCharacterChanged since the
+	 * pawn can only be resolved once the player controller actually possesses one. */
+	void BindPawnRightClick();
+
 	UFUNCTION()
 	void HandleControlledCharacterChanged();
 
+	/** Bound to the possessed pawn's OnRightMouseButtonClicked in InitializeForPlayer — a right click
+	 * anywhere on the map clears the province selection the same way an invalid pick from the map
+	 * itself would (see SelectProvince). */
+	UFUNCTION()
+	void HandleRightMouseButtonClicked();
+
 	UPROPERTY()
 	TObjectPtr<ARtsPlayer> Player;
+
+	/** The pawn OnRightMouseButtonClicked is bound to, tracked separately from Player because the
+	 * pawn can change (or be unpossessed) without OnControlledCharacterIdChanged firing. */
+	UPROPERTY()
+	TObjectPtr<ARtsMapPawn> Pawn;
 
 	/** Reused across refreshes so a rebuild that neither adds nor removes an action keeps the same
 	 * row objects — the widget's list does not churn and the OnClicked binding survives. */

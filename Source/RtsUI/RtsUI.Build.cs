@@ -62,7 +62,10 @@ public class RtsUI : ModuleRules
                 // component there.
                 "Time",
                 // UProvinceViewModel passes UEcology* through
-                "Ecology"
+                "Ecology",
+                // Only to resolve ARtsMapPawn in the .cpp and bind OnRightMouseButtonClicked; the
+                // header forward-declares it.
+                "MapCamera"
             }
         );
     }

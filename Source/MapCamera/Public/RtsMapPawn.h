@@ -10,6 +10,10 @@ class UInputAction;
 class UInputMappingContext;
 class USpringArmComponent;
 
+/** Fired on a right click anywhere over the map, regardless of what it hit — unlike the left click,
+ * nothing here resolves a province, so there is nothing to pass along. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMapPawnRightClicked);
+
 /**
  * The map camera pawn: a camera framed on the globe, and the trace that turns a cursor position
  * into a point on it.
@@ -48,6 +52,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Tracing")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Visibility;
 
+	/** Broadcast from HandleRightClickStarted. Bound by UPlayerCharacterViewModel to clear the
+	 * current province selection. */
+	UPROPERTY(BlueprintAssignable, Category="Tracing")
+	FMapPawnRightClicked OnRightMouseButtonClicked;
+
 	UPROPERTY(BlueprintReadOnly, Category="Map Data")
 	TObjectPtr<ARtsWorldMap> MapReference;
 
@@ -68,6 +77,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
 	TObjectPtr<UInputAction> InputSelect;
+
+	/** No default asset finder for this one — assign the Input Action in the pawn Blueprint's
+	 * defaults, the same way InputMapping/InputMove/InputSelect would if the constructor's
+	 * ConstructorHelpers lookups ever missed. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Input")
+	TObjectPtr<UInputAction> InputRightClick;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement Settings")
 	FRotator StartRotationGlobe = FRotator(-50.0f, -100.0f, 0.0f);
@@ -127,6 +142,10 @@ private:
 	void FrameCamera();
 
 	void HandleSelectStarted();
+
+	/** Broadcasts OnRightMouseButtonClicked. Resolves nothing itself, same as the pawn's class
+	 * comment says about the left click — a listener decides what a right click means. */
+	void HandleRightClickStarted();
 
 	/** Interp target for the spring arm, kept separate so zooming stays smooth. */
 	float ArmLength = 0.0f;
