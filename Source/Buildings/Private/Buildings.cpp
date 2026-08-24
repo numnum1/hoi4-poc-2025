@@ -113,6 +113,21 @@ TArray<UBuildingType*> UBuildings::GetHeadquarterBuildingTypes() const
 	return Result;
 }
 
+TArray<UBuildingType*> UBuildings::GetBuildingTypesInCategory(const EBuildingCategory InCategory) const
+{
+	EnsureCatalogLoaded();
+
+	TArray<UBuildingType*> Result;
+	for (UBuildingType* Type : BuildingTypes)
+	{
+		if (Type && Type->GetCategory() == InCategory)
+		{
+			Result.Add(Type);
+		}
+	}
+	return Result;
+}
+
 FProvinceId UBuildings::GetProvince(const FBuildingId InBuildingId) const
 {
 	const UBuildingEntitySubsystem* Entities = GetEntities();

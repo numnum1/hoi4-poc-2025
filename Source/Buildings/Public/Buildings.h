@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "BuildingCategory.h"
 #include "RtsIds.h"
 #include "Components/ActorComponent.h"
 #include "Modules/ModuleManager.h"
@@ -65,6 +66,11 @@ public:
 	 * offers. Reads UBuildingCatalogSettings, not a per-entity query. */
 	UFUNCTION(BlueprintPure)
 	TArray<UBuildingType*> GetHeadquarterBuildingTypes() const;
+
+	/** Every catalogued type authored under InCategory, in catalogue order — one section of the
+	 * build menu. Reads UBuildingCatalogSettings, not a per-entity query. */
+	UFUNCTION(BlueprintPure)
+	TArray<UBuildingType*> GetBuildingTypesInCategory(EBuildingCategory InCategory) const;
 
 	UFUNCTION(BlueprintPure)
 	FProvinceId GetProvince(FBuildingId InBuildingId) const;

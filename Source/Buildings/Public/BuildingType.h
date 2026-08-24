@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "BuildingCategory.h"
 #include "BuildingFunction.h"
 #include "Engine/DataAsset.h"
 #include "BuildingType.generated.h"
@@ -52,6 +53,10 @@ private:
 	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess), EditDefaultsOnly)
 	FSlateBrush Icon;
 
+	/** Which build-menu section this kind shows up under. */
+	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess), EditDefaultsOnly)
+	EBuildingCategory Category = EBuildingCategory::BC_Administration;
+
 	/** What putting one up costs the character who orders it. */
 	UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess), EditDefaultsOnly)
 	int32 BuildCost = 0;
@@ -69,6 +74,7 @@ private:
 public:
 	FORCEINLINE const FText& GetBuildingName() const { return BuildingName; }
 	FORCEINLINE const FSlateBrush& GetIcon() const { return Icon; }
+	FORCEINLINE EBuildingCategory GetCategory() const { return Category; }
 	FORCEINLINE int32 GetBuildCost() const { return BuildCost; }
 	FORCEINLINE bool IsHeadquarters() const { return bIsHeadquarters; }
 	FORCEINLINE const TArray<FBuildingFunctionSlot>& GetFunctions() const { return Functions; }

@@ -126,23 +126,6 @@ namespace
 		return false;
 	}
 
-	/** Everything the character has, across every account they hold. The same sum the money row in
-	 * the resource panel shows (see URtsResources, RD_Total) — a character's cash is one pot. */
-	int32 GetCharacterFunds(const UBanking* InBanking, const FCharacterId InCharacterId)
-	{
-		if (InBanking == nullptr)
-		{
-			return 0;
-		}
-
-		int32 Total = 0;
-		for (const FBankAccountId AccountId : InBanking->GetAccountsForCharacter(InCharacterId))
-		{
-			Total += InBanking->GetBalance(AccountId);
-		}
-		return Total;
-	}
-
 	/**
 	 * Takes InAmount off the character, spreading it over their accounts. Returns false and moves
 	 * no money at all if they cannot cover it — the total is checked before the first withdrawal,
@@ -158,7 +141,7 @@ namespace
 			return true;
 		}
 
-		if (InBanking == nullptr || GetCharacterFunds(InBanking, InCharacterId) < InAmount)
+		if (InBanking == nullptr || URtsActions::GetCharacterFunds(InBanking, InCharacterId) < InAmount)
 		{
 			return false;
 		}
@@ -276,7 +259,7 @@ FText URtsActions::GetInvalidInputReason(const EAction InAction, const FRtsActio
 		}
 
 		const int32 Cost = InInput.HeadquartersType->GetBuildCost();
-		if (GetCharacterFunds(InContext.Banking, InContext.ActorId) < Cost)
+		if (URtsActions::GetCharacterFunds(InContext.Banking, InContext.ActorId) < Cost)
 		{
 			return FText::Format(LOCTEXT("CannotAffordHeadquarters", "You cannot afford this: it costs {0}."),
 				FText::AsNumber(Cost));
@@ -456,6 +439,21 @@ void URtsActions::ExecuteAction(const EAction InAction, const FRtsActionContext&
 		return;
 	}
 	}
+}
+
+int32 URtsActions::GetCharacterFunds(const UBanking* InBanking, const FCharacterId InCharacterId)
+{
+	if (InBanking == nullptr)
+	{
+		return 0;
+	}
+
+	int32 Total = 0;
+	for (const FBankAccountId AccountId : InBanking->GetAccountsForCharacter(InCharacterId))
+	{
+		Total += InBanking->GetBalance(AccountId);
+	}
+	return Total;
 }
 
 bool URtsActions::CanFoundHeadquartersIn(const FProvinceId InProvinceId, UProvinces* InProvinces, const FNationId InActingNationId)

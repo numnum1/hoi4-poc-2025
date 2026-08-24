@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "BuildingCategory.h"
 #include "MapModes/MapModeType.h"
 #include "MapTypes.h"
 #include "MVVMViewModelBase.h"
@@ -11,7 +12,11 @@
 
 class ARtsMapPawn;
 class ARtsPlayer;
+class UBanking;
+class UBuildingCategoryViewModel;
+class UBuildingKindViewModel;
 class UBuildings;
+class UBuildingType;
 class UDepartments;
 class UMapModeEntryViewModel;
 class UNations;
@@ -72,6 +77,25 @@ public:
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
 	TMap<FNationId, FWorldMapNationData> GetNationData() const;
 
+#pragma region Build Menu
+	/**
+	 * Opens or closes the one build menu the HUD has. There is exactly one — a process that needs a
+	 * building picked (founding an organization today) brings this one up instead of carrying a
+	 * picker of its own, which is why the state lives here and not on the process' modal.
+	 *
+	 * Closing it drops the pick: a menu that comes back up still showing yesterday's selection would
+	 * be a second source of truth for whatever process opens it next.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
+	void SetBuildMenuOpen(bool bInOpen);
+
+	/** What the player has picked in the build menu, or null. The authority on the pick — the row's
+	 * own bIsSelected is display only, the same split UBuildingKindViewModel documents. Read by
+	 * whichever process is collecting a building, and by ComputeTooltip so hovering a province can
+	 * say something about the building about to be placed there. */
+	UBuildingType* GetSelectedBuildingType() const { return SelectedBuildingType; }
+#pragma endregion
+
 #pragma region Tooltip
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
 	FMapTooltipContent ComputeTooltip() const;
@@ -104,6 +128,26 @@ private:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FProvinceId HoveredProvinceId;
 
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsBuildMenuOpen, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	bool bIsBuildMenuOpen = false;
+
+	/** One row per section that actually has something to offer, cached like MapModes. Empty
+	 * sections are left out rather than shown empty — the filter can hide every kind in a section
+	 * (founding only offers headquarters), and a heading with nothing under it says nothing. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	TArray<TObjectPtr<UBuildingCategoryViewModel>> BuildingCategories;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	int32 BuildingCategoryCount = 0;
+
+	/** The picked row, for a widget that wants to show the pick outside the list. Derived from
+	 * SelectedBuildingType by ApplySelectedBuildingType, never set on its own. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	TObjectPtr<UBuildingKindViewModel> SelectedBuildingKind;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	int32 SelectedBuildingCost = 0;
+
 	/** One row per mode, cached rather than rebuilt: the set of modes is fixed, only which one is
 	 * active changes. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
@@ -111,6 +155,26 @@ private:
 
 	UFUNCTION()
 	void HandleMapModeClicked(UMapModeEntryViewModel* InClickedEntry);
+
+	//~ Build menu ---------------------------------------------------------------------------------
+
+	/** The one writer of SelectedBuildingType, and through the rebuild below of the row highlight
+	 * and SelectedBuildingCost derived from it — so the pick and what is shown cannot disagree. */
+	void ApplySelectedBuildingType(UBuildingType* InBuildingType);
+
+	/** Rebuilds the sections with current affordability and re-derives the highlight and cost. */
+	void RefreshBuildMenu();
+
+	/** Whether the menu currently offers headquarters only. Derived from ActiveModal rather than
+	 * pushed in when the menu is opened: the founding process is the only thing that narrows the
+	 * catalogue, and deriving it means closing that modal cannot leave the filter behind. */
+	bool IsBuildMenuHeadquartersOnly() const;
+
+	UFUNCTION()
+	void HandleBuildingKindClicked(UBuildingKindViewModel* InClickedKind);
+
+	UFUNCTION()
+	void HandleBalanceChanged(FBankAccountId InAccountId);
 
 	//~ Anything that can move a province's color under the active mode ---------------------------
 
@@ -181,6 +245,9 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UPopulations> Populations;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UBanking> Banking;
+
 	UPROPERTY()
 	TObjectPtr<ARtsPlayer> Player;
 
@@ -188,6 +255,20 @@ private:
 	 * pawn can change (or be unpossessed) without the controlled character changing. */
 	UPROPERTY()
 	TObjectPtr<ARtsMapPawn> Pawn;
+
+	/** The pick itself. A plain UPROPERTY rather than FieldNotify: nothing binds to the asset, only
+	 * to SelectedBuildingKind and SelectedBuildingCost derived from it. */
+	UPROPERTY()
+	TObjectPtr<UBuildingType> SelectedBuildingType;
+
+	/** Rebuilds that offer the same kinds keep the same row objects, so a refresh for affordability
+	 * does not churn the widgets bound to them. Keyed by asset, not by index — the filter changes
+	 * which kinds appear at all. */
+	UPROPERTY()
+	TMap<TObjectPtr<UBuildingType>, TObjectPtr<UBuildingKindViewModel>> BuildingKindCache;
+
+	UPROPERTY()
+	TMap<EBuildingCategory, TObjectPtr<UBuildingCategoryViewModel>> BuildingCategoryCache;
 
 public:
 	FCharacterId GetControlledCharacterId() const { return ControlledCharacterId; }
@@ -198,4 +279,9 @@ public:
 	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
 	FProvinceId GetHoveredProvinceId() const { return HoveredProvinceId; }
 	const TArray<TObjectPtr<UMapModeEntryViewModel>>& GetMapModes() const { return MapModes; }
+	bool IsBuildMenuOpen() const { return bIsBuildMenuOpen; }
+	const TArray<TObjectPtr<UBuildingCategoryViewModel>>& GetBuildingCategories() const { return BuildingCategories; }
+	int32 GetBuildingCategoryCount() const { return BuildingCategoryCount; }
+	UBuildingKindViewModel* GetSelectedBuildingKind() const { return SelectedBuildingKind; }
+	int32 GetSelectedBuildingCost() const { return SelectedBuildingCost; }
 };

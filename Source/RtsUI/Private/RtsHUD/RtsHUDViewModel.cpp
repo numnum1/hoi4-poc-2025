@@ -1,6 +1,12 @@
 #include "RtsHUD/RtsHUDViewModel.h"
 
+#include "Actions/RtsActions.h"
+#include "Banking.h"
 #include "Buildings.h"
+#include "Buildings/BuildingCategoryViewModel.h"
+#include "Buildings/BuildingKindViewModel.h"
+#include "Buildings/RtsBuildingCategories.h"
+#include "BuildingType.h"
 #include "Departments.h"
 #include "MapModes/MapModeEntryViewModel.h"
 #include "MapModes/RtsMapModes.h"
@@ -27,9 +33,11 @@ void URtsHUDViewModel::Initialize()
 	Departments = FindRtsGameStateComponent<UDepartments>(this);
 	Buildings = FindRtsGameStateComponent<UBuildings>(this);
 	Populations = FindRtsGameStateComponent<UPopulations>(this);
+	Banking = FindRtsGameStateComponent<UBanking>(this);
 
 	BindFacades();
 	RefreshMapModeEntries();
+	RefreshBuildMenu();
 	BindPlayer();
 
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
@@ -61,6 +69,11 @@ void URtsHUDViewModel::SetActiveModal(EPlayerModal InActiveModal)
 	}
 
 	UE_MVVM_SET_PROPERTY_VALUE(ActiveModal, InActiveModal);
+
+	// The build menu belongs to whichever process needs a building picked, and today that is
+	// founding an organization - so the modal opening brings the one menu up and closing it takes
+	// it down again, pick and all.
+	SetBuildMenuOpen(InActiveModal == EPlayerModal::PM_FoundOrganization);
 
 	// A modal may paint the map for its own purposes while it is open (the founding dialog colors
 	// provinces by eligibility). Repainting the active mode on every modal change is what puts the
@@ -155,6 +168,131 @@ FMapTooltipContent URtsHUDViewModel::ComputeTooltip() const
 	Tooltip.Headline = Provinces->GetDisplayInfo(HoveredProvinceId).Name;
 
 	return Tooltip;
+}
+
+void URtsHUDViewModel::SetBuildMenuOpen(const bool bInOpen)
+{
+	if (bIsBuildMenuOpen == bInOpen)
+	{
+		return;
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(bIsBuildMenuOpen, bInOpen);
+
+	// Dropping the pick is what keeps a reopened menu from handing the next process a building the
+	// player chose for the last one.
+	ApplySelectedBuildingType(nullptr);
+	RefreshBuildMenu();
+}
+
+void URtsHUDViewModel::ApplySelectedBuildingType(UBuildingType* InBuildingType)
+{
+	if (SelectedBuildingType == InBuildingType)
+	{
+		return;
+	}
+
+	SelectedBuildingType = InBuildingType;
+
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingCost, InBuildingType ? InBuildingType->GetBuildCost() : 0);
+
+	const TObjectPtr<UBuildingKindViewModel>* PickedRow = InBuildingType ? BuildingKindCache.Find(InBuildingType) : nullptr;
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingKind, PickedRow ? PickedRow->Get() : nullptr);
+
+	for (const TPair<TObjectPtr<UBuildingType>, TObjectPtr<UBuildingKindViewModel>>& Entry : BuildingKindCache)
+	{
+		if (Entry.Value)
+		{
+			Entry.Value->SetSelected(Entry.Key == InBuildingType);
+		}
+	}
+
+	// What the tooltip says about a hovered province depends on what is about to be placed there.
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeTooltip);
+}
+
+void URtsHUDViewModel::RefreshBuildMenu()
+{
+	const bool bHeadquartersOnly = IsBuildMenuHeadquartersOnly();
+	const int32 Funds = URtsActions::GetCharacterFunds(Banking, ControlledCharacterId);
+
+	TArray<TObjectPtr<UBuildingCategoryViewModel>> NewCategories;
+
+	for (const EBuildingCategory CategoryValue : URtsBuildingCategories::GetCategories())
+	{
+		const TArray<UBuildingType*> Catalogue = Buildings ? Buildings->GetBuildingTypesInCategory(CategoryValue) : TArray<UBuildingType*>();
+
+		TArray<TObjectPtr<UBuildingKindViewModel>> Kinds;
+		for (UBuildingType* BuildingType : Catalogue)
+		{
+			if (BuildingType == nullptr || (bHeadquartersOnly && !BuildingType->IsHeadquarters()))
+			{
+				continue;
+			}
+
+			TObjectPtr<UBuildingKindViewModel>& Kind = BuildingKindCache.FindOrAdd(BuildingType);
+			if (Kind == nullptr)
+			{
+				Kind = NewObject<UBuildingKindViewModel>(this);
+				Kind->OnClicked.AddDynamic(this, &URtsHUDViewModel::HandleBuildingKindClicked);
+			}
+
+			Kind->SetSource(BuildingType);
+			Kind->SetAffordable(Funds >= BuildingType->GetBuildCost());
+			Kind->SetSelected(BuildingType == SelectedBuildingType);
+
+			Kinds.Add(Kind);
+		}
+
+		if (Kinds.IsEmpty())
+		{
+			continue;
+		}
+
+		TObjectPtr<UBuildingCategoryViewModel>& CategoryRow = BuildingCategoryCache.FindOrAdd(CategoryValue);
+		if (CategoryRow == nullptr)
+		{
+			CategoryRow = NewObject<UBuildingCategoryViewModel>(this);
+			CategoryRow->SetCategory(CategoryValue);
+		}
+
+		CategoryRow->SetKinds(Kinds);
+		NewCategories.Add(CategoryRow);
+	}
+
+	UE_MVVM_SET_PROPERTY_VALUE(BuildingCategories, NewCategories);
+	UE_MVVM_SET_PROPERTY_VALUE(BuildingCategoryCount, NewCategories.Num());
+
+	// The filter can drop the picked kind out of the menu entirely, and a pick nobody can see any
+	// more is the same stale state SetBuildMenuOpen clears.
+	if (SelectedBuildingType && bHeadquartersOnly && !SelectedBuildingType->IsHeadquarters())
+	{
+		ApplySelectedBuildingType(nullptr);
+	}
+}
+
+bool URtsHUDViewModel::IsBuildMenuHeadquartersOnly() const
+{
+	return ActiveModal == EPlayerModal::PM_FoundOrganization;
+}
+
+void URtsHUDViewModel::HandleBuildingKindClicked(UBuildingKindViewModel* InClickedKind)
+{
+	if (InClickedKind == nullptr)
+	{
+		return;
+	}
+
+	// Clicking the picked row unpicks it, the same toggle every other picker here uses.
+	UBuildingType* ClickedType = InClickedKind->GetBuildingType();
+	ApplySelectedBuildingType(ClickedType == SelectedBuildingType ? nullptr : ClickedType);
+}
+
+void URtsHUDViewModel::HandleBalanceChanged(FBankAccountId InAccountId)
+{
+	// Unfiltered: re-deriving the whole menu is cheap and affordability has to stay honest while it
+	// is open.
+	RefreshBuildMenu();
 }
 
 void URtsHUDViewModel::RefreshMapModeEntries()
@@ -276,6 +414,11 @@ void URtsHUDViewModel::BindFacades()
 		Populations->OnPopSizeChanged.AddDynamic(this, &URtsHUDViewModel::HandlePopChanged);
 		Populations->OnPopDestroyed.AddDynamic(this, &URtsHUDViewModel::HandlePopChanged);
 	}
+
+	if (Banking)
+	{
+		Banking->OnBalanceChanged.AddDynamic(this, &URtsHUDViewModel::HandleBalanceChanged);
+	}
 }
 
 void URtsHUDViewModel::BindPlayer()
@@ -301,7 +444,11 @@ void URtsHUDViewModel::BindPlayer()
 
 void URtsHUDViewModel::HandleControlledCharacterChanged()
 {
-	UE_MVVM_SET_PROPERTY_VALUE(ControlledCharacterId, Player ? Player->GetControlledCharacterId() : FCharacterId());
+	if (UE_MVVM_SET_PROPERTY_VALUE(ControlledCharacterId, Player ? Player->GetControlledCharacterId() : FCharacterId()))
+	{
+		// Affordability is priced against whoever is being played.
+		RefreshBuildMenu();
+	}
 
 	BindPawnRightClick();
 }
@@ -364,5 +511,10 @@ void URtsHUDViewModel::UnbindFacades()
 		Populations->OnPopulationsGrown.RemoveAll(this);
 		Populations->OnPopSizeChanged.RemoveAll(this);
 		Populations->OnPopDestroyed.RemoveAll(this);
+	}
+
+	if (Banking)
+	{
+		Banking->OnBalanceChanged.RemoveAll(this);
 	}
 }

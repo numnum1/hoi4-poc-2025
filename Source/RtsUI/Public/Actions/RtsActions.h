@@ -8,6 +8,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "RtsActions.generated.h"
 
+class UBanking;
 class UProvinces;
 
 /**
@@ -77,4 +78,14 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category="Rts Actions")
 	static bool CanFoundHeadquartersIn(FProvinceId InProvinceId, UProvinces* InProvinces, FNationId InActingNationId);
+
+	/**
+	 * Everything the character has, across every account they hold — a character's cash is one pot,
+	 * the same sum the money row in the resource panel shows (see URtsResources, RD_Total). Public
+	 * because every picker that prices something against the buyer needs it (the build menu's
+	 * affordability, the founding gate below), and three copies of the loop would be three places
+	 * for "one pot" to stop being true.
+	 */
+	UFUNCTION(BlueprintPure, Category="Rts Actions")
+	static int32 GetCharacterFunds(const UBanking* InBanking, FCharacterId InCharacterId);
 };
