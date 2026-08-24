@@ -5,6 +5,7 @@
 #include "FieldNotificationId.h"
 #include "RtsHUDWidget.generated.h"
 
+class UPlayedCharacterView;
 class URtsHUDViewModel;
 class UWorldMapWidget;
 
@@ -40,6 +41,12 @@ protected:
 	/** Optional so a HUD Blueprint without a map on screen still works. */
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
 	TObjectPtr<UWorldMapWidget> WorldMapWidget;
+
+	/** The played character's view, handed the HUD view model so everything under it can bind
+	 * against the build menu, the map selection and the founding verdict. Optional for the same
+	 * reason WorldMapWidget is. */
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+	TObjectPtr<UPlayedCharacterView> PlayedCharacterView;
 
 private:
 	void HandleProvinceVisualsChanged(UObject* InViewModel, UE::FieldNotification::FFieldId InFieldId);

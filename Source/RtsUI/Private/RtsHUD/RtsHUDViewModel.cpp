@@ -7,6 +7,7 @@
 #include "Buildings/BuildingKindViewModel.h"
 #include "Buildings/RtsBuildingCategories.h"
 #include "BuildingType.h"
+#include "Characters.h"
 #include "Departments.h"
 #include "MapModes/MapModeEntryViewModel.h"
 #include "MapModes/RtsMapModes.h"
@@ -14,6 +15,7 @@
 #include "Organizations.h"
 #include "Populations.h"
 #include "Provinces.h"
+#include "Roles.h"
 #include "RtsGameStateComponent.h"
 #include "RtsMapPawn.h"
 #include "RtsPlayer.h"
@@ -34,6 +36,8 @@ void URtsHUDViewModel::Initialize()
 	Buildings = FindRtsGameStateComponent<UBuildings>(this);
 	Populations = FindRtsGameStateComponent<UPopulations>(this);
 	Banking = FindRtsGameStateComponent<UBanking>(this);
+	Characters = FindRtsGameStateComponent<UCharacters>(this);
+	Roles = FindRtsGameStateComponent<URoles>(this);
 
 	BindFacades();
 	RefreshMapModeEntries();
@@ -75,6 +79,12 @@ void URtsHUDViewModel::SetActiveModal(EPlayerModal InActiveModal)
 	// it down again, pick and all.
 	SetBuildMenuOpen(InActiveModal == EPlayerModal::PM_FoundOrganization);
 
+	// The typed name goes with the form it was typed into.
+	if (InActiveModal != EPlayerModal::PM_FoundOrganization)
+	{
+		SetPendingOrganizationName(FText::GetEmpty());
+	}
+
 	// A modal may paint the map for its own purposes while it is open (the founding dialog colors
 	// provinces by eligibility). Repainting the active mode on every modal change is what puts the
 	// map back afterwards, so no modal has to undo its own colors.
@@ -103,6 +113,10 @@ void URtsHUDViewModel::SetSelectedProvinceId(const FProvinceId InSelectedProvinc
 {
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceId, InSelectedProvinceId);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceIdValue, InSelectedProvinceId.Value);
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedProvinceName,
+		Provinces && Provinces->IsAlive(InSelectedProvinceId) ? Provinces->GetDisplayInfo(InSelectedProvinceId).Name : FText::GetEmpty());
+
+	BroadcastFoundOrganizationVerdict();
 }
 
 void URtsHUDViewModel::SetHoveredProvinceId(const FProvinceId InHoveredProvinceId)
@@ -115,6 +129,12 @@ void URtsHUDViewModel::SetHoveredProvinceId(const FProvinceId InHoveredProvinceI
 
 TMap<FProvinceId, FProvinceVisuals> URtsHUDViewModel::GetProvinceVisuals() const
 {
+	// While a site is being picked, eligibility *is* what the map is for.
+	if (ActiveModal == EPlayerModal::PM_FoundOrganization && SelectedBuildingType != nullptr)
+	{
+		return BuildFoundingSiteVisuals();
+	}
+
 	FRtsMapModeContext Context;
 	Context.Provinces = Provinces;
 	Context.Nations = Nations;
@@ -179,6 +199,9 @@ void URtsHUDViewModel::SetBuildMenuOpen(const bool bInOpen)
 
 	UE_MVVM_SET_PROPERTY_VALUE(bIsBuildMenuOpen, bInOpen);
 
+	// The founding overlay only shows while the menu is up, so opening or closing it is a repaint.
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+
 	// Dropping the pick is what keeps a reopened menu from handing the next process a building the
 	// player chose for the last one.
 	ApplySelectedBuildingType(nullptr);
@@ -195,6 +218,7 @@ void URtsHUDViewModel::ApplySelectedBuildingType(UBuildingType* InBuildingType)
 	SelectedBuildingType = InBuildingType;
 
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingCost, InBuildingType ? InBuildingType->GetBuildCost() : 0);
+	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingName, InBuildingType ? InBuildingType->GetBuildingName() : FText::GetEmpty());
 
 	const TObjectPtr<UBuildingKindViewModel>* PickedRow = InBuildingType ? BuildingKindCache.Find(InBuildingType) : nullptr;
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingKind, PickedRow ? PickedRow->Get() : nullptr);
@@ -207,8 +231,124 @@ void URtsHUDViewModel::ApplySelectedBuildingType(UBuildingType* InBuildingType)
 		}
 	}
 
-	// What the tooltip says about a hovered province depends on what is about to be placed there.
+	// What the tooltip says about a hovered province depends on what is about to be placed there,
+	// and so does where the map says a site is free.
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeTooltip);
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+	BroadcastFoundOrganizationVerdict();
+}
+
+void URtsHUDViewModel::SetPendingOrganizationName(const FText& InPendingOrganizationName)
+{
+	if (UE_MVVM_SET_PROPERTY_VALUE(PendingOrganizationName, InPendingOrganizationName))
+	{
+		BroadcastFoundOrganizationVerdict();
+	}
+}
+
+FText URtsHUDViewModel::ComputeFoundOrganizationError() const
+{
+	const FRtsActionContext Context = MakeFoundOrganizationContext();
+
+	const FText BlockedReason = URtsActions::GetBlockedReason(EAction::EA_FoundOrganization, Context);
+	if (!BlockedReason.IsEmpty())
+	{
+		return BlockedReason;
+	}
+
+	return URtsActions::GetInvalidInputReason(EAction::EA_FoundOrganization, Context, MakeFoundOrganizationInput());
+}
+
+bool URtsHUDViewModel::CanConfirmFoundOrganization() const
+{
+	return ComputeFoundOrganizationError().IsEmpty();
+}
+
+FRtsActionContext URtsHUDViewModel::MakeFoundOrganizationContext() const
+{
+	FRtsActionContext Context;
+	Context.Scope = ERtsActionScope::RAS_Self;
+	Context.ActorId = ControlledCharacterId;
+	Context.Characters = Characters;
+	Context.Organizations = Organizations;
+	Context.Departments = Departments;
+	Context.Roles = Roles;
+	Context.Buildings = Buildings;
+	Context.Banking = Banking;
+	Context.Provinces = Provinces;
+	return Context;
+}
+
+FRtsActionInput URtsHUDViewModel::MakeFoundOrganizationInput() const
+{
+	FRtsActionInput Input;
+	Input.OrganizationName = PendingOrganizationName;
+	Input.HeadquartersType = SelectedBuildingType;
+	Input.HeadquartersProvinceId = SelectedProvinceId;
+	return Input;
+}
+
+void URtsHUDViewModel::BroadcastFoundOrganizationVerdict()
+{
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeFoundOrganizationError);
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(CanConfirmFoundOrganization);
+}
+
+FNationId URtsHUDViewModel::GetActingNationId() const
+{
+	const FProvinceId ActorProvinceId = Characters ? Characters->GetCurrentProvince(ControlledCharacterId) : FProvinceId();
+	return Provinces && ActorProvinceId.IsValid() ? Provinces->GetOwningNation(ActorProvinceId) : FNationId();
+}
+
+TMap<FProvinceId, FProvinceVisuals> URtsHUDViewModel::BuildFoundingSiteVisuals() const
+{
+	TMap<FProvinceId, FProvinceVisuals> Visuals;
+	if (Provinces == nullptr)
+	{
+		return Visuals;
+	}
+
+	const FNationId ActingNationId = GetActingNationId();
+
+	for (int32 Index = 0; Index < Provinces->Num(); ++Index)
+	{
+		const FProvinceId CandidateId(Index);
+		if (!Provinces->IsAlive(CandidateId))
+		{
+			continue;
+		}
+
+		const FNationId OwningNation = Provinces->GetOwningNation(CandidateId);
+		if (OwningNation.IsValid() && OwningNation != ActingNationId)
+		{
+			Visuals.Add(CandidateId).PrimaryColor = FColor(128, 128, 128);
+			continue;
+		}
+
+		if (!URtsActions::CanFoundHeadquartersIn(CandidateId, Provinces, ActingNationId))
+		{
+			Visuals.Add(CandidateId).PrimaryColor = FColor::Red;
+			continue;
+		}
+
+		bool bAlreadyHasType = false;
+		if (Buildings)
+		{
+			for (const FBuildingId ExistingId : Buildings->CollectBuildingsInProvince(CandidateId))
+			{
+				if (Buildings->GetBuildingType(ExistingId) == SelectedBuildingType
+					&& Buildings->GetOwnerCharacter(ExistingId) == ControlledCharacterId)
+				{
+					bAlreadyHasType = true;
+					break;
+				}
+			}
+		}
+
+		Visuals.Add(CandidateId).PrimaryColor = bAlreadyHasType ? FColor::Blue : FColor::Green;
+	}
+
+	return Visuals;
 }
 
 void URtsHUDViewModel::RefreshBuildMenu()
@@ -293,6 +433,7 @@ void URtsHUDViewModel::HandleBalanceChanged(FBankAccountId InAccountId)
 	// Unfiltered: re-deriving the whole menu is cheap and affordability has to stay honest while it
 	// is open.
 	RefreshBuildMenu();
+	BroadcastFoundOrganizationVerdict();
 }
 
 void URtsHUDViewModel::RefreshMapModeEntries()
@@ -446,8 +587,10 @@ void URtsHUDViewModel::HandleControlledCharacterChanged()
 {
 	if (UE_MVVM_SET_PROPERTY_VALUE(ControlledCharacterId, Player ? Player->GetControlledCharacterId() : FCharacterId()))
 	{
-		// Affordability is priced against whoever is being played.
+		// Affordability is priced against whoever is being played, and so is everything founding
+		// checks.
 		RefreshBuildMenu();
+		BroadcastFoundOrganizationVerdict();
 	}
 
 	BindPawnRightClick();

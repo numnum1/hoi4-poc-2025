@@ -18,7 +18,7 @@ class UPlayerCharacterViewModel;
  * view model's SelectedProvinceId — the same "Kind-ViewModels: Create Instance + Initialize"
  * pattern UTimezoneViewModel uses. What this class pushes in (SetPlayerViewModel) is only that
  * source: a Property Path the Blueprint's destination binding reads from, exactly like
- * UFoundOrganizationModalWidget::SetPlayerViewModel.
+ * UJoinOrganizationModalWidget::SetPlayerViewModel.
  *
  * It is also the way a click gets *out* of that view model. UProvinceViewModel is a pure
  * derivation of the simulation and may not know UPlayerCharacterViewModel, and being CreateInstance it has no

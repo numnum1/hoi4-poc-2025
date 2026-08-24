@@ -163,9 +163,8 @@ void UPlayerCharacterViewModel::SelectProvince(const FProvinceId InProvinceId)
 
 	// While the player is filling in the found-organization form, a map click is that form's site
 	// field. Opening the province modal over it would throw the half-filled form away, so the
-	// selection lands and nothing else moves — the values just written above (bound as
-	// SetSelectedProvinceId/SetSelectedProvinceName on the modal's own view model) are all that form
-	// needs to see the pick.
+	// selection lands and nothing else moves — the form reads the site off URtsHUDViewModel, which
+	// the same click updates.
 	if (ActiveModal == EPlayerModal::PM_FoundOrganization)
 	{
 		return;

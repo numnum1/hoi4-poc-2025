@@ -1,11 +1,11 @@
 #include "FoundOrganizationModal/FoundOrganizationModalWidget.h"
 
 #include "FoundOrganizationModal/FoundOrganizationModalWidgetViewModel.h"
-#include "PlayedCharacterView/PlayerCharacterViewModel.h"
+#include "RtsHUD/RtsHUDViewModel.h"
 
-void UFoundOrganizationModalWidget::SetPlayerViewModel(UPlayerCharacterViewModel* InPlayerViewModel)
+void UFoundOrganizationModalWidget::SetHUDViewModel(URtsHUDViewModel* InHUDViewModel)
 {
-	PlayerViewModel = InPlayerViewModel;
+	HUDViewModel = InHUDViewModel;
 }
 
 void UFoundOrganizationModalWidget::SetFormViewModel(UFoundOrganizationModalWidgetViewModel* InFormViewModel)
@@ -15,18 +15,17 @@ void UFoundOrganizationModalWidget::SetFormViewModel(UFoundOrganizationModalWidg
 
 void UFoundOrganizationModalWidget::Confirm()
 {
-	if (FormViewModel == nullptr)
+	if (FormViewModel == nullptr || HUDViewModel == nullptr)
 	{
 		return;
 	}
 
-	// Reported as-is, without checking the form's IsValid first: whoever handles OnConfirmed
-	// re-runs both gates on exactly these values anyway, and a second gate here would be a copy to
-	// keep in sync.
+	// Reported as-is, without checking the verdict first: whoever handles OnConfirmed re-runs both
+	// gates on exactly these values anyway, and a second gate here would be a copy to keep in sync.
 	OnConfirmed.Broadcast(
 		FormViewModel->GetOrganizationName(),
-		FormViewModel->GetPendingHeadquartersType(),
-		FormViewModel->GetSelectedProvinceId());
+		HUDViewModel->GetSelectedBuildingType(),
+		HUDViewModel->GetSelectedProvinceId());
 }
 
 void UFoundOrganizationModalWidget::Cancel()

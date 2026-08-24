@@ -6,6 +6,7 @@
 #include "PlayedCharacterView/PlayerCharacterViewModel.h"
 #include "ProvinceDetail/ProvinceDetailWidget.h"
 #include "RecruitCharacterModal/RecruitCharacterModalWidget.h"
+#include "RtsHUD/RtsHUDViewModel.h"
 
 void UPlayedCharacterView::NativeOnInitialized()
 {
@@ -15,11 +16,6 @@ void UPlayedCharacterView::NativeOnInitialized()
 	{
 		PlayerViewModel = NewObject<UPlayerCharacterViewModel>(this);
 		PlayerViewModel->InitializeForPlayer();
-	}
-
-	if (FoundOrganizationModal)
-	{
-		FoundOrganizationModal->SetPlayerViewModel(PlayerViewModel);
 	}
 
 	if (JoinOrganizationModal)
@@ -40,5 +36,15 @@ void UPlayedCharacterView::NativeOnInitialized()
 	if (RecruitCharacterModal)
 	{
 		RecruitCharacterModal->SetPlayerViewModel(PlayerViewModel);
+	}
+}
+
+void UPlayedCharacterView::SetHUDViewModel(URtsHUDViewModel* InHUDViewModel)
+{
+	HUDViewModel = InHUDViewModel;
+
+	if (FoundOrganizationModal)
+	{
+		FoundOrganizationModal->SetHUDViewModel(HUDViewModel);
 	}
 }

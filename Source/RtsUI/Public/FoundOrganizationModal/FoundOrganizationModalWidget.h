@@ -7,37 +7,36 @@
 
 class UBuildingType;
 class UFoundOrganizationModalWidgetViewModel;
-class UPlayerCharacterViewModel;
+class URtsHUDViewModel;
 
 /**
  * The found-organization modal, as the C++ half of a widget whose Blueprint child carries only
  * layout and styling. Lives inside the played character's view because it is that character who
  * founds the organization — the modal has no meaning without one.
  *
- * This widget binds its own elements to its own component, UFoundOrganizationModalWidgetViewModel
- * — a CreateInstance view model the widget's Blueprint spawns itself in its View Models panel, not
- * something pushed in from C++. That component is a "smart form": name typed, headquarters picked,
- * the headquarters catalogue and whether the form is valid right now are all local state and
- * business logic it owns and computes itself, not values pushed down from here.
+ * The two view models it works with never reference each other. The form
+ * (UFoundOrganizationModalWidgetViewModel) is a Create Instance entry the widget's own Blueprint
+ * spawns and owns only the typed name; everything it displays is bound in the editor from
+ * URtsHUDViewModel, which is where the build menu's pick, the map's site pick and the verdict on
+ * all of it live. This class is what makes that source reachable: SetHUDViewModel is pushed down
+ * from UPlayedCharacterView, and the Blueprint adds a "Property Path" view model entry pointing at
+ * GetHUDViewModel to bind against.
  *
- * What this class still pushes in (SetPlayerViewModel) is the played character's view model, kept
- * around only as a Property Path source for the handful of things the modal's own component cannot
- * know on its own: a one-way Function binding from UPlayerCharacterViewModel::CharacterId onto the
- * modal view model's Initialize (so it can resolve its own facades and funds), and one-way Function
- * bindings from GetSelectedProvinceId/GetSelectedProvinceName onto SetSelectedProvinceId/
- * SetSelectedProvinceName (the province is picked on the world map, not typed into this form).
+ * The name goes the other way through the same mechanism — a binding from the form's
+ * OrganizationName onto URtsHUDViewModel::SetPendingOrganizationName — because the verdict cannot
+ * be computed without it.
  *
- * The confirm/cancel buttons run through this class rather than through a dispatcher on the form: a
+ * Confirm/Cancel run through this class rather than through a dispatcher on the form: a
  * CreateInstance view model has no owner to report to, so it gets none (see "Callbacks gibt es nur
  * auf Manual-ViewModels" in CLAUDE.md — that rule is about ViewModels, not widgets, so it does not
- * forbid the dispatchers below). The Blueprint calls SetFormViewModel once with the view model its
- * own MVVM panel spawned; Confirm/Cancel then read the form and broadcast OnConfirmed/OnCancelled
- * instead of calling UPlayerCharacterViewModel directly — this widget does not need to know that
- * class exists at all, only whoever owns it (UPlayedCharacterView's Blueprint) does, and wires those
- * two dispatchers onto UPlayerCharacterViewModel::HandleFoundOrganizationConfirmed/CloseModal. Those
- * handlers re-validate through URtsActions before running anything — the form's own validation is UX
- * feedback, not the authority. The Blueprint should also call the form's ResetForm() whenever the
- * modal becomes visible again, since the form does not reset itself.
+ * forbid the dispatchers below). Confirm reads the name off the form and the building and site off
+ * the HUD view model, then broadcasts OnConfirmed instead of calling UPlayerCharacterViewModel
+ * directly — this widget does not need to know that class exists, only whoever owns it
+ * (UPlayedCharacterView's Blueprint) does, and wires OnConfirmed/OnCancelled onto
+ * HandleFoundOrganizationConfirmed/CloseModal. Those handlers re-validate through URtsActions before
+ * running anything — the verdict shown here is UX feedback, not the authority. The Blueprint should
+ * also call the form's ResetForm() whenever the modal becomes visible again, since the form does not
+ * reset itself.
  */
 UCLASS(Abstract)
 class RTSUI_API UFoundOrganizationModalWidget : public UUserWidget
@@ -45,17 +44,16 @@ class RTSUI_API UFoundOrganizationModalWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	/** Pushed in by the owning view once it has its view model. Kept only as a Property Path source
-	 * for the form's own Blueprint bindings (CharacterId, SelectedProvinceId/Name) — Confirm/Cancel
-	 * below no longer call anything on it directly. */
+	/** Pushed down from UPlayedCharacterView. Kept as the Property Path source the form's own
+	 * Blueprint bindings read from, and as what Confirm reads the collected building and site off. */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
-	void SetPlayerViewModel(UPlayerCharacterViewModel* InPlayerViewModel);
+	void SetHUDViewModel(URtsHUDViewModel* InHUDViewModel);
 
 	UFUNCTION(BlueprintPure, Category="Found Organization Modal")
-	UPlayerCharacterViewModel* GetPlayerViewModel() const { return PlayerViewModel; }
+	URtsHUDViewModel* GetHUDViewModel() const { return HUDViewModel; }
 
 	/** Pushed in by the Blueprint once, with the form view model its own MVVM panel spawned. C++
-	 * cannot reach that instance otherwise, and Confirm below has to read what it collected. */
+	 * cannot reach that instance otherwise, and Confirm below has to read the name it collected. */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
 	void SetFormViewModel(UFoundOrganizationModalWidgetViewModel* InFormViewModel);
 
@@ -64,7 +62,7 @@ public:
 
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnFoundOrganizationConfirmed, FText, OrganizationName, UBuildingType*, HeadquartersType, FProvinceId, ProvinceId);
 
-	/** Broadcast by Confirm() below with whatever the form collected. Bind this (Event binding, via a
+	/** Broadcast by Confirm() below with whatever was collected. Bind this (Event binding, via a
 	 * Custom Event that forwards to a Call Function node — a dispatcher cannot be bound directly to a
 	 * function on another object) to UPlayerCharacterViewModel::HandleFoundOrganizationConfirmed,
 	 * which re-validates before running anything. */
@@ -78,8 +76,8 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Found Organization Modal")
 	FOnFoundOrganizationCancelled OnCancelled;
 
-	/** Bind the confirm button's OnClicked to this. Reads the form and broadcasts OnConfirmed with
-	 * what it collected — this widget decides nothing about whether founding may run. */
+	/** Bind the confirm button's OnClicked to this. Reports what was collected and nothing else —
+	 * this widget decides nothing about whether founding may run. */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
 	void Confirm();
 
@@ -89,7 +87,7 @@ public:
 
 private:
 	UPROPERTY(Transient)
-	TObjectPtr<UPlayerCharacterViewModel> PlayerViewModel;
+	TObjectPtr<URtsHUDViewModel> HUDViewModel;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UFoundOrganizationModalWidgetViewModel> FormViewModel;

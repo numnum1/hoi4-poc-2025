@@ -1,5 +1,6 @@
 #include "RtsHUD/RtsHUDWidget.h"
 
+#include "PlayedCharacterView/PlayedCharacterView.h"
 #include "RtsHUD/RtsHUDViewModel.h"
 #include "WorldMapWidget.h"
 
@@ -21,6 +22,11 @@ void URtsHUDWidget::NativeOnInitialized()
 		INotifyFieldValueChanged::FFieldValueChangedDelegate::CreateUObject(this, &URtsHUDWidget::HandleNationDataChanged));
 
 	HUDViewModel->Initialize();
+
+	if (PlayedCharacterView)
+	{
+		PlayedCharacterView->SetHUDViewModel(HUDViewModel);
+	}
 
 	// Initialize broadcasts on its own, but the map actor may not have resolved its province lookup
 	// yet that early — the first tick repaints regardless, and by then it has.

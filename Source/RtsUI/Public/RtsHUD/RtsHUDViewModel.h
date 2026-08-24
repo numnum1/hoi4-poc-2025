@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Actions/RtsActionContext.h"
+#include "Actions/RtsActionInput.h"
 #include "BuildingCategory.h"
 #include "MapModes/MapModeType.h"
 #include "MapTypes.h"
@@ -17,12 +19,14 @@ class UBuildingCategoryViewModel;
 class UBuildingKindViewModel;
 class UBuildings;
 class UBuildingType;
+class UCharacters;
 class UDepartments;
 class UMapModeEntryViewModel;
 class UNations;
 class UOrganizations;
 class UPopulations;
 class UProvinces;
+class URoles;
 
 /**
  * Root view model for the HUD, owned by the HUD's root widget the same way UPlayedCharacterView
@@ -96,6 +100,29 @@ public:
 	UBuildingType* GetSelectedBuildingType() const { return SelectedBuildingType; }
 #pragma endregion
 
+#pragma region Found Organization
+	/**
+	 * The name the founding form has collected so far, mirrored up by a binding from
+	 * UFoundOrganizationModalWidgetViewModel::OrganizationName.
+	 *
+	 * It lives here because judging it needs the acting character, their money, the site province
+	 * and the nation that owns it — none of which the form can resolve. The form stays the field's
+	 * owner; this is the copy the verdict below is computed from.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
+	void SetPendingOrganizationName(const FText& InPendingOrganizationName);
+
+	/** Why founding would be refused right now, or empty. Computed rather than stored, the same
+	 * reason ProvinceVisuals is: nothing can push a verdict in and none of its inputs can drift out
+	 * of sync with it. Still only UX feedback — UPlayerCharacterViewModel re-runs both gates on
+	 * confirm, which is what actually decides. */
+	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
+	FText ComputeFoundOrganizationError() const;
+
+	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
+	bool CanConfirmFoundOrganization() const;
+#pragma endregion
+
 #pragma region Tooltip
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
 	FMapTooltipContent ComputeTooltip() const;
@@ -128,6 +155,11 @@ private:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FProvinceId HoveredProvinceId;
 
+	/** The selected province's name, so a form showing the picked site does not need UProvinces of
+	 * its own. Derived in SetSelectedProvinceId, never pushed. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	FText SelectedProvinceName;
+
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsBuildMenuOpen, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	bool bIsBuildMenuOpen = false;
 
@@ -147,6 +179,14 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	int32 SelectedBuildingCost = 0;
+
+	/** Same reason as SelectedProvinceName: a form showing what is about to be built binds this
+	 * rather than reaching for the asset. */
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	FText SelectedBuildingName;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	FText PendingOrganizationName;
 
 	/** One row per mode, cached rather than rebuilt: the set of modes is fixed, only which one is
 	 * active changes. */
@@ -175,6 +215,32 @@ private:
 
 	UFUNCTION()
 	void HandleBalanceChanged(FBankAccountId InAccountId);
+
+	//~ Found organization -------------------------------------------------------------------------
+
+	/** Everything URtsActions needs to judge founding, assembled from the facades resolved here —
+	 * URtsActions never resolves a subsystem itself, see NationActions.h for the same shape. */
+	FRtsActionContext MakeFoundOrganizationContext() const;
+
+	/** The collected values, in the shape the gate takes them. */
+	FRtsActionInput MakeFoundOrganizationInput() const;
+
+	/** Re-announces the verdict. Called wherever one of its inputs moves — there is no single
+	 * setter to hang it off, since the name, the building and the site all arrive separately. */
+	void BroadcastFoundOrganizationVerdict();
+
+	/** The acting character's own nation: whoever owns the province they are standing in, the same
+	 * derivation UCharacterViewModel::CurrentNationId makes for display. */
+	FNationId GetActingNationId() const;
+
+	/** Every living province colored by founding eligibility for the picked building — grey for
+	 * another nation's territory, red where founding is refused for another reason, blue where the
+	 * character already has one, green where a site is free.
+	 *
+	 * Returned from GetProvinceVisuals instead of painted onto the map directly, so the founding
+	 * overlay is a derivation like every other map coloring here and nothing has to undo it: the
+	 * moment the modal closes or the pick is dropped, the active map mode is what comes back. */
+	TMap<FProvinceId, FProvinceVisuals> BuildFoundingSiteVisuals() const;
 
 	//~ Anything that can move a province's color under the active mode ---------------------------
 
@@ -248,6 +314,12 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UBanking> Banking;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UCharacters> Characters;
+
+	UPROPERTY(Transient)
+	TObjectPtr<URoles> Roles;
+
 	UPROPERTY()
 	TObjectPtr<ARtsPlayer> Player;
 
@@ -278,10 +350,13 @@ public:
 	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
 	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
 	FProvinceId GetHoveredProvinceId() const { return HoveredProvinceId; }
+	FText GetSelectedProvinceName() const { return SelectedProvinceName; }
 	const TArray<TObjectPtr<UMapModeEntryViewModel>>& GetMapModes() const { return MapModes; }
 	bool IsBuildMenuOpen() const { return bIsBuildMenuOpen; }
 	const TArray<TObjectPtr<UBuildingCategoryViewModel>>& GetBuildingCategories() const { return BuildingCategories; }
 	int32 GetBuildingCategoryCount() const { return BuildingCategoryCount; }
 	UBuildingKindViewModel* GetSelectedBuildingKind() const { return SelectedBuildingKind; }
 	int32 GetSelectedBuildingCost() const { return SelectedBuildingCost; }
+	FText GetSelectedBuildingName() const { return SelectedBuildingName; }
+	FText GetPendingOrganizationName() const { return PendingOrganizationName; }
 };

@@ -2,41 +2,27 @@
 
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
-#include "RtsIds.h"
 #include "FoundOrganizationModalWidgetViewModel.generated.h"
 
-class UBanking;
-class UBuildingKindViewModel;
-class UBuildings;
-class UBuildingType;
-class UCharacters;
-class UProvinces;
-
 /**
- * The found-organization modal's own component, in exactly the sense the "ViewModels sind
- * Komponenten" rule in CLAUDE.md means it — but unlike a list row (UActionViewModel,
- * UBuildingKindViewModel, ...), this one is CreateInstance: the widget's own Blueprint spawns it,
- * it is never constructed or cached from C++. UPlayerCharacterViewModel does not know this class
- * exists.
+ * The found-organization form. A deliberately dumb component: the only thing it owns is the name
+ * the player types, and everything else it shows is pushed in.
  *
- * Unlike most CreateInstance components in this codebase, this one is a "smart form": the name
- * typed, the headquarters picked, the headquarters catalogue (with affordability) and whether the
- * form is valid right now are all local state and business logic this class owns and computes
- * itself, not values pushed down from a parent. That is deliberate — this form is not a reusable
- * shape another screen will ever bind against, so there is no cost to it knowing exactly what
- * founding an organization requires. Bind Initialize(FCharacterId) from
- * UPlayerCharacterViewModel::CharacterId (destination binding) so it can resolve its own facades and
- * compute the acting character's funds; the province is the one input it cannot invent itself (it is
- * picked on the world map, see CLAUDE.md), so that alone is still pushed in from the parent.
+ * It used to compute its own headquarters catalogue, affordability and validity. It cannot any
+ * more, and should not: judging those needs the played character, their money, the site province
+ * and the nation that owns it — contexts URtsHUDViewModel holds and a form spawned inside one
+ * modal does not. The building itself is no longer picked here at all; there is one build menu, it
+ * lives in the HUD, and this form only displays what was picked in it.
  *
- * There is deliberately no dispatcher here — a CreateInstance view model has no owner to report to,
- * see "Callbacks gibt es nur auf Manual-ViewModels" in CLAUDE.md. The confirm button calls
- * UFoundOrganizationModalWidget::Confirm instead, which reads the collected values off the getters
- * below and hands them to UPlayerCharacterViewModel::HandleFoundOrganizationConfirmed. Nothing here
- * ever writes into UPlayerCharacterViewModel, and this form's own IsValid is UX feedback rather than
- * the authority: that handler re-runs URtsActions::GetBlockedReason/GetInvalidInputReason on exactly
- * the values it was given — the same "never trust the last pushed state" rule every other click
- * handler in this codebase follows.
+ * Every value below other than OrganizationName therefore arrives through a binding wired in the
+ * widget Blueprint, sourced from URtsHUDViewModel — this class holds no reference to it, and no
+ * view model here ever holds a reference to another. OrganizationName travels the same way in the
+ * other direction, onto URtsHUDViewModel::SetPendingOrganizationName, because the verdict this form
+ * displays cannot be computed without it. That makes this a controlled input in the React sense:
+ * the field lives here, the judgement lives above.
+ *
+ * bIsValid is display only, never authority — UPlayerCharacterViewModel re-runs both gates on
+ * exactly the values it is handed when confirm is clicked.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
 class RTSUI_API UFoundOrganizationModalWidgetViewModel : public UMVVMViewModelBase
@@ -44,138 +30,60 @@ class RTSUI_API UFoundOrganizationModalWidgetViewModel : public UMVVMViewModelBa
 	GENERATED_BODY()
 
 public:
-	/** Bound in Blueprint as a Destination binding from UPlayerCharacterViewModel::CharacterId.
-	 * Resolves this form's own facades (Buildings, Banking), rebuilds the headquarters catalogue and
-	 * binds to balance changes so affordability stays live while the modal is open. */
+	/** The one value this form owns. Bind the text box to it, and bind it onward to
+	 * URtsHUDViewModel::SetPendingOrganizationName so the verdict can account for it. */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
-	void Initialize(FCharacterId InCharacterId);
+	void SetOrganizationName(const FText& InOrganizationName);
 
-	/** Pushed from UPlayerCharacterViewModel — the province is picked on the world map, not typed
-	 * into this form, so it arrives the same way every other externally-picked value would. */
+	/** Pushed from URtsHUDViewModel::SelectedBuildingName — what the build menu has picked. */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
-	void SetSelectedProvinceId(FProvinceId InSelectedProvinceId);
+	void SetSelectedBuildingName(const FText& InSelectedBuildingName);
 
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void SetSelectedBuildingCost(int32 InSelectedBuildingCost);
+
+	/** Pushed from URtsHUDViewModel::SelectedProvinceName — the site, picked on the world map. */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
 	void SetSelectedProvinceName(const FText& InSelectedProvinceName);
 
-	/** Local form state — never mirrored up to UPlayerCharacterViewModel. */
+	/** Pushed from URtsHUDViewModel::ComputeFoundOrganizationError. */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
-	void SetOrganizationName(const FText& InName);
+	void SetErrorText(const FText& InErrorText);
 
-	/** Clears the form back to its opening state — typed name, headquarters pick. This form does not
-	 * reset itself on open: nothing tells it when that happens, the same reason it does not push
-	 * anything into the parent. Call this from the widget's Blueprint whenever the modal becomes
-	 * visible again. */
+	/** Pushed from URtsHUDViewModel::CanConfirmFoundOrganization. */
+	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
+	void SetIsValid(bool bInIsValid);
+
+	/** Clears the typed name. Nothing tells this form when the modal opens, so call it from the
+	 * widget Blueprint whenever the modal becomes visible again — the pushed values need no reset,
+	 * they follow whatever the HUD says. */
 	UFUNCTION(BlueprintCallable, Category="Found Organization Modal")
 	void ResetForm();
 
 protected:
-	virtual void BeginDestroy() override;
-
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Found Organization Modal", meta=(AllowPrivateAccess))
 	FText OrganizationName;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Found Organization Modal", meta=(AllowPrivateAccess))
-	TArray<TObjectPtr<UBuildingKindViewModel>> HeadquartersTypes;
+	FText SelectedBuildingName;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Found Organization Modal", meta=(AllowPrivateAccess))
-	int32 HeadquartersTypeCount = 0;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Found Organization Modal", meta=(AllowPrivateAccess))
-	TObjectPtr<UBuildingKindViewModel> SelectedHeadquartersType;
+	int32 SelectedBuildingCost = 0;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Found Organization Modal", meta=(AllowPrivateAccess))
 	FText SelectedProvinceName;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Found Organization Modal", meta=(AllowPrivateAccess))
-	int32 PendingCost = 0;
-
-	/** Computed by Revalidate() from the local state above, in the same order
-	 * URtsActions::GetInvalidInputReason checks it — kept in sync by hand since that logic needs the
-	 * full FRtsActionContext/FRtsActionInput
-	 * the parent alone can build (funds/context aside, this form has no organization-action gate to
-	 * run — GetBlockedReason for EA_FoundOrganization is always empty at RAS_Self). */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Found Organization Modal", meta=(AllowPrivateAccess))
-	FText ModalErrorText;
+	FText ErrorText;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsValid, Category="Found Organization Modal", meta=(AllowPrivateAccess))
 	bool bIsValid = false;
 
 public:
 	FText GetOrganizationName() const { return OrganizationName; }
-	const TArray<TObjectPtr<UBuildingKindViewModel>>& GetHeadquartersTypes() const { return HeadquartersTypes; }
-	int32 GetHeadquartersTypeCount() const { return HeadquartersTypeCount; }
-	UBuildingKindViewModel* GetSelectedHeadquartersType() const { return SelectedHeadquartersType; }
+	FText GetSelectedBuildingName() const { return SelectedBuildingName; }
+	int32 GetSelectedBuildingCost() const { return SelectedBuildingCost; }
 	FText GetSelectedProvinceName() const { return SelectedProvinceName; }
-	int32 GetPendingCost() const { return PendingCost; }
-	FText GetModalErrorText() const { return ModalErrorText; }
+	FText GetErrorText() const { return ErrorText; }
 	bool IsValid() const { return bIsValid; }
-
-	/** The collected result, read by UFoundOrganizationModalWidget::Confirm when the button is
-	 * clicked — the form reports what it has, it does not act on it. Not FieldNotify properties:
-	 * nothing displays the raw picks, the rows and PendingCost above already show them. */
-	UBuildingType* GetPendingHeadquartersType() const { return PendingHeadquartersType; }
-	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
-
-private:
-	/** The one writer of PendingHeadquartersType (and, through the refresh below, of the row
-	 * highlight and PendingCost derived from it), so the pick and what is shown cannot disagree —
-	 * same reason UPlayerCharacterViewModel::ApplySelection is the one writer of its selection. */
-	void ApplyHeadquartersType(UBuildingType* InBuildingType);
-
-	/** Rebuilds HeadquartersTypes with current affordability and re-derives PendingCost/validity. */
-	void RefreshHeadquartersTypes();
-
-	/** Re-derives ModalErrorText/bIsValid from the local state, in the order the player fills it in. */
-	void Revalidate();
-
-	/** The acting character's own nation — whatever nation owns the province they currently stand
-	 * in, the same derivation UCharacterViewModel::CurrentNationId makes for display. Needed so
-	 * CanFoundHeadquartersIn can refuse a site owned by someone else. */
-	FNationId GetActingNationId() const;
-
-	/** Colors every alive province by founding eligibility for PendingHeadquartersType: grey
-	 * (another nation's territory), red (CanFoundHeadquartersIn refuses for another reason), blue
-	 * (the character already has one here), green (eligible and free). Called once a headquarters
-	 * type is picked, so the player can see where they may found while looking for a site on the
-	 * WeltMap; cleared once they click a province (SetSelectedProvinceId) or unpick the type. */
-	void RefreshProvinceOverlay() const;
-
-	void ClearProvinceOverlay() const;
-
-	int32 GetCharacterFunds() const;
-
-	UFUNCTION()
-	void HandleHeadquartersTypeClicked(UBuildingKindViewModel* ClickedType);
-
-	UFUNCTION()
-	void HandleBalanceChanged(FBankAccountId InAccountId);
-
-	FCharacterId CharacterId;
-	FProvinceId SelectedProvinceId;
-
-	UPROPERTY()
-	TObjectPtr<UBuildingType> PendingHeadquartersType;
-
-	UPROPERTY()
-	TObjectPtr<UBuildings> Buildings;
-
-	/** Resolved by Initialize, read only by GetActingNationId. */
-	UPROPERTY()
-	TObjectPtr<UCharacters> Characters;
-
-	/** Resolved by Initialize, read by Revalidate to mirror
-	 * URtsActions::CanFoundHeadquartersIn — a province the world map picked can go dead while the
-	 * modal is still open. */
-	UPROPERTY()
-	TObjectPtr<UProvinces> Provinces;
-
-	/** Resolved by Initialize, bound to for live affordability; unbound in BeginDestroy. */
-	UPROPERTY()
-	TObjectPtr<UBanking> Banking;
-
-	/** Same idea as UPlayerCharacterViewModel::HeadquartersTypeCache — a rebuild that offers the same
-	 * types keeps the same row objects. */
-	UPROPERTY()
-	TMap<TObjectPtr<UBuildingType>, TObjectPtr<UBuildingKindViewModel>> HeadquartersTypeCache;
 };
