@@ -1,4 +1,4 @@
-#include "Buildings/BuildingKindViewModel.h"
+#include "BuildMenu/BuildingKindViewModel.h"
 
 #include "BuildingType.h"
 

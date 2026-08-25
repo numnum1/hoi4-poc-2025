@@ -1,6 +1,6 @@
 #include "BuildMenu/BuildMenuWidgetViewModel.h"
 
-#include "Buildings/BuildingCategoryViewModel.h"
+#include "BuildMenu/BuildingCategoryViewModel.h"
 
 void UBuildMenuWidgetViewModel::SetOpen(const bool bInOpen)
 {

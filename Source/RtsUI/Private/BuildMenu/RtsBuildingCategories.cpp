@@ -1,4 +1,4 @@
-#include "Buildings/RtsBuildingCategories.h"
+#include "BuildMenu/RtsBuildingCategories.h"
 
 #define LOCTEXT_NAMESPACE "RtsBuildingCategories"
 

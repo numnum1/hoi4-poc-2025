@@ -1,4 +1,4 @@
-#include "Buildings/BuildingViewModel.h"
+#include "BuildMenu/BuildingViewModel.h"
 
 #include "Buildings.h"
 #include "RtsGameStateComponent.h"

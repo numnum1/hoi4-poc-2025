@@ -1,6 +1,6 @@
-#include "Buildings/BuildingCategoryViewModel.h"
+#include "BuildMenu/BuildingCategoryViewModel.h"
 
-#include "Buildings/RtsBuildingCategories.h"
+#include "BuildMenu/RtsBuildingCategories.h"
 
 void UBuildingCategoryViewModel::SetCategory(const EBuildingCategory InCategory)
 {
