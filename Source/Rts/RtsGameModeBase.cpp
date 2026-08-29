@@ -4,6 +4,7 @@
 #include "RtsGameModeBase.h"
 
 #include "Banking.h"
+#include "BuildingType.h"
 #include "CharacterEntitySubsystem.h"
 #include "Characters.h"
 #include "Nations.h"
@@ -22,6 +23,7 @@
 ARtsGameModeBase::ARtsGameModeBase()
 {
 	GameStateClass = ARtsGameState::StaticClass();
+	RacesContainer = CreateDefaultSubobject<URaces>(TEXT("RacesContainer"));
 }
 
 void ARtsGameModeBase::BeginPlay()
@@ -46,9 +48,11 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 		return;
 	}
 	
+	BuildingTypes.Reset();
+	BuildingTypes.Append(InScenario->GetBuildingTypes());
+
 	const auto [Categories, LifeTypes, Species, Races, RaceIndexes] =
 		ScenarioLoader::ExtractRaces(InScenario->GetCharacters(), InScenario->GetProvinces());
-	URaces* RacesContainer = RtsGameState->GetRacesContainer();
 	RacesContainer->SetCategories(Categories);
 	RacesContainer->SetLifeTypes(LifeTypes);
 	RacesContainer->SetSpecies(Species);

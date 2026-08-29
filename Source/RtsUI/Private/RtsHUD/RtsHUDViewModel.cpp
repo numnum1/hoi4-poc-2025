@@ -2,10 +2,8 @@
 
 #include "Actions/RtsActions.h"
 #include "Banking.h"
+#include "BuildingCatalog.h"
 #include "Buildings.h"
-#include "BuildMenu/BuildingCategoryViewModel.h"
-#include "BuildMenu/BuildingKindViewModel.h"
-#include "BuildMenu/RtsBuildingCategories.h"
 #include "BuildingType.h"
 #include "Characters.h"
 #include "Departments.h"
@@ -220,17 +218,6 @@ void URtsHUDViewModel::ApplySelectedBuildingType(UBuildingType* InBuildingType)
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingCost, InBuildingType ? InBuildingType->GetBuildCost() : 0);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingName, InBuildingType ? InBuildingType->GetBuildingName() : FText::GetEmpty());
 
-	const TObjectPtr<UBuildingKindViewModel>* PickedRow = InBuildingType ? BuildingKindCache.Find(InBuildingType) : nullptr;
-	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingKind, PickedRow ? PickedRow->Get() : nullptr);
-
-	for (const TPair<TObjectPtr<UBuildingType>, TObjectPtr<UBuildingKindViewModel>>& Entry : BuildingKindCache)
-	{
-		if (Entry.Value)
-		{
-			Entry.Value->SetSelected(Entry.Key == InBuildingType);
-		}
-	}
-
 	// What the tooltip says about a hovered province depends on what is about to be placed there,
 	// and so does where the map says a site is free.
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeTooltip);
@@ -353,79 +340,43 @@ TMap<FProvinceId, FProvinceVisuals> URtsHUDViewModel::BuildFoundingSiteVisuals()
 
 void URtsHUDViewModel::RefreshBuildMenu()
 {
-	const bool bHeadquartersOnly = IsBuildMenuHeadquartersOnly();
-	const int32 Funds = URtsActions::GetCharacterFunds(Banking, ControlledCharacterId);
-
-	TArray<TObjectPtr<UBuildingCategoryViewModel>> NewCategories;
-
-	for (const EBuildingCategory CategoryValue : URtsBuildingCategories::GetCategories())
-	{
-		const TArray<UBuildingType*> Catalogue = Buildings ? Buildings->GetBuildingTypesInCategory(CategoryValue) : TArray<UBuildingType*>();
-
-		TArray<TObjectPtr<UBuildingKindViewModel>> Kinds;
-		for (UBuildingType* BuildingType : Catalogue)
-		{
-			if (BuildingType == nullptr || (bHeadquartersOnly && !BuildingType->IsHeadquarters()))
-			{
-				continue;
-			}
-
-			TObjectPtr<UBuildingKindViewModel>& Kind = BuildingKindCache.FindOrAdd(BuildingType);
-			if (Kind == nullptr)
-			{
-				Kind = NewObject<UBuildingKindViewModel>(this);
-				Kind->OnClicked.AddDynamic(this, &URtsHUDViewModel::HandleBuildingKindClicked);
-			}
-
-			Kind->SetSource(BuildingType);
-			Kind->SetAffordable(Funds >= BuildingType->GetBuildCost());
-			Kind->SetSelected(BuildingType == SelectedBuildingType);
-
-			Kinds.Add(Kind);
-		}
-
-		if (Kinds.IsEmpty())
-		{
-			continue;
-		}
-
-		TObjectPtr<UBuildingCategoryViewModel>& CategoryRow = BuildingCategoryCache.FindOrAdd(CategoryValue);
-		if (CategoryRow == nullptr)
-		{
-			CategoryRow = NewObject<UBuildingCategoryViewModel>(this);
-			CategoryRow->SetCategory(CategoryValue);
-		}
-
-		CategoryRow->SetKinds(Kinds);
-		NewCategories.Add(CategoryRow);
-	}
-
-	UE_MVVM_SET_PROPERTY_VALUE(BuildingCategories, NewCategories);
-	UE_MVVM_SET_PROPERTY_VALUE(BuildingCategoryCount, NewCategories.Num());
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeBuildings);
 
 	// The filter can drop the picked kind out of the menu entirely, and a pick nobody can see any
 	// more is the same stale state SetBuildMenuOpen clears.
-	if (SelectedBuildingType && bHeadquartersOnly && !SelectedBuildingType->IsHeadquarters())
+	if (SelectedBuildingType && IsBuildMenuHeadquartersOnly() && !SelectedBuildingType->IsHeadquarters())
 	{
 		ApplySelectedBuildingType(nullptr);
 	}
 }
 
+TArray<UBuildingType*> URtsHUDViewModel::ComputeBuildings() const
+{
+	const UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(this, EGetWorldErrorMode::ReturnNull) : nullptr;
+	const IBuildingCatalog* Catalog = World ? Cast<IBuildingCatalog>(World->GetAuthGameMode()) : nullptr;
+	if (Catalog == nullptr)
+	{
+		return TArray<UBuildingType*>();
+	}
+
+	const bool bHeadquartersOnly = IsBuildMenuHeadquartersOnly();
+
+	TArray<UBuildingType*> Result;
+	for (const TObjectPtr<UBuildingType>& BuildingType : Catalog->GetBuildingTypes())
+	{
+		if (BuildingType == nullptr || (bHeadquartersOnly && !BuildingType->IsHeadquarters()))
+		{
+			continue;
+		}
+
+		Result.Add(BuildingType);
+	}
+	return Result;
+}
+
 bool URtsHUDViewModel::IsBuildMenuHeadquartersOnly() const
 {
 	return ActiveModal == EPlayerModal::PM_FoundOrganization;
-}
-
-void URtsHUDViewModel::HandleBuildingKindClicked(UBuildingKindViewModel* InClickedKind)
-{
-	if (InClickedKind == nullptr)
-	{
-		return;
-	}
-
-	// Clicking the picked row unpicks it, the same toggle every other picker here uses.
-	UBuildingType* ClickedType = InClickedKind->GetBuildingType();
-	ApplySelectedBuildingType(ClickedType == SelectedBuildingType ? nullptr : ClickedType);
 }
 
 void URtsHUDViewModel::HandleBalanceChanged(FBankAccountId InAccountId)

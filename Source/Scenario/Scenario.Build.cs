@@ -13,7 +13,9 @@ public class Scenario : ModuleRules
                 // ECharacterSimTier lives with the character types it describes
                 "Characters",
                 // UScheduleAsset authors an FSchedule in a public header
-                "Schedules"
+                "Schedules",
+                // UScenario authors the building catalogue as UBuildingType* in a public header
+                "Buildings"
                 // UEthnicityAsset needs no domain module: it authors plain data, and the conversion
                 // to FEthnicityInfo/FPopSpawnData happens in ScenarioLoading.h like every other asset
             }

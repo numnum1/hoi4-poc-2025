@@ -1,6 +1,5 @@
 #include "Buildings.h"
 
-#include "BuildingCatalogSettings.h"
 #include "BuildingEntitySubsystem.h"
 #include "BuildingType.h"
 #include "Engine/World.h"
@@ -54,40 +53,14 @@ bool UBuildings::IsAlive(const FBuildingId InBuildingId) const
 	return Entities && Entities->IsAlive(InBuildingId);
 }
 
-void UBuildings::EnsureCatalogLoaded() const
-{
-	if (bCatalogLoaded)
-	{
-		return;
-	}
-	bCatalogLoaded = true;
-
-	const UBuildingCatalogSettings* Settings = GetDefault<UBuildingCatalogSettings>();
-	if (Settings == nullptr)
-	{
-		return;
-	}
-
-	for (const TSoftObjectPtr<UBuildingType>& SoftType : Settings->BuildingTypes)
-	{
-		if (UBuildingType* LoadedType = SoftType.LoadSynchronous())
-		{
-			BuildingTypes.AddUnique(LoadedType);
-		}
-	}
-}
-
 int32 UBuildings::ResolveTypeIndex(UBuildingType* InBuildingType)
 {
-	EnsureCatalogLoaded();
 	const int32 Existing = BuildingTypes.Find(InBuildingType);
 	return Existing != INDEX_NONE ? Existing : BuildingTypes.Add(InBuildingType);
 }
 
 UBuildingType* UBuildings::GetBuildingType(const FBuildingId InBuildingId) const
 {
-	EnsureCatalogLoaded();
-
 	const UBuildingEntitySubsystem* Entities = GetEntities();
 	if (!Entities)
 	{
@@ -96,36 +69,6 @@ UBuildingType* UBuildings::GetBuildingType(const FBuildingId InBuildingId) const
 
 	const int32 TypeIndex = Entities->GetTypeIndex(InBuildingId);
 	return BuildingTypes.IsValidIndex(TypeIndex) ? BuildingTypes[TypeIndex] : nullptr;
-}
-
-TArray<UBuildingType*> UBuildings::GetHeadquarterBuildingTypes() const
-{
-	EnsureCatalogLoaded();
-
-	TArray<UBuildingType*> Result;
-	for (UBuildingType* Type : BuildingTypes)
-	{
-		if (Type && Type->IsHeadquarters())
-		{
-			Result.Add(Type);
-		}
-	}
-	return Result;
-}
-
-TArray<UBuildingType*> UBuildings::GetBuildingTypesInCategory(const EBuildingCategory InCategory) const
-{
-	EnsureCatalogLoaded();
-
-	TArray<UBuildingType*> Result;
-	for (UBuildingType* Type : BuildingTypes)
-	{
-		if (Type && Type->GetCategory() == InCategory)
-		{
-			Result.Add(Type);
-		}
-	}
-	return Result;
 }
 
 FProvinceId UBuildings::GetProvince(const FBuildingId InBuildingId) const

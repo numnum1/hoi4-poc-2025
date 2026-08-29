@@ -13,7 +13,6 @@ class UDepartments;
 class UBanking;
 class UBuildings;
 class UTime;
-class URaces;
 class UProvinces;
 class UPopulations;
 class UNations;
@@ -44,8 +43,6 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UPopulations* PopulationsContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
-	URaces* RacesContainer;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UBuildings* BuildingsContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UOrganizations* OrganizationsContainer;
@@ -75,7 +72,6 @@ public:
 	FORCEINLINE UNations* GetNationsContainer() { return NationsContainer; }
 	FORCEINLINE UProvinces* GetProvincesContainer() { return ProvincesContainer; }
 	FORCEINLINE UPopulations* GetPopulationsContainer() const { return PopulationsContainer; }
-	FORCEINLINE URaces* GetRacesContainer() { return RacesContainer; }
 	FORCEINLINE UBuildings* GetBuildingsContainer() const { return BuildingsContainer; }
 	FORCEINLINE UOrganizations* GetOrganizationsContainer() const { return OrganizationsContainer; }
 	FORCEINLINE UDepartments* GetDepartmentsContainer() const { return DepartmentsContainer; }

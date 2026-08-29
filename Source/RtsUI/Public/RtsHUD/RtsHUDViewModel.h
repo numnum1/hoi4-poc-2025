@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "Actions/RtsActionContext.h"
 #include "Actions/RtsActionInput.h"
-#include "BuildingCategory.h"
 #include "MapModes/MapModeType.h"
 #include "MapTypes.h"
 #include "MVVMViewModelBase.h"
@@ -15,8 +14,6 @@
 class ARtsMapPawn;
 class ARtsPlayer;
 class UBanking;
-class UBuildingCategoryViewModel;
-class UBuildingKindViewModel;
 class UBuildings;
 class UBuildingType;
 class UCharacters;
@@ -94,7 +91,7 @@ public:
 	void SetBuildMenuOpen(bool bInOpen);
 
 	/** What the player has picked in the build menu, or null. The authority on the pick — the row's
-	 * own bIsSelected is display only, the same split UBuildingKindViewModel documents. Read by
+	 * own bIsSelected is display only, the same split UBuildMenuEntry documents. Read by
 	 * whichever process is collecting a building, and by ComputeTooltip so hovering a province can
 	 * say something about the building about to be placed there. */
 	UBuildingType* GetSelectedBuildingType() const { return SelectedBuildingType; }
@@ -121,6 +118,11 @@ public:
 
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
 	bool CanConfirmFoundOrganization() const;
+#pragma endregion
+
+#pragma region Build menu
+	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
+	TArray<UBuildingType*> ComputeBuildings() const;
 #pragma endregion
 
 #pragma region Tooltip
@@ -163,20 +165,6 @@ private:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsBuildMenuOpen, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	bool bIsBuildMenuOpen = false;
 
-	/** One row per section that actually has something to offer, cached like MapModes. Empty
-	 * sections are left out rather than shown empty — the filter can hide every kind in a section
-	 * (founding only offers headquarters), and a heading with nothing under it says nothing. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
-	TArray<TObjectPtr<UBuildingCategoryViewModel>> BuildingCategories;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
-	int32 BuildingCategoryCount = 0;
-
-	/** The picked row, for a widget that wants to show the pick outside the list. Derived from
-	 * SelectedBuildingType by ApplySelectedBuildingType, never set on its own. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
-	TObjectPtr<UBuildingKindViewModel> SelectedBuildingKind;
-
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	int32 SelectedBuildingCost = 0;
 
@@ -202,7 +190,6 @@ private:
 	 * and SelectedBuildingCost derived from it — so the pick and what is shown cannot disagree. */
 	void ApplySelectedBuildingType(UBuildingType* InBuildingType);
 
-	/** Rebuilds the sections with current affordability and re-derives the highlight and cost. */
 	void RefreshBuildMenu();
 
 	/** Whether the menu currently offers headquarters only. Derived from ActiveModal rather than
@@ -210,8 +197,6 @@ private:
 	 * catalogue, and deriving it means closing that modal cannot leave the filter behind. */
 	bool IsBuildMenuHeadquartersOnly() const;
 
-	UFUNCTION()
-	void HandleBuildingKindClicked(UBuildingKindViewModel* InClickedKind);
 
 	UFUNCTION()
 	void HandleBalanceChanged(FBankAccountId InAccountId);
@@ -333,14 +318,6 @@ private:
 	UPROPERTY()
 	TObjectPtr<UBuildingType> SelectedBuildingType;
 
-	/** Rebuilds that offer the same kinds keep the same row objects, so a refresh for affordability
-	 * does not churn the widgets bound to them. Keyed by asset, not by index — the filter changes
-	 * which kinds appear at all. */
-	UPROPERTY()
-	TMap<TObjectPtr<UBuildingType>, TObjectPtr<UBuildingKindViewModel>> BuildingKindCache;
-
-	UPROPERTY()
-	TMap<EBuildingCategory, TObjectPtr<UBuildingCategoryViewModel>> BuildingCategoryCache;
 
 public:
 	FCharacterId GetControlledCharacterId() const { return ControlledCharacterId; }
@@ -353,9 +330,6 @@ public:
 	FText GetSelectedProvinceName() const { return SelectedProvinceName; }
 	const TArray<TObjectPtr<UMapModeEntryViewModel>>& GetMapModes() const { return MapModes; }
 	bool IsBuildMenuOpen() const { return bIsBuildMenuOpen; }
-	const TArray<TObjectPtr<UBuildingCategoryViewModel>>& GetBuildingCategories() const { return BuildingCategories; }
-	int32 GetBuildingCategoryCount() const { return BuildingCategoryCount; }
-	UBuildingKindViewModel* GetSelectedBuildingKind() const { return SelectedBuildingKind; }
 	int32 GetSelectedBuildingCost() const { return SelectedBuildingCost; }
 	FText GetSelectedBuildingName() const { return SelectedBuildingName; }
 	FText GetPendingOrganizationName() const { return PendingOrganizationName; }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BuildingCategory.h"
 #include "RtsIds.h"
 #include "Components/ActorComponent.h"
 #include "Modules/ModuleManager.h"
@@ -24,9 +23,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBuildingsEvent, FBuildingId, InBuil
  *
  * Identity, location, type and owner live in Mass entities owned by UBuildingEntitySubsystem;
  * this component keeps the registry mapping an opaque type index back to the actual
- * UBuildingType* (Mass fragments cannot safely hold UObject pointers), seeded from
- * UBuildingCatalogSettings on first use, and the change events the view models bind to. Every
- * accessor takes the same FBuildingId every other building API uses.
+ * UBuildingType* (Mass fragments cannot safely hold UObject pointers) and the change events the
+ * view models bind to. Every accessor takes the same FBuildingId every other building API uses.
  *
  * A building always belongs to a character. Organizations do not own buildings — they have a root
  * department, and a department is seated in a building rather than owning it. "Which buildings does
@@ -62,16 +60,6 @@ public:
 	UFUNCTION(BlueprintPure)
 	UBuildingType* GetBuildingType(FBuildingId InBuildingId) const;
 
-	/** Every catalogued type with bIsHeadquarters set — the list the found-organization modal
-	 * offers. Reads UBuildingCatalogSettings, not a per-entity query. */
-	UFUNCTION(BlueprintPure)
-	TArray<UBuildingType*> GetHeadquarterBuildingTypes() const;
-
-	/** Every catalogued type authored under InCategory, in catalogue order — one section of the
-	 * build menu. Reads UBuildingCatalogSettings, not a per-entity query. */
-	UFUNCTION(BlueprintPure)
-	TArray<UBuildingType*> GetBuildingTypesInCategory(EBuildingCategory InCategory) const;
-
 	UFUNCTION(BlueprintPure)
 	FProvinceId GetProvince(FBuildingId InBuildingId) const;
 
@@ -101,15 +89,10 @@ public:
 private:
 	UBuildingEntitySubsystem* GetEntities() const;
 
-	/** Loads UBuildingCatalogSettings into BuildingTypes on first use. Idempotent. */
-	void EnsureCatalogLoaded() const;
-
-	/** Find-or-add registry; never shrinks. Seeded from the project's building catalog, but also
-	 * accepts a type that was not catalogued — the same permissiveness the original registry had. */
+	/** Find-or-add registry; never shrinks. Filled as buildings are put up — the catalogue of which
+	 * types exist is a game rule and lives on the game mode, see IBuildingCatalog. */
 	int32 ResolveTypeIndex(UBuildingType* InBuildingType);
 
 	UPROPERTY(Transient)
-	mutable TArray<TObjectPtr<UBuildingType>> BuildingTypes;
-
-	mutable bool bCatalogLoaded = false;
+	TArray<TObjectPtr<UBuildingType>> BuildingTypes;
 };

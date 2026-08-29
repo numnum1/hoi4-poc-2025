@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "BuildingCategory.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Styling/SlateBrush.h"
 #include "RtsBuildingCategories.generated.h"
 
 /**
@@ -11,7 +12,7 @@
  * means one EBuildingCategory entry and one case here.
  *
  * Which building kinds fall into a section is not answered here: that is authored on the
- * UBuildingType assets and asked of UBuildings::GetBuildingTypesInCategory.
+ * UBuildingType assets, and the grouping happens in UBuildMenuWidgetViewModel.
  */
 UCLASS()
 class RTSUI_API URtsBuildingCategories : public UBlueprintFunctionLibrary
@@ -24,4 +25,6 @@ public:
 	static TArray<EBuildingCategory> GetCategories();
 
 	static FText GetDisplayName(EBuildingCategory InCategory);
+	static FText GetDescription(EBuildingCategory InCategory);
+	static FSlateBrush GetIcon(EBuildingCategory InCategory);
 };

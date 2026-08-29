@@ -1,28 +1,64 @@
 #include "BuildMenu/BuildMenuWidgetViewModel.h"
 
+#include "BuildMenu/BuildMenuEntry.h"
 #include "BuildMenu/BuildingCategoryViewModel.h"
+#include "BuildMenu/RtsBuildingCategories.h"
+#include "BuildingType.h"
 
-void UBuildMenuWidgetViewModel::SetOpen(const bool bInOpen)
+void UBuildMenuWidgetViewModel::Fill(const TArray<UBuildingType*>& InBuildings)
 {
-	UE_MVVM_SET_PROPERTY_VALUE(bIsOpen, bInOpen);
+	Buildings = InBuildings;
+	RebuildCategories();
+
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(Buildings);
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeCategories);
 }
 
-void UBuildMenuWidgetViewModel::SetCategories(const TArray<UBuildingCategoryViewModel*>& InCategories)
+void UBuildMenuWidgetViewModel::RebuildCategories()
 {
-	UE_MVVM_SET_PROPERTY_VALUE(Categories, TArray<TObjectPtr<UBuildingCategoryViewModel>>(InCategories));
+	Categories.Reset();
+
+	for (const EBuildingCategory Category : URtsBuildingCategories::GetCategories())
+	{
+		TArray<UBuildMenuEntry*> Entries;
+
+		for (UBuildingType* BuildingType : Buildings)
+		{
+			if (BuildingType == nullptr || BuildingType->GetCategory() != Category)
+			{
+				continue;
+			}
+
+			UBuildMenuEntry* Entry = NewObject<UBuildMenuEntry>(this);
+			Entry->Initialize(BuildingType);
+			Entries.Add(Entry);
+		}
+
+		if (Entries.IsEmpty())
+		{
+			continue;
+		}
+
+		UBuildingCategoryViewModel* Row = NewObject<UBuildingCategoryViewModel>(this);
+		Row->SetDisplay(
+			URtsBuildingCategories::GetDisplayName(Category),
+			URtsBuildingCategories::GetDescription(Category),
+			URtsBuildingCategories::GetIcon(Category),
+			Entries);
+
+		Categories.Add(Row);
+	}
 }
 
-void UBuildMenuWidgetViewModel::SetCategoryCount(const int32 InCategoryCount)
+TArray<UBuildingCategoryViewModel*> UBuildMenuWidgetViewModel::ComputeCategories() const
 {
-	UE_MVVM_SET_PROPERTY_VALUE(CategoryCount, InCategoryCount);
-}
+	TArray<UBuildingCategoryViewModel*> Result;
+	Result.Reserve(Categories.Num());
 
-void UBuildMenuWidgetViewModel::SetSelectedBuildingName(const FText& InSelectedBuildingName)
-{
-	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingName, InSelectedBuildingName);
-}
+	for (const TObjectPtr<UBuildingCategoryViewModel>& Category : Categories)
+	{
+		Result.Add(Category);
+	}
 
-void UBuildMenuWidgetViewModel::SetSelectedBuildingCost(const int32 InSelectedBuildingCost)
-{
-	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingCost, InSelectedBuildingCost);
+	return Result;
 }

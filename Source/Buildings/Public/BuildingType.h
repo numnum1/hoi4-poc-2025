@@ -36,9 +36,8 @@ struct BUILDINGS_API FBuildingFunctionSlot
  * department can only be seated where its function is offered. Note the direction: the building
  * offers capacity, it does not name a department type. See EBuildingFunction.
  *
- * The catalogue of which assets exist is UBuildingCatalogSettings, a project-wide setting rather
- * than per-scenario data — a building's kind does not vary between playthroughs the way a
- * character or an organization does.
+ * The catalogue of which assets exist is authored on the scenario and held by the game mode as a
+ * game rule — see IBuildingCatalog.
  */
 UCLASS()
 class BUILDINGS_API UBuildingType : public UPrimaryDataAsset
