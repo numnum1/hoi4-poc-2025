@@ -6,10 +6,11 @@
 
 /**
  * One action button, as the C++ half of a widget whose Blueprint child carries only layout and
- * styling. There is no view model behind it: every action is known ahead of time, so whoever
- * creates one of these (UPlayedCharacterView's Blueprint, one fixed instance per action) pushes the
- * name and icon once via SetSource and drives enabled/tooltip/visibility through the inherited
- * SetIsEnabled/SetToolTipText/SetVisibility instead of this class inventing its own copies of them.
+ * styling. There is no view model behind it: every action is known ahead of time, so whoever places
+ * one of these (UPlayedCharacterView's Blueprint, one fixed instance per action) authors its name
+ * and icon right there in the Details panel. Only what moves with the selection is bound —
+ * enabled/tooltip/visibility, through the inherited SetIsEnabled/SetToolTipText/SetVisibility
+ * against UPlayerCharacterViewModel, instead of this class inventing its own copies of them.
  *
  * OnClicked is a dispatcher rather than a call into UPlayerCharacterViewModel directly, because
  * this widget does not need to know that class exists — only whoever owns it does, and wires
@@ -23,9 +24,6 @@ class RTSUI_API UActionButtonWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category="Action Button")
-	void SetSource(const FText& InDisplayName, const FSlateBrush& InIcon);
-
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnActionButtonClicked);
 
 	/** Bind (through a Custom-Event bridge) to the owning view model's ClickXxx() for this action. */
@@ -37,10 +35,10 @@ public:
 	void CallOnClicked();
 
 protected:
-	UPROPERTY(BlueprintReadOnly, Category="Action Button", meta=(AllowPrivateAccess))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Action Button", meta=(AllowPrivateAccess, DesignerRebuild))
 	FText DisplayName;
 
-	UPROPERTY(BlueprintReadOnly, Category="Action Button", meta=(AllowPrivateAccess))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Action Button", meta=(AllowPrivateAccess, DesignerRebuild))
 	FSlateBrush Icon;
 
 public:
