@@ -221,7 +221,7 @@ protected:
 
 	//~ Positions --------------------------------------------------------------------------------
 	// One UPositionViewModel row per FPosition, cached per index and repointed on refresh rather
-	// than reallocated — see UActionViewModel/UPlayerCharacterViewModel for the same shape.
+	// than reallocated — see UPlayerCharacterViewModel::SelectablePositionCache for the same shape.
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
 	TArray<TObjectPtr<UPositionViewModel>> Positions;

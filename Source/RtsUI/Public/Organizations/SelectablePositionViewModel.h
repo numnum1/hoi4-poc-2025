@@ -5,10 +5,9 @@
 #include "SelectablePositionViewModel.generated.h"
 
 /**
- * One entry in the player's position picker: an icon, a label, and a click. Nothing else — this is
- * the same shape UActionViewModel has, and for the same reason. The row decides nothing: which
- * position it stands for, whether picking it is allowed, and what picking it changes are all
- * decided by UPlayerCharacterViewModel, which owns the selection.
+ * One entry in the player's position picker: an icon, a label, and a click. Nothing else. The row
+ * decides nothing: which position it stands for, whether picking it is allowed, and what picking it
+ * changes are all decided by UPlayerCharacterViewModel, which owns the selection.
  *
  * Deliberately not UPositionViewModel: that one is the full read-only description of a position
  * (organization, logo, role, ownership) a detail panel binds to, and it carries no click. Making a

@@ -97,7 +97,7 @@ protected:
 	int32 SettledNationCount = 0;
 
 	//~ Members ----------------------------------------------------------------------------------
-	// Rows cached per character id, same shape UPlayerCharacterViewModel::ActionEntryCache uses.
+	// Rows cached per character id, same shape UPlayerCharacterViewModel::SelectablePositionCache uses.
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Organization Viewmodel|Members", meta=(AllowPrivateAccess))
 	TArray<TObjectPtr<UMemberViewModel>> Members;

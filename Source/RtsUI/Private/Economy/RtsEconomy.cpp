@@ -10,7 +10,7 @@
 namespace
 {
 	/** What one filled seat of this function earns per day. Balance numbers live in code, not a
-	 * DataAsset — same reasoning as URtsActions::GetRequiredPermissions. */
+	 * DataAsset — same reasoning as the permission constants in URtsActions. */
 	int32 GetDailyYield(const EBuildingFunction InFunction)
 	{
 		switch (InFunction)

@@ -29,7 +29,7 @@ enum class ERtsActionScope : uint8
  * a context that reached C++ from Blueprint is a claim, not a fact.
  *
  * OrganizationId/RoleId are only meaningful when Scope is RAS_Position. Characters/Organizations/
- * Roles are the facades the gate and ExecuteAction read through — the context carries them
+ * Roles are the facades the gates and the execute functions read through — the context carries them
  * instead of URtsActions resolving a subsystem itself, so every function in URtsActions stays a
  * pure function of its inputs (see NationActions.h for the same shape, domain-local instead of
  * cross-domain).

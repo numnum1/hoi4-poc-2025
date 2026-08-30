@@ -14,7 +14,7 @@
  * Lives in RtsCore rather than in Buildings or Organizations because both need it and the domain
  * modules do not know each other — the same reason ERolePermission is here. What a function
  * actually produces will be a switch over these values, never a data asset selecting behaviour or
- * a class per function; see EAction/URtsActions for the shape.
+ * a class per function; see URtsActions for the shape.
  */
 UENUM(BlueprintType)
 enum class EBuildingFunction : uint8

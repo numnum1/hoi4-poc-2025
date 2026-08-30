@@ -237,13 +237,13 @@ FText URtsHUDViewModel::ComputeFoundOrganizationError() const
 {
 	const FRtsActionContext Context = MakeFoundOrganizationContext();
 
-	const FText BlockedReason = URtsActions::GetBlockedReason(EAction::EA_FoundOrganization, Context);
+	const FText BlockedReason = URtsActions::GetFoundOrganizationBlockedReason(Context);
 	if (!BlockedReason.IsEmpty())
 	{
 		return BlockedReason;
 	}
 
-	return URtsActions::GetInvalidInputReason(EAction::EA_FoundOrganization, Context, MakeFoundOrganizationInput());
+	return URtsActions::GetFoundOrganizationInvalidInputReason(Context, MakeFoundOrganizationInput());
 }
 
 bool URtsHUDViewModel::CanConfirmFoundOrganization() const

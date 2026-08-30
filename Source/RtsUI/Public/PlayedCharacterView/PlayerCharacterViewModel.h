@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Actions/ActionType.h"
 #include "Actions/RtsActionContext.h"
 #include "Actions/RtsActionInput.h"
 #include "Characters/CharacterViewModel.h"
@@ -11,7 +10,6 @@
 #include "PlayerCharacterViewModel.generated.h"
 
 class ARtsPlayer;
-class UActionViewModel;
 class UBuildingType;
 class UResourceViewModel;
 class USelectableCharacterViewModel;
@@ -125,6 +123,23 @@ public:
 	 * the player's own position row — both mean "go look at this organization". */
 	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Modal")
 	void ViewOrganization(FOrganizationId InOrganizationId);
+
+	//~ Actions — one entry point per action, since every action is known ahead of time, so a button
+	//~ binds straight to the one it stands for rather than through a shared click-and-switch
+	//~ indirection. Each re-derives the gate through that action's own URtsActions function and then
+	//~ either runs it or opens its modal. -----------------------------------------------------------
+
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Actions")
+	void ClickFoundOrganization();
+
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Actions")
+	void ClickJoinOrganization();
+
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Actions")
+	void ClickLeaveOrganization();
+
+	UFUNCTION(BlueprintCallable, Category="Player Character Viewmodel|Actions")
+	void ClickRecruitCharacter();
 
 protected:
 	//~ Widget state — invented by the UI, not derived from the simulation ------------------------
@@ -245,11 +260,45 @@ protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
 	int32 SelectablePositionCount = 0;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
-	TArray<TObjectPtr<UActionViewModel>> Actions;
+	//~ One fixed button per action — there is no per-action view model or list, see
+	//~ ActionButtonWidget.h. Name and icon are constants the button's own Blueprint carries; only
+	//~ visible/enabled/tooltip move with the current selection and are pushed from here. ------------
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel", meta=(AllowPrivateAccess))
-	int32 ActionCount = 0;
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsFoundOrganizationVisible, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	bool bIsFoundOrganizationVisible = false;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsFoundOrganizationEnabled, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	bool bIsFoundOrganizationEnabled = false;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	FText FoundOrganizationTooltip;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsJoinOrganizationVisible, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	bool bIsJoinOrganizationVisible = false;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsJoinOrganizationEnabled, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	bool bIsJoinOrganizationEnabled = false;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	FText JoinOrganizationTooltip;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsLeaveOrganizationVisible, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	bool bIsLeaveOrganizationVisible = false;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsLeaveOrganizationEnabled, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	bool bIsLeaveOrganizationEnabled = false;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	FText LeaveOrganizationTooltip;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsRecruitCharacterVisible, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	bool bIsRecruitCharacterVisible = false;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsRecruitCharacterEnabled, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	bool bIsRecruitCharacterEnabled = false;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Player Character Viewmodel|Actions", meta=(AllowPrivateAccess))
+	FText RecruitCharacterTooltip;
 
 	/** One row per resource the current owner (the selection below) has — see MakeResourceContext.
 	 * Same function of the selection as Actions, so it lives here rather than in a view model of
@@ -289,8 +338,18 @@ public:
 	USelectableCharacterViewModel* GetSelectedRecruitCharacter() const { return SelectedRecruitCharacter; }
 	FText GetModalErrorText() const { return ModalErrorText; }
 	bool CanConfirmModal() const { return bCanConfirmModal; }
-	const TArray<TObjectPtr<UActionViewModel>>& GetActions() const { return Actions; }
-	int32 GetActionCount() const { return ActionCount; }
+	bool IsFoundOrganizationVisible() const { return bIsFoundOrganizationVisible; }
+	bool IsFoundOrganizationEnabled() const { return bIsFoundOrganizationEnabled; }
+	FText GetFoundOrganizationTooltip() const { return FoundOrganizationTooltip; }
+	bool IsJoinOrganizationVisible() const { return bIsJoinOrganizationVisible; }
+	bool IsJoinOrganizationEnabled() const { return bIsJoinOrganizationEnabled; }
+	FText GetJoinOrganizationTooltip() const { return JoinOrganizationTooltip; }
+	bool IsLeaveOrganizationVisible() const { return bIsLeaveOrganizationVisible; }
+	bool IsLeaveOrganizationEnabled() const { return bIsLeaveOrganizationEnabled; }
+	FText GetLeaveOrganizationTooltip() const { return LeaveOrganizationTooltip; }
+	bool IsRecruitCharacterVisible() const { return bIsRecruitCharacterVisible; }
+	bool IsRecruitCharacterEnabled() const { return bIsRecruitCharacterEnabled; }
+	FText GetRecruitCharacterTooltip() const { return RecruitCharacterTooltip; }
 	const TArray<TObjectPtr<UResourceViewModel>>& GetResources() const { return Resources; }
 	int32 GetResourceCount() const { return ResourceCount; }
 
@@ -310,16 +369,20 @@ private:
 	 * the selected position's organization, or the played character itself while acting as self. */
 	FRtsResourceContext MakeResourceContext() const;
 
-	/** Which action the open modal is collecting input for. EA_FoundOrganization is meaningless
-	 * while ActiveModal is PM_None, so callers check that first. */
-	EAction GetModalAction() const;
+	/** Opens InModal, or closes it again if it is the one already open — the toggle every action
+	 * button that collects input before running shares. */
+	void ToggleModal(EPlayerModal InModal);
 
 	/** False for modals that only display something (PM_ViewProvince) rather than collect input for
-	 * an EAction — those have no GetModalAction() and must not run the confirm gate. */
+	 * an action — those have nothing to confirm and must not run the confirm gate. */
 	bool IsActionModal(EPlayerModal InModal) const;
 
+	/** Both gates of whichever action the open modal is collecting for, empty while the input is
+	 * usable. Empty too for a modal that confirms nothing, which IsActionModal separates out. */
+	FText ComputeModalError() const;
+
 	/** The one writer of SelectedPositionIndex/bIsActingAsSelf/SelectedPosition. INDEX_NONE means
-	 * acting as self. Refreshes the action list, which is a function of exactly this. */
+	 * acting as self. Refreshes the action buttons, which are a function of exactly this. */
 	void ApplySelection(int32 InPositionIndex);
 
 	/** The one writer of PendingJoinOrganizationId/SelectedJoinOrganization, same reason
@@ -347,9 +410,6 @@ private:
 
 	/** Re-runs the input gate and pushes the result into ModalErrorText/bCanConfirmModal. */
 	void RefreshModalValidation();
-
-	UFUNCTION()
-	void HandleActionClicked(UActionViewModel* ClickedAction);
 
 	/** Clicking the row that is already selected clears the selection instead of re-picking it. */
 	UFUNCTION()
@@ -383,18 +443,13 @@ private:
 	UPROPERTY()
 	TObjectPtr<ARtsPlayer> Player;
 
-	/** Reused across refreshes so a rebuild that neither adds nor removes an action keeps the same
-	 * row objects — the widget's list does not churn and the OnClicked binding survives. */
-	UPROPERTY()
-	TMap<EAction, TObjectPtr<UActionViewModel>> ActionEntryCache;
-
-	/** Same idea, one row per position index — a refresh that neither adds nor removes a position
+	/** One row per position index — a refresh that neither adds nor removes a position
 	 * keeps the same row objects, so the picker does not churn and the bindings survive. */
 	UPROPERTY()
 	TArray<TObjectPtr<USelectablePositionViewModel>> SelectablePositionCache;
 
-	/** Keyed by EResourceType like ActionEntryCache is keyed by EAction — a rebuild that offers the
-	 * same resources keeps the same row objects. */
+	/** Keyed by EResourceType — a rebuild that offers the same resources keeps the same row
+	 * objects. */
 	UPROPERTY()
 	TMap<EResourceType, TObjectPtr<UResourceViewModel>> ResourceEntryCache;
 

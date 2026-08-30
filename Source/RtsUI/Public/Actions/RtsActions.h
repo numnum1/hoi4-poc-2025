@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Actions/ActionType.h"
 #include "Actions/RtsActionContext.h"
 #include "Actions/RtsActionInput.h"
 #include "Characters.h"
@@ -12,15 +11,29 @@ class UBanking;
 class UProvinces;
 
 /**
- * The action catalogue, hardcoded as a set of small switches over EAction rather than a lookup
- * table or a UObject subclass per action. GetActionsForSelf/GetActionsForPosition decide which
- * actions apply to a scope; the rest answer everything UCharacterActionsViewModel needs to gate,
- * display and run one action. Adding an action means adding one EAction entry and one case to each
- * switch in RtsActions.cpp — nothing else.
+ * The action catalogue, hardcoded as one set of named functions per action rather than a lookup
+ * table, a UObject subclass per action, or a switch over an action enum. There is no runtime action
+ * identity at all: every caller already knows which action it means at the call site, so it calls
+ * that action's functions by name. Adding an action means adding its three functions here —
+ * nothing else, and nothing existing has to grow a case.
+ *
+ * Each action has the same three:
+ *   Get<Action>BlockedReason(Context)          — may this run at all, empty means yes
+ *   Get<Action>InvalidInputReason(Ctx, Input)  — are the collected values usable, empty means yes
+ *   Execute<Action>(Context, Input)            — run it
+ *
+ * The two gates are separate because they answer different questions at different times: whether
+ * the action may be offered, versus whether what the player typed is acceptable. A widget re-runs
+ * the second on every keystroke; both run again on confirm. Actions that collect nothing have no
+ * input gate.
+ *
+ * A context is a claim, not a fact: a blocked-reason function re-derives everything from the
+ * character itself, and position-scoped actions verify through the shared gate that the character
+ * really holds the (organization, role) pair the context claims. All of it stays a pure function of
+ * its inputs — the context carries the facades, so nothing here resolves a subsystem itself.
  *
  * A UBlueprintFunctionLibrary rather than a plain namespace, the same shape UScheduleStatics uses,
- * so a widget can call the pure queries directly if it ever needs to (building a scope picker, say)
- * instead of only through UCharacterActionsViewModel.
+ * so a widget can call the pure queries directly if it ever needs to.
  */
 UCLASS()
 class RTSUI_API URtsActions : public UBlueprintFunctionLibrary
@@ -28,49 +41,24 @@ class RTSUI_API URtsActions : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	/** Actions available while acting as yourself. */
-	UFUNCTION(BlueprintPure, Category="Rts Actions")
-	static TArray<EAction> GetActionsForSelf();
+	static FText GetFoundOrganizationBlockedReason(const FRtsActionContext& InContext);
+	static FText GetFoundOrganizationInvalidInputReason(const FRtsActionContext& InContext, const FRtsActionInput& InInput);
+	static void ExecuteFoundOrganization(const FRtsActionContext& InContext, const FRtsActionInput& InInput);
 
-	/** Actions available while acting as the given position. */
-	UFUNCTION(BlueprintPure, Category="Rts Actions")
-	static TArray<EAction> GetActionsForPosition(FPosition InPosition);
+	static FText GetJoinOrganizationBlockedReason(const FRtsActionContext& InContext);
+	static FText GetJoinOrganizationInvalidInputReason(const FRtsActionContext& InContext, const FRtsActionInput& InInput);
+	static void ExecuteJoinOrganization(const FRtsActionContext& InContext, const FRtsActionInput& InInput);
 
-	static ERtsActionScope GetScope(EAction InAction);
-	static FText GetDisplayName(EAction InAction);
-	static FSlateBrush GetIcon(EAction InAction);
+	static FText GetLeaveOrganizationBlockedReason(const FRtsActionContext& InContext);
+	static void ExecuteLeaveOrganization(const FRtsActionContext& InContext);
 
-	/** What a RAS_Position context's role must grant. Ignored for RAS_Self actions. */
-	static int32 GetRequiredPermissions(EAction InAction);
-
-	/**
-	 * The whole gate for one action in one context — empty means allowed, otherwise the reason to
-	 * show. Verifies that the action is genuinely offered for this scope and, for RAS_Position, that
-	 * the character actually holds the claimed (organization, role) pair and that the role grants
-	 * GetRequiredPermissions. A context is a claim, not a fact: this re-derives everything from the
-	 * character itself.
-	 *
-	 * A pure function of (action, context) — the context carries the facades this needs, so it
-	 * never resolves a subsystem itself — which is why it lives here and not on the view model
-	 * that happens to hold the current selection.
-	 */
-	static FText GetBlockedReason(EAction InAction, const FRtsActionContext& InContext);
-
-	/**
-	 * The gate for the values a modal collected — empty means the input is usable. Separate from
-	 * GetBlockedReason because the two answer different questions at different times: whether the
-	 * action may be offered at all, versus whether what the player typed is acceptable. A widget
-	 * re-runs this on every keystroke; both run again on confirm.
-	 *
-	 * Returns empty for actions that take no input.
-	 */
-	static FText GetInvalidInputReason(EAction InAction, const FRtsActionContext& InContext, const FRtsActionInput& InInput);
-
-	static void ExecuteAction(EAction InAction, const FRtsActionContext& InContext, const FRtsActionInput& InInput);
+	static FText GetRecruitCharacterBlockedReason(const FRtsActionContext& InContext);
+	static FText GetRecruitCharacterInvalidInputReason(const FRtsActionContext& InContext, const FRtsActionInput& InInput);
+	static void ExecuteRecruitCharacter(const FRtsActionContext& InContext, const FRtsActionInput& InInput);
 
 	/**
 	 * Whether a headquarters could be founded in InProvinceId right now — the province-specific
-	 * slice of GetInvalidInputReason(EA_FoundOrganization), pulled out so the WeltMap can color
+	 * slice of GetFoundOrganizationInvalidInputReason, pulled out so the WeltMap can color
 	 * provinces by founding eligibility while the player picks a site without duplicating the
 	 * rule. Checks that the province still exists and belongs to nobody or to InActingNationId —
 	 * further province-specific founding restrictions (terrain, ...) get added here once they

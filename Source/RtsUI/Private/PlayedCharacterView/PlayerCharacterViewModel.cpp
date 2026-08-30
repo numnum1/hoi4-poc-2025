@@ -1,6 +1,5 @@
 #include "PlayedCharacterView/PlayerCharacterViewModel.h"
 
-#include "Actions/ActionViewModel.h"
 #include "Actions/RtsActions.h"
 #include "Banking.h"
 #include "Buildings.h"
@@ -205,18 +204,29 @@ void UPlayerCharacterViewModel::ConfirmModal()
 	}
 
 	// Both gates run again here rather than trusting the bCanConfirmModal last pushed into the
-	// widget — the same reason HandleActionClicked re-derives instead of believing bIsEnabled.
-	const EAction ModalAction = GetModalAction();
-	const FRtsActionContext Context = MakeContext();
-	const FRtsActionInput Input = MakeInput();
-
-	if (!URtsActions::GetBlockedReason(ModalAction, Context).IsEmpty()
-		|| !URtsActions::GetInvalidInputReason(ModalAction, Context, Input).IsEmpty())
+	// widget — the same reason every ClickXxx re-derives instead of believing bIsXxxEnabled.
+	if (!ComputeModalError().IsEmpty())
 	{
 		return;
 	}
 
-	URtsActions::ExecuteAction(ModalAction, Context, Input);
+	const FRtsActionContext Context = MakeContext();
+	const FRtsActionInput Input = MakeInput();
+
+	switch (ActiveModal)
+	{
+	case EPlayerModal::PM_JoinOrganization:
+		URtsActions::ExecuteJoinOrganization(Context, Input);
+		break;
+
+	case EPlayerModal::PM_RecruitCharacter:
+		URtsActions::ExecuteRecruitCharacter(Context, Input);
+		break;
+
+	default:
+		return;
+	}
+
 	CloseModal();
 }
 
@@ -231,28 +241,42 @@ void UPlayerCharacterViewModel::HandleFoundOrganizationConfirmed(const FText& In
 	Input.HeadquartersType = InHeadquartersType;
 	Input.HeadquartersProvinceId = InProvinceId;
 
-	if (!URtsActions::GetBlockedReason(EAction::EA_FoundOrganization, Context).IsEmpty()
-		|| !URtsActions::GetInvalidInputReason(EAction::EA_FoundOrganization, Context, Input).IsEmpty())
+	if (!URtsActions::GetFoundOrganizationBlockedReason(Context).IsEmpty()
+		|| !URtsActions::GetFoundOrganizationInvalidInputReason(Context, Input).IsEmpty())
 	{
 		return;
 	}
 
-	URtsActions::ExecuteAction(EAction::EA_FoundOrganization, Context, Input);
+	URtsActions::ExecuteFoundOrganization(Context, Input);
 	CloseModal();
 }
 
-EAction UPlayerCharacterViewModel::GetModalAction() const
+FText UPlayerCharacterViewModel::ComputeModalError() const
 {
+	const FRtsActionContext Context = MakeContext();
+
+	// The action gate counts too, not just the input: a modal opened a moment ago can become
+	// impossible while it is still on screen, and confirming would then be refused with no visible
+	// reason.
 	switch (ActiveModal)
 	{
 	case EPlayerModal::PM_JoinOrganization:
-		return EAction::EA_JoinOrganization;
+	{
+		const FText BlockedReason = URtsActions::GetJoinOrganizationBlockedReason(Context);
+		return BlockedReason.IsEmpty() ? URtsActions::GetJoinOrganizationInvalidInputReason(Context, MakeInput()) : BlockedReason;
+	}
+
 	case EPlayerModal::PM_RecruitCharacter:
-		return EAction::EA_RecruitCharacter;
+	{
+		const FText BlockedReason = URtsActions::GetRecruitCharacterBlockedReason(Context);
+		return BlockedReason.IsEmpty() ? URtsActions::GetRecruitCharacterInvalidInputReason(Context, MakeInput()) : BlockedReason;
+	}
+
 	default:
 		break;
 	}
-	return EAction::EA_JoinOrganization;
+
+	return FText::GetEmpty();
 }
 
 bool UPlayerCharacterViewModel::IsActionModal(const EPlayerModal InModal) const
@@ -401,7 +425,7 @@ void UPlayerCharacterViewModel::RefreshRecruitableCharacters()
 
 	for (const FCharacterId CandidateId : CandidateIds)
 	{
-		// Already holds a position here — nothing to recruit, same check ExecuteAction's gate makes.
+		// Already holds a position here — nothing to recruit, same check the recruit input gate makes.
 		bool bAlreadyMember = false;
 		for (const FPosition& Position : Characters->GetPositions(CandidateId))
 		{
@@ -446,7 +470,7 @@ void UPlayerCharacterViewModel::RefreshModalValidation()
 	RefreshJoinableOrganizations();
 	RefreshRecruitableCharacters();
 
-	// PM_ViewProvince only displays a UProvinceViewModel and has no EAction to gate — there is
+	// PM_ViewProvince only displays a UProvinceViewModel and has no action to gate — there is
 	// nothing here for it to confirm.
 	if (!IsActionModal(ActiveModal))
 	{
@@ -455,17 +479,7 @@ void UPlayerCharacterViewModel::RefreshModalValidation()
 		return;
 	}
 
-	const EAction ModalAction = GetModalAction();
-	const FRtsActionContext Context = MakeContext();
-
-	// The action gate counts too: a modal opened a moment ago can become impossible while it is
-	// still on screen, and confirming would then be refused with no visible reason.
-	FText Reason = URtsActions::GetBlockedReason(ModalAction, Context);
-	if (Reason.IsEmpty())
-	{
-		Reason = URtsActions::GetInvalidInputReason(ModalAction, Context, MakeInput());
-	}
-
+	const FText Reason = ComputeModalError();
 	UE_MVVM_SET_PROPERTY_VALUE(ModalErrorText, Reason);
 	UE_MVVM_SET_PROPERTY_VALUE(bCanConfirmModal, Reason.IsEmpty());
 }
@@ -586,41 +600,28 @@ void UPlayerCharacterViewModel::RefreshActions()
 {
 	const FRtsActionContext Context = MakeContext();
 
-	TArray<EAction> OfferedActions;
-	if (Context.Scope == ERtsActionScope::RAS_Self)
-	{
-		OfferedActions = URtsActions::GetActionsForSelf();
-	}
-	else
-	{
-		FPosition ActingPosition;
-		ActingPosition.OrganizationId = Context.OrganizationId;
-		ActingPosition.RoleId = Context.RoleId;
-		OfferedActions = URtsActions::GetActionsForPosition(ActingPosition);
-	}
+	// Which scope a button belongs to is what decides whether it is on screen at all; its own gate
+	// then decides whether it is clickable, and says why not when it is not. Written out per action
+	// rather than looped over a catalog — every action is known here by name.
+	const FText FoundOrganizationReason = URtsActions::GetFoundOrganizationBlockedReason(Context);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsFoundOrganizationVisible, bIsActingAsSelf);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsFoundOrganizationEnabled, FoundOrganizationReason.IsEmpty());
+	UE_MVVM_SET_PROPERTY_VALUE(FoundOrganizationTooltip, FoundOrganizationReason);
 
-	TArray<TObjectPtr<UActionViewModel>> NewActions;
-	NewActions.Reserve(OfferedActions.Num());
+	const FText JoinOrganizationReason = URtsActions::GetJoinOrganizationBlockedReason(Context);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsJoinOrganizationVisible, bIsActingAsSelf);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsJoinOrganizationEnabled, JoinOrganizationReason.IsEmpty());
+	UE_MVVM_SET_PROPERTY_VALUE(JoinOrganizationTooltip, JoinOrganizationReason);
 
-	for (const EAction ActionType : OfferedActions)
-	{
-		TObjectPtr<UActionViewModel>& Entry = ActionEntryCache.FindOrAdd(ActionType);
-		if (Entry == nullptr)
-		{
-			Entry = NewObject<UActionViewModel>(this);
-			Entry->OnClicked.AddDynamic(this, &UPlayerCharacterViewModel::HandleActionClicked);
-		}
+	const FText LeaveOrganizationReason = URtsActions::GetLeaveOrganizationBlockedReason(Context);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsLeaveOrganizationVisible, !bIsActingAsSelf);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsLeaveOrganizationEnabled, LeaveOrganizationReason.IsEmpty());
+	UE_MVVM_SET_PROPERTY_VALUE(LeaveOrganizationTooltip, LeaveOrganizationReason);
 
-		Entry->SetAction(ActionType);
-
-		const FText BlockedReason = URtsActions::GetBlockedReason(ActionType, Context);
-		Entry->SetEnabled(BlockedReason.IsEmpty(), BlockedReason);
-
-		NewActions.Add(Entry);
-	}
-
-	UE_MVVM_SET_PROPERTY_VALUE(Actions, NewActions);
-	UE_MVVM_SET_PROPERTY_VALUE(ActionCount, NewActions.Num());
+	const FText RecruitCharacterReason = URtsActions::GetRecruitCharacterBlockedReason(Context);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsRecruitCharacterVisible, !bIsActingAsSelf);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsRecruitCharacterEnabled, RecruitCharacterReason.IsEmpty());
+	UE_MVVM_SET_PROPERTY_VALUE(RecruitCharacterTooltip, RecruitCharacterReason);
 }
 
 void UPlayerCharacterViewModel::RefreshResources()
@@ -667,70 +668,67 @@ void UPlayerCharacterViewModel::HandleResourceClicked(UResourceViewModel* Clicke
 	RefreshResources();
 }
 
-void UPlayerCharacterViewModel::HandleActionClicked(UActionViewModel* ClickedAction)
+// Each of the four re-runs its own gate instead of trusting whichever bIsXxxEnabled was last pushed
+// into the button — the same reason a React handler does not trust the rendered `disabled`. Actions
+// that need input from the player open their modal instead of running, and ConfirmModal finishes
+// the job; which modal that is stays here rather than in URtsActions, because EPlayerModal is
+// UI-invented state a pure-derivation view model is not allowed to know about.
+
+void UPlayerCharacterViewModel::ClickFoundOrganization()
 {
-	if (ClickedAction == nullptr)
+	if (!URtsActions::GetFoundOrganizationBlockedReason(MakeContext()).IsEmpty())
 	{
 		return;
 	}
 
-	// Re-derive the context and re-run the gate instead of trusting whichever bIsEnabled was last
-	// pushed into the row — the same reason a React handler does not trust the rendered `disabled`.
+	ToggleModal(EPlayerModal::PM_FoundOrganization);
+}
+
+void UPlayerCharacterViewModel::ClickJoinOrganization()
+{
+	if (!URtsActions::GetJoinOrganizationBlockedReason(MakeContext()).IsEmpty())
+	{
+		return;
+	}
+
+	ToggleModal(EPlayerModal::PM_JoinOrganization);
+}
+
+void UPlayerCharacterViewModel::ClickLeaveOrganization()
+{
 	const FRtsActionContext Context = MakeContext();
-	const EAction ActionType = ClickedAction->GetActionType();
-
-	if (!URtsActions::GetBlockedReason(ActionType, Context).IsEmpty())
+	if (!URtsActions::GetLeaveOrganizationBlockedReason(Context).IsEmpty())
 	{
 		return;
 	}
 
-	// Actions that need input from the player open their modal instead of running; ConfirmModal
-	// finishes the job. Which modal that is stays here rather than in URtsActions, because
-	// EPlayerModal is UI-invented state a pure-derivation view model is not allowed to know about.
-	switch (ActionType)
+	// No input to collect — this one runs straight from the click. The refresh that follows
+	// (OnPositionChanged -> Characters event -> Refresh_Implementation) rebuilds the selection and
+	// the action buttons.
+	URtsActions::ExecuteLeaveOrganization(Context);
+}
+
+void UPlayerCharacterViewModel::ClickRecruitCharacter()
+{
+	if (!URtsActions::GetRecruitCharacterBlockedReason(MakeContext()).IsEmpty())
 	{
-	case EAction::EA_FoundOrganization:
-		// Clicking the action again while its modal is already open closes it, the same toggle shape
-		// HandlePositionClicked uses for its own selection.
-		if (ActiveModal == EPlayerModal::PM_FoundOrganization)
-		{
-			CloseModal();
-		}
-		else
-		{
-			OpenModal(EPlayerModal::PM_FoundOrganization);
-		}
-		return;
-
-	case EAction::EA_JoinOrganization:
-		if (ActiveModal == EPlayerModal::PM_JoinOrganization)
-		{
-			CloseModal();
-		}
-		else
-		{
-			OpenModal(EPlayerModal::PM_JoinOrganization);
-		}
-		return;
-
-	case EAction::EA_LeaveOrganization:
-		// No input to collect — this one runs straight from the click, same as any RAS_Position
-		// action with an empty FRtsActionInput would. The refresh that follows (OnPositionChanged ->
-		// Characters event -> Refresh_Implementation) rebuilds the selection and action list.
-		URtsActions::ExecuteAction(ActionType, Context, FRtsActionInput());
-		return;
-
-	case EAction::EA_RecruitCharacter:
-		if (ActiveModal == EPlayerModal::PM_RecruitCharacter)
-		{
-			CloseModal();
-		}
-		else
-		{
-			OpenModal(EPlayerModal::PM_RecruitCharacter);
-		}
 		return;
 	}
+
+	ToggleModal(EPlayerModal::PM_RecruitCharacter);
+}
+
+void UPlayerCharacterViewModel::ToggleModal(const EPlayerModal InModal)
+{
+	// Clicking the action again while its modal is already open closes it, the same toggle shape
+	// HandlePositionClicked uses for its own selection.
+	if (ActiveModal == InModal)
+	{
+		CloseModal();
+		return;
+	}
+
+	OpenModal(InModal);
 }
 
 void UPlayerCharacterViewModel::BindBanking()

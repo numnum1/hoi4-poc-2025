@@ -11,7 +11,7 @@ class URoles;
 
 /**
  * One of a character's positions — an organization and the role held there — as a row a UMG
- * ListView can bind directly, the same shape UActionViewModel gives an action.
+ * ListView can bind directly.
  *
  * Not a single-parameter Initialize(Id): a position has no id of its own, it is identified by
  * (character, index) — see FPosition in Characters.h. SetSource is driven by

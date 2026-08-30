@@ -9,11 +9,11 @@ class UBuildingType;
 /**
  * What an action needs from the player on top of FRtsActionContext — the values a modal collects
  * before the action runs. One flat struct covering the handful of actions that ask for input,
- * rather than a type per action; the same reason EAction is a single enum.
+ * rather than a type per action; the same reason nothing here is split up per action.
  *
- * Like the context, this is a claim rather than a fact: URtsActions::GetInvalidInputReason
- * re-validates it, and UPlayerCharacterViewModel::ConfirmModal runs that check again on confirm
- * instead of trusting whatever was last pushed into the widget.
+ * Like the context, this is a claim rather than a fact: each action's
+ * Get<Action>InvalidInputReason re-validates it, and UPlayerCharacterViewModel::ConfirmModal runs
+ * that check again on confirm instead of trusting whatever was last pushed into the widget.
  */
 USTRUCT(BlueprintType)
 struct RTSUI_API FRtsActionInput
@@ -26,7 +26,7 @@ struct RTSUI_API FRtsActionInput
 
 	/** EA_FoundOrganization: which headquarters to put up. This is the whole of what the new
 	 * organization *is* — there is no separate organization type to pick. Null until the player
-	 * has chosen one; URtsActions::GetInvalidInputReason refuses on that, same as on an empty name. */
+	 * has chosen one; the founding input gate refuses on that, same as on an empty name. */
 	UPROPERTY(BlueprintReadWrite, Category="Action")
 	TObjectPtr<UBuildingType> HeadquartersType;
 
