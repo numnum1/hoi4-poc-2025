@@ -83,7 +83,7 @@ public:
 	bool ComputeIsBuildMenuOpen() const;
 
 	/** What the player has picked in the build menu, or null. The authority on the pick — the row's
-	 * own bIsSelected is display only, the same split UBuildMenuEntry documents. Read by
+	 * own bIsSelected is display only, the same split UBuildMenuEntryViewModel documents. Read by
 	 * whichever process is collecting a building, and by ComputeTooltip so hovering a province can
 	 * say something about the building about to be placed there. */
 	UBuildingType* GetSelectedBuildingType() const { return SelectedBuildingType; }

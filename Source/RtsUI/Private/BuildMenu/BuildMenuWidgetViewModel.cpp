@@ -1,6 +1,6 @@
 #include "BuildMenu/BuildMenuWidgetViewModel.h"
 
-#include "BuildMenu/BuildMenuEntry.h"
+#include "BuildMenu/BuildMenuEntryViewModel.h"
 #include "BuildMenu/BuildingCategoryViewModel.h"
 #include "BuildMenu/RtsBuildingCategories.h"
 #include "BuildingType.h"
@@ -20,7 +20,7 @@ void UBuildMenuWidgetViewModel::RebuildCategories()
 
 	for (const EBuildingCategory Category : URtsBuildingCategories::GetCategories())
 	{
-		TArray<UBuildMenuEntry*> Entries;
+		TArray<UBuildMenuEntryViewModel*> Entries;
 
 		for (UBuildingType* BuildingType : Buildings)
 		{
@@ -29,7 +29,7 @@ void UBuildMenuWidgetViewModel::RebuildCategories()
 				continue;
 			}
 
-			UBuildMenuEntry* Entry = NewObject<UBuildMenuEntry>(this);
+			UBuildMenuEntryViewModel* Entry = NewObject<UBuildMenuEntryViewModel>(this);
 			Entry->Initialize(BuildingType);
 			Entries.Add(Entry);
 		}

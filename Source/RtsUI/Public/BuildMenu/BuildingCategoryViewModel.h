@@ -5,7 +5,7 @@
 #include "Styling/SlateBrush.h"
 #include "BuildingCategoryViewModel.generated.h"
 
-class UBuildMenuEntry;
+class UBuildMenuEntryViewModel;
 
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="Manual"))
 class RTSUI_API UBuildingCategoryViewModel : public UMVVMViewModelBase
@@ -13,7 +13,7 @@ class RTSUI_API UBuildingCategoryViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 
 public:
-	void SetDisplay(const FText& InDisplayName, const FText& InDescription, const FSlateBrush& InIcon,const TArray<UBuildMenuEntry*> InEntries);
+	void SetDisplay(const FText& InDisplayName, const FText& InDescription, const FSlateBrush& InIcon,const TArray<UBuildMenuEntryViewModel*> InEntries);
 
 protected:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Category", meta=(AllowPrivateAccess))
@@ -26,11 +26,11 @@ protected:
 	FSlateBrush Icon;
 	
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Building Category", meta=(AllowPrivateAccess))
-	TArray<UBuildMenuEntry*> Entries;
+	TArray<UBuildMenuEntryViewModel*> Entries;
 
 public:
 	const FText& GetDisplayName() const { return DisplayName; }
 	const FText& GetDescription() const { return Description; }
 	const FSlateBrush& GetIcon() const { return Icon; }
-	const TArray<UBuildMenuEntry*>& GetEntries() const { return Entries; }
+	const TArray<UBuildMenuEntryViewModel*>& GetEntries() const { return Entries; }
 };

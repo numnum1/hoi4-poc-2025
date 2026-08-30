@@ -1,8 +1,8 @@
-#include "BuildMenu/BuildMenuEntry.h"
+#include "BuildMenu/BuildMenuEntryViewModel.h"
 
 #include "BuildingType.h"
 
-void UBuildMenuEntry::Initialize(UBuildingType* InBuildingType)
+void UBuildMenuEntryViewModel::Initialize(UBuildingType* InBuildingType)
 {
 	BuildingType = InBuildingType;
 
@@ -13,42 +13,42 @@ void UBuildMenuEntry::Initialize(UBuildingType* InBuildingType)
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeIsHeadquarters);
 }
 
-void UBuildMenuEntry::SetAffordable(const bool bInAffordable)
+void UBuildMenuEntryViewModel::SetAffordable(const bool bInAffordable)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(bIsAffordable, bInAffordable);
 }
 
-void UBuildMenuEntry::SetSelected(const bool bInSelected)
+void UBuildMenuEntryViewModel::SetSelected(const bool bInSelected)
 {
 	UE_MVVM_SET_PROPERTY_VALUE(bIsSelected, bInSelected);
 }
 
-FText UBuildMenuEntry::ComputeDisplayName() const
+FText UBuildMenuEntryViewModel::ComputeDisplayName() const
 {
 	return BuildingType ? BuildingType->GetBuildingName() : FText::GetEmpty();
 }
 
-FSlateBrush UBuildMenuEntry::ComputeIcon() const
+FSlateBrush UBuildMenuEntryViewModel::ComputeIcon() const
 {
 	return BuildingType ? BuildingType->GetIcon() : FSlateBrush();
 }
 
-int32 UBuildMenuEntry::ComputeCost() const
+int32 UBuildMenuEntryViewModel::ComputeCost() const
 {
 	return BuildingType ? BuildingType->GetBuildCost() : 0;
 }
 
-FText UBuildMenuEntry::ComputeCostText() const
+FText UBuildMenuEntryViewModel::ComputeCostText() const
 {
 	return FText::AsNumber(ComputeCost());
 }
 
-bool UBuildMenuEntry::ComputeIsHeadquarters() const
+bool UBuildMenuEntryViewModel::ComputeIsHeadquarters() const
 {
 	return BuildingType && BuildingType->IsHeadquarters();
 }
 
-void UBuildMenuEntry::CallOnClicked()
+void UBuildMenuEntryViewModel::CallOnClicked()
 {
 	OnClicked.Broadcast(this);
 }

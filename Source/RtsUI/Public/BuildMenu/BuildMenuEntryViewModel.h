@@ -2,12 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
-#include "BuildMenuEntry.generated.h"
+#include "BuildMenuEntryViewModel.generated.h"
 
 class UBuildingType;
 
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="Manual"))
-class RTSUI_API UBuildMenuEntry : public UMVVMViewModelBase
+class RTSUI_API UBuildMenuEntryViewModel : public UMVVMViewModelBase
 {
 	GENERATED_BODY()
 
@@ -35,7 +35,7 @@ public:
 	UFUNCTION(BlueprintCallable, FieldNotify, Category="Build Menu Entry")
 	bool ComputeIsHeadquarters() const;
 
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBuildingKindClicked, UBuildMenuEntry*, ClickedKind);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBuildingKindClicked, UBuildMenuEntryViewModel*, ClickedKind);
 
 	UPROPERTY(BlueprintAssignable, Category="Build Menu Entry")
 	FOnBuildingKindClicked OnClicked;
