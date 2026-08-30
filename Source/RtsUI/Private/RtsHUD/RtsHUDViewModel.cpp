@@ -75,7 +75,9 @@ void URtsHUDViewModel::SetActiveModal(EPlayerModal InActiveModal)
 	// The build menu belongs to whichever process needs a building picked, and today that is
 	// founding an organization - so the modal opening brings the one menu up and closing it takes
 	// it down again, pick and all.
-	SetBuildMenuOpen(InActiveModal == EPlayerModal::PM_FoundOrganization);
+	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeIsBuildMenuOpen);
+	ApplySelectedBuildingType(nullptr);
+	RefreshBuildMenu();
 
 	// The typed name goes with the form it was typed into.
 	if (InActiveModal != EPlayerModal::PM_FoundOrganization)
@@ -188,22 +190,9 @@ FMapTooltipContent URtsHUDViewModel::ComputeTooltip() const
 	return Tooltip;
 }
 
-void URtsHUDViewModel::SetBuildMenuOpen(const bool bInOpen)
+bool URtsHUDViewModel::ComputeIsBuildMenuOpen() const
 {
-	if (bIsBuildMenuOpen == bInOpen)
-	{
-		return;
-	}
-
-	UE_MVVM_SET_PROPERTY_VALUE(bIsBuildMenuOpen, bInOpen);
-
-	// The founding overlay only shows while the menu is up, so opening or closing it is a repaint.
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
-
-	// Dropping the pick is what keeps a reopened menu from handing the next process a building the
-	// player chose for the last one.
-	ApplySelectedBuildingType(nullptr);
-	RefreshBuildMenu();
+	return ActiveModal == EPlayerModal::PM_FoundOrganization;
 }
 
 void URtsHUDViewModel::ApplySelectedBuildingType(UBuildingType* InBuildingType)

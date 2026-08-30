@@ -79,16 +79,8 @@ public:
 	TMap<FNationId, FWorldMapNationData> GetNationData() const;
 
 #pragma region Build Menu
-	/**
-	 * Opens or closes the one build menu the HUD has. There is exactly one — a process that needs a
-	 * building picked (founding an organization today) brings this one up instead of carrying a
-	 * picker of its own, which is why the state lives here and not on the process' modal.
-	 *
-	 * Closing it drops the pick: a menu that comes back up still showing yesterday's selection would
-	 * be a second source of truth for whatever process opens it next.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
-	void SetBuildMenuOpen(bool bInOpen);
+	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
+	bool ComputeIsBuildMenuOpen() const;
 
 	/** What the player has picked in the build menu, or null. The authority on the pick — the row's
 	 * own bIsSelected is display only, the same split UBuildMenuEntry documents. Read by
@@ -161,9 +153,6 @@ private:
 	 * its own. Derived in SetSelectedProvinceId, never pushed. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FText SelectedProvinceName;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsBuildMenuOpen, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
-	bool bIsBuildMenuOpen = false;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	int32 SelectedBuildingCost = 0;
@@ -329,7 +318,6 @@ public:
 	FProvinceId GetHoveredProvinceId() const { return HoveredProvinceId; }
 	FText GetSelectedProvinceName() const { return SelectedProvinceName; }
 	const TArray<TObjectPtr<UMapModeEntryViewModel>>& GetMapModes() const { return MapModes; }
-	bool IsBuildMenuOpen() const { return bIsBuildMenuOpen; }
 	int32 GetSelectedBuildingCost() const { return SelectedBuildingCost; }
 	FText GetSelectedBuildingName() const { return SelectedBuildingName; }
 	FText GetPendingOrganizationName() const { return PendingOrganizationName; }
