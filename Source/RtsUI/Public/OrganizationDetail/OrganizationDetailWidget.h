@@ -4,15 +4,15 @@
 #include "Blueprint/UserWidget.h"
 #include "OrganizationDetailWidget.generated.h"
 
-class UPlayerCharacterViewModel;
+class URtsHUDViewModel;
 
 /**
  * PM_ViewOrganization's widget — same shape as UProvinceDetailWidget. Holds no data of its own:
  * what it shows (members, departments, balance) lives on a UOrganizationViewModel the Blueprint
  * creates itself as a CreateInstance view model, bound via a Destination Binding —
- * Initialize(FOrganizationId) <- the played character view model's SelectedOrganizationId, the
+ * Initialize(FOrganizationId) <- the HUD view model's SelectedOrganizationId, the
  * same "Kind-ViewModels: Create Instance + Initialize" pattern UProvinceDetailWidget uses for
- * UProvinceViewModel. What this class pushes in (SetPlayerViewModel) is only that source.
+ * UProvinceViewModel. What this class pushes in (SetHUDViewModel) is only that source.
  */
 UCLASS(Abstract)
 class RTSUI_API UOrganizationDetailWidget : public UUserWidget
@@ -20,14 +20,14 @@ class RTSUI_API UOrganizationDetailWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	/** Pushed in by the owning view once it has its view model. */
+	/** Pushed in by URtsHUDWidget, which owns the view model. */
 	UFUNCTION(BlueprintCallable, Category="Organization Detail")
-	void SetPlayerViewModel(UPlayerCharacterViewModel* InPlayerViewModel);
+	void SetHUDViewModel(URtsHUDViewModel* InHUDViewModel);
 
 	UFUNCTION(BlueprintPure, Category="Organization Detail")
-	UPlayerCharacterViewModel* GetPlayerViewModel() const { return PlayerViewModel; }
+	URtsHUDViewModel* GetHUDViewModel() const { return HUDViewModel; }
 
 private:
 	UPROPERTY(Transient)
-	TObjectPtr<UPlayerCharacterViewModel> PlayerViewModel;
+	TObjectPtr<URtsHUDViewModel> HUDViewModel;
 };

@@ -23,7 +23,7 @@ enum class ERtsActionScope : uint8
 /**
  * Everything an action needs to check availability and run, for one character in one scope.
  *
- * Never assembled by hand: UPlayerCharacterViewModel builds it from the character's own
+ * Never assembled by hand: URtsHUDViewModel builds it from the character's own
  * positions, so OrganizationId and RoleId always come from the same position and cannot be
  * mismatched. The shared gate in RtsActions.cpp verifies that anyway before anything runs —
  * a context that reached C++ from Blueprint is a claim, not a fact.

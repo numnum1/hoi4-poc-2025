@@ -154,7 +154,7 @@ void UProvinceViewModel::RefreshOrganizationsPresent()
 	for (const FOrganizationId Id : PresentIds)
 	{
 		// No OnClicked binding here: this module cannot know what clicking a row should do (that is
-		// UPlayerCharacterViewModel's business, in RtsUI). The row widget reports its click to
+		// URtsHUDViewModel's business, in RtsUI). The row widget reports its click to
 		// UProvinceDetailWidget::ViewOrganization instead.
 		TObjectPtr<USelectableOrganizationViewModel>& Entry = OrganizationRowCache.FindOrAdd(Id);
 		if (Entry == nullptr)

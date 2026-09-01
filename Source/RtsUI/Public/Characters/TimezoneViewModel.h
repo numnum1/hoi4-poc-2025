@@ -25,7 +25,7 @@ class UTime;
  * changes. That costs nothing: every value goes through UE_MVVM_SET_PROPERTY_VALUE, which only
  * broadcasts on an actual change, and the displayed values are minute-precise.
  *
- * This is a CreateInstance view model, not a child object hanging off UPlayerCharacterViewModel:
+ * This is a CreateInstance view model, not a child object hanging off URtsHUDViewModel:
  * the widget blueprint declares its own entry for it and drives Initialize from a binding on the
  * played character's id. Nothing owns it, so the speed buttons are answered here — the two
  * CallOn... functions set UTime's speed and that is the whole of it. There is deliberately no

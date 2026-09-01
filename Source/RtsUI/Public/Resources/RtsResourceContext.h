@@ -12,7 +12,7 @@ class UOrganizations;
 /**
  * Who owns the resources being asked about, plus the facades URtsResources reads through.
  *
- * Never assembled by hand: UPlayerCharacterViewModel builds it from the current selection, so the
+ * Never assembled by hand: URtsHUDViewModel builds it from the current selection, so the
  * owner always comes from a live position. The facades are carried instead of URtsResources
  * resolving a subsystem itself, so every function in URtsResources stays a pure function of its
  * inputs — see FRtsActionContext for the same shape.

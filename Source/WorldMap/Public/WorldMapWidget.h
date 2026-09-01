@@ -16,7 +16,7 @@ class URtsWorldMapViewModel;
  * anywhere in the HUD's widget tree without whoever places it having to know about the map actor,
  * the subsystem or the camera pawn.
  *
- * It owns URtsWorldMapViewModel the same way UPlayedCharacterView owns UPlayerCharacterViewModel:
+ * It owns URtsWorldMapViewModel the same way URtsHUDWidget owns URtsHUDViewModel:
  * created in NativeOnInitialized, handed everything that is pushed in, and exposed through a getter
  * so the Blueprint binds its own widgets to it with creation type "Property Path".
  *

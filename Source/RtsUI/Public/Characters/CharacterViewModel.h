@@ -221,7 +221,7 @@ protected:
 
 	//~ Positions --------------------------------------------------------------------------------
 	// One UPositionViewModel row per FPosition, cached per index and repointed on refresh rather
-	// than reallocated — see UPlayerCharacterViewModel::SelectablePositionCache for the same shape.
+	// than reallocated — see URtsHUDViewModel::SelectablePositionCache for the same shape.
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category="Character Viewmodel|Positions", meta=(AllowPrivateAccess))
 	TArray<TObjectPtr<UPositionViewModel>> Positions;
@@ -300,8 +300,7 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category="Character Viewmodel")
 	void OnCharacterReady();
 
-	//~ The facades subclasses (UPlayerCharacterViewModel) need beyond the flat FieldNotify
-	//~ properties — building an FRtsActionContext needs the same three this class already reads.
+	//~ The facades this class reads beyond the flat FieldNotify properties below.
 	UPROPERTY(BlueprintReadOnly, Category="Character Viewmodel")
 	TObjectPtr<UCharacters> Characters;
 
@@ -312,8 +311,6 @@ protected:
 	TObjectPtr<URoles> Roles;
 
 	//~ Begin UObject interface
-	// Protected rather than private: a subclass overriding this must be able to call
-	// Super::BeginDestroy() to run this class's own Unbind().
 	virtual void BeginDestroy() override;
 	//~ End UObject interface
 

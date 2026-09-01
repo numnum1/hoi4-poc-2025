@@ -12,7 +12,7 @@ class UBuildingType;
  * rather than a type per action; the same reason nothing here is split up per action.
  *
  * Like the context, this is a claim rather than a fact: each action's
- * Get<Action>InvalidInputReason re-validates it, and UPlayerCharacterViewModel::ConfirmModal runs
+ * Get<Action>InvalidInputReason re-validates it, and URtsHUDViewModel::ConfirmModal runs
  * that check again on confirm instead of trusting whatever was last pushed into the widget.
  */
 USTRUCT(BlueprintType)

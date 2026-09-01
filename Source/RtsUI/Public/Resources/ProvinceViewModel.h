@@ -262,7 +262,7 @@ private:
 	TObjectPtr<UPopulations> Populations;
 
 	/** Reused across refreshes so a rebuild that offers the same organizations keeps the same row
-	 * objects — same idea as UPlayerCharacterViewModel::SelectablePositionCache. */
+	 * objects — same idea as URtsHUDViewModel::SelectablePositionCache. */
 	UPROPERTY()
 	TMap<FOrganizationId, TObjectPtr<USelectableOrganizationViewModel>> OrganizationRowCache;
 };

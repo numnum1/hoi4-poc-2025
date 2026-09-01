@@ -2,12 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
+#include "RtsIds.h"
 #include "SelectablePositionViewModel.generated.h"
 
 /**
  * One entry in the player's position picker: an icon, a label, and a click. Nothing else. The row
  * decides nothing: which position it stands for, whether picking it is allowed, and what picking it
- * changes are all decided by UPlayerCharacterViewModel, which owns the selection.
+ * changes are all decided by URtsHUDViewModel, which owns the selection.
  *
  * Deliberately not UPositionViewModel: that one is the full read-only description of a position
  * (organization, logo, role, ownership) a detail panel binds to, and it carries no click. Making a
@@ -24,11 +25,15 @@ class RTSUI_API USelectablePositionViewModel : public UMVVMViewModelBase
 
 public:
 	/** Pushed by the owning view model: which position this row stands for and how to show it. */
-	void SetSource(int32 InPositionIndex, const FText& InDisplayName, const FSlateBrush& InIcon);
+	void SetSource(int32 InPositionIndex, FOrganizationId InOrganizationId, const FText& InDisplayName, const FSlateBrush& InIcon);
 
 	/** The index into the character's positions this row was built from — how the owner maps a
 	 * click back to a position without the row knowing anything about the selection. */
 	int32 GetPositionIndex() const { return PositionIndex; }
+
+	/** The organization this row's position is held at. The index moves when a position ahead of it
+	 * disappears; this does not, so it is what a selection is recovered by across a refresh. */
+	FOrganizationId GetOrganizationId() const { return OrganizationId; }
 
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPositionClicked, USelectablePositionViewModel*, ClickedPosition);
 
@@ -54,4 +59,6 @@ public:
 
 private:
 	int32 PositionIndex = INDEX_NONE;
+
+	FOrganizationId OrganizationId;
 };

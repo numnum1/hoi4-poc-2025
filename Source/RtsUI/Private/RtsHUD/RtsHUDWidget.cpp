@@ -1,6 +1,10 @@
 #include "RtsHUD/RtsHUDWidget.h"
 
-#include "PlayedCharacterView/PlayedCharacterView.h"
+#include "FoundOrganizationModal/FoundOrganizationModalWidget.h"
+#include "JoinOrganizationModal/JoinOrganizationModalWidget.h"
+#include "OrganizationDetail/OrganizationDetailWidget.h"
+#include "ProvinceDetail/ProvinceDetailWidget.h"
+#include "RecruitCharacterModal/RecruitCharacterModalWidget.h"
 #include "RtsHUD/RtsHUDViewModel.h"
 #include "WorldMapWidget.h"
 
@@ -23,9 +27,39 @@ void URtsHUDWidget::NativeOnInitialized()
 
 	HUDViewModel->Initialize();
 
-	if (PlayedCharacterView)
+	// A child widget is fully initialized before its parent, so every one of these already exists.
+	if (FoundOrganizationModal)
 	{
-		PlayedCharacterView->SetHUDViewModel(HUDViewModel);
+		FoundOrganizationModal->SetHUDViewModel(HUDViewModel);
+	}
+
+	if (JoinOrganizationModal)
+	{
+		JoinOrganizationModal->SetHUDViewModel(HUDViewModel);
+	}
+
+	if (ProvinceDetail)
+	{
+		ProvinceDetail->SetHUDViewModel(HUDViewModel);
+	}
+
+	if (OrganizationDetail)
+	{
+		OrganizationDetail->SetHUDViewModel(HUDViewModel);
+	}
+
+	if (RecruitCharacterModal)
+	{
+		RecruitCharacterModal->SetHUDViewModel(HUDViewModel);
+	}
+
+	// Bound here rather than in the HUD Blueprint's graph: this class holds both the map and the
+	// view model, and what a province click means is a decision, not layout.
+	URtsHUDViewModel* ViewModel = HUDViewModel;
+	if (UWorldMapWidget* MapWidget = ResolveMapWidget())
+	{
+		MapWidget->OnProvinceClicked.AddDynamic(ViewModel, &URtsHUDViewModel::SetSelectedProvinceId);
+		MapWidget->OnHoveredProvinceIdChanged.AddDynamic(ViewModel, &URtsHUDViewModel::SetHoveredProvinceId);
 	}
 
 	// Initialize broadcasts on its own, but the map actor may not have resolved its province lookup
@@ -39,6 +73,12 @@ void URtsHUDWidget::NativeDestruct()
 	if (HUDViewModel)
 	{
 		HUDViewModel->RemoveAllFieldValueChangedDelegates(this);
+
+		if (WorldMapWidget)
+		{
+			WorldMapWidget->OnProvinceClicked.RemoveAll(HUDViewModel.Get());
+			WorldMapWidget->OnHoveredProvinceIdChanged.RemoveAll(HUDViewModel.Get());
+		}
 	}
 
 	Super::NativeDestruct();

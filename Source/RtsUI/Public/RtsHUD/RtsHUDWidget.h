@@ -5,19 +5,24 @@
 #include "FieldNotificationId.h"
 #include "RtsHUDWidget.generated.h"
 
-class UPlayedCharacterView;
+class UFoundOrganizationModalWidget;
+class UJoinOrganizationModalWidget;
+class UOrganizationDetailWidget;
+class UProvinceDetailWidget;
+class URecruitCharacterModalWidget;
 class URtsHUDViewModel;
 class UWorldMapWidget;
 
 /**
- * The HUD's root widget. Owns URtsHUDViewModel — created here in NativeOnInitialized, the same
- * pattern UPlayedCharacterView uses for UPlayerCharacterViewModel — and is the one place that hands
- * the map its colors: it watches the view model's computed ProvinceVisuals and pushes the result
- * into the world map widget.
+ * The HUD's root widget. Owns URtsHUDViewModel — created here in NativeOnInitialized — and is the
+ * single place that hands it down: to the map, which it watches ProvinceVisuals for, and to every
+ * modal and detail widget under it, which keep it only as the source their Blueprint bindings read
+ * from. Nothing below this reaches for the view model itself.
  *
- * That direction is not a style choice. UWorldMapWidget lives in WorldMap, which must not know
+ * The map direction is not a style choice. UWorldMapWidget lives in WorldMap, which must not know
  * RtsUI (RtsUI already depends on WorldMap), so the map widget cannot bind to a view model here. It
- * gets pushed to instead, and stays free of any knowledge about map modes.
+ * gets pushed to instead, and stays free of any knowledge about map modes. Its clicks come back the
+ * same way: bound here in C++ rather than in a Blueprint graph, since this class holds both ends.
  *
  * The Blueprint deriving from this binds its own widgets to GetHUDViewModel through a "Property
  * Path" view model entry — never "Create Instance", which would spawn a second, uninitialized one.
@@ -42,11 +47,26 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
 	TObjectPtr<UWorldMapWidget> WorldMapWidget;
 
-	/** The played character's view, handed the HUD view model so everything under it can bind
-	 * against the build menu, the map selection and the founding verdict. Optional for the same
-	 * reason WorldMapWidget is. */
+	/** Optional so this class still initializes cleanly before the Blueprint has placed the modal
+	 * (or for a derived HUD that never needs it). Pushed to as soon as both exist. */
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
-	TObjectPtr<UPlayedCharacterView> PlayedCharacterView;
+	TObjectPtr<UFoundOrganizationModalWidget> FoundOrganizationModal;
+
+	/** Same optionality reasoning as FoundOrganizationModal. */
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+	TObjectPtr<UJoinOrganizationModalWidget> JoinOrganizationModal;
+
+	/** Same optionality reasoning as FoundOrganizationModal. */
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+	TObjectPtr<UProvinceDetailWidget> ProvinceDetail;
+
+	/** Same optionality reasoning as FoundOrganizationModal. */
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+	TObjectPtr<UOrganizationDetailWidget> OrganizationDetail;
+
+	/** Same optionality reasoning as FoundOrganizationModal. */
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+	TObjectPtr<URecruitCharacterModalWidget> RecruitCharacterModal;
 
 private:
 	void HandleProvinceVisualsChanged(UObject* InViewModel, UE::FieldNotification::FFieldId InFieldId);

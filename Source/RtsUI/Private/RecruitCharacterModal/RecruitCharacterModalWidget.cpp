@@ -1,8 +1,8 @@
 #include "RecruitCharacterModal/RecruitCharacterModalWidget.h"
 
-#include "PlayedCharacterView/PlayerCharacterViewModel.h"
+#include "RtsHUD/RtsHUDViewModel.h"
 
-void URecruitCharacterModalWidget::SetPlayerViewModel(UPlayerCharacterViewModel* InPlayerViewModel)
+void URecruitCharacterModalWidget::SetHUDViewModel(URtsHUDViewModel* InHUDViewModel)
 {
-	PlayerViewModel = InPlayerViewModel;
+	HUDViewModel = InHUDViewModel;
 }

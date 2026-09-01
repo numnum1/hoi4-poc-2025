@@ -5,7 +5,7 @@
 
 /**
  * Which modal the player-facing UI currently has open. Widget state in the strict sense — nothing
- * in the simulation knows a modal exists — which is why it lives on UPlayerCharacterViewModel
+ * in the simulation knows a modal exists — which is why it lives on URtsHUDViewModel
  * and not on any view model that is a pure derivation of the simulation.
  *
  * One enum plus a switch rather than a class per dialog or a bool per dialog: PM_None is a real

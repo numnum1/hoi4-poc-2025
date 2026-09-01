@@ -7,12 +7,12 @@
 /**
  * One action button, as the C++ half of a widget whose Blueprint child carries only layout and
  * styling. There is no view model behind it: every action is known ahead of time, so whoever places
- * one of these (UPlayedCharacterView's Blueprint, one fixed instance per action) authors its name
+ * one of these (the HUD Blueprint, one fixed instance per action) authors its name
  * and icon right there in the Details panel. Only what moves with the selection is bound —
  * enabled/tooltip/visibility, through the inherited SetIsEnabled/SetToolTipText/SetVisibility
- * against UPlayerCharacterViewModel, instead of this class inventing its own copies of them.
+ * against URtsHUDViewModel, instead of this class inventing its own copies of them.
  *
- * OnClicked is a dispatcher rather than a call into UPlayerCharacterViewModel directly, because
+ * OnClicked is a dispatcher rather than a call into URtsHUDViewModel directly, because
  * this widget does not need to know that class exists — only whoever owns it does, and wires
  * OnClicked (through a Custom-Event bridge, a dispatcher cannot be bound directly to a function on
  * another object) onto the matching ClickXxx() there. See "Callbacks gibt es nur auf

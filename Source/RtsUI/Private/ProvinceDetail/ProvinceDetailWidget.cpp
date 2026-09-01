@@ -1,18 +1,18 @@
 #include "ProvinceDetail/ProvinceDetailWidget.h"
 
-#include "PlayedCharacterView/PlayerCharacterViewModel.h"
+#include "RtsHUD/RtsHUDViewModel.h"
 
-void UProvinceDetailWidget::SetPlayerViewModel(UPlayerCharacterViewModel* InPlayerViewModel)
+void UProvinceDetailWidget::SetHUDViewModel(URtsHUDViewModel* InHUDViewModel)
 {
-	PlayerViewModel = InPlayerViewModel;
+	HUDViewModel = InHUDViewModel;
 }
 
 void UProvinceDetailWidget::ViewOrganization(const FOrganizationId InOrganizationId)
 {
-	if (PlayerViewModel == nullptr || !InOrganizationId.IsValid())
+	if (HUDViewModel == nullptr || !InOrganizationId.IsValid())
 	{
 		return;
 	}
 
-	PlayerViewModel->ViewOrganization(InOrganizationId);
+	HUDViewModel->ViewOrganization(InOrganizationId);
 }

@@ -1,8 +1,8 @@
 #include "OrganizationDetail/OrganizationDetailWidget.h"
 
-#include "PlayedCharacterView/PlayerCharacterViewModel.h"
+#include "RtsHUD/RtsHUDViewModel.h"
 
-void UOrganizationDetailWidget::SetPlayerViewModel(UPlayerCharacterViewModel* InPlayerViewModel)
+void UOrganizationDetailWidget::SetHUDViewModel(URtsHUDViewModel* InHUDViewModel)
 {
-	PlayerViewModel = InPlayerViewModel;
+	HUDViewModel = InHUDViewModel;
 }

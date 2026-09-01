@@ -17,8 +17,8 @@ public class RtsUI : ModuleRules
                 // once. RtsActions.h/PositionViewModel.h include Characters.h on their own public
                 // header, so this needs to be public, not just private.
                 "Characters",
-                // UBuildingType is a property on UPlayerCharacterViewModel's header: the
-                // headquarters the found-organization modal is collecting.
+                // UBuildingType is a return type on URtsHUDViewModel's header: the build menu's
+                // catalogue, and the headquarters the found-organization modal is collecting.
                 "Buildings",
                 // The view models derive from UMVVMViewModelBase on their public headers.
                 "ModelViewViewModel",
@@ -42,9 +42,9 @@ public class RtsUI : ModuleRules
                 "UMG",
                 // Only to resolve ARtsPlayer in the .cpp; the header forward-declares it.
                 "RtsPlayer",
-                // SelectProvince plays the province's InspectionSound and reads the province name
-                // for the modal's site label; resolved via UProvinces in the .cpp only, not
-                // exposed on the header
+                // SetSelectedProvinceId plays the province's InspectionSound and reads the
+                // province name for the modal's site label; resolved via UProvinces in the .cpp
+                // only, not exposed on the header
                 "Provinces",
                 // NationViewModel/ProvinceViewModel read UNations for the owning nation's name
                 "Nations",

@@ -21,7 +21,7 @@
  * displays cannot be computed without it. That makes this a controlled input in the React sense:
  * the field lives here, the judgement lives above.
  *
- * bIsValid is display only, never authority — UPlayerCharacterViewModel re-runs both gates on
+ * bIsValid is display only, never authority — URtsHUDViewModel re-runs both gates on
  * exactly the values it is handed when confirm is clicked.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))

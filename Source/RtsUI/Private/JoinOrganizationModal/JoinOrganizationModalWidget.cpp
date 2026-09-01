@@ -1,8 +1,8 @@
 #include "JoinOrganizationModal/JoinOrganizationModalWidget.h"
 
-#include "PlayedCharacterView/PlayerCharacterViewModel.h"
+#include "RtsHUD/RtsHUDViewModel.h"
 
-void UJoinOrganizationModalWidget::SetPlayerViewModel(UPlayerCharacterViewModel* InPlayerViewModel)
+void UJoinOrganizationModalWidget::SetHUDViewModel(URtsHUDViewModel* InHUDViewModel)
 {
-	PlayerViewModel = InPlayerViewModel;
+	HUDViewModel = InHUDViewModel;
 }

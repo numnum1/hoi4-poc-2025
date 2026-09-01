@@ -12,12 +12,12 @@ class UResourceDetailViewModel;
  * One resource, shown as one row in an owner's resource list — Money, Manpower, Crystals, ...
  * Every resource looks the same at this layer (icon, name, total, a list of sub-values); what
  * backs the numbers is entirely URtsResources::GetAmount's problem, switching per resource. This
- * row never resolves anything itself — see UPlayerCharacterViewModel::RefreshResources, which owns
+ * row never resolves anything itself — see URtsHUDViewModel::RefreshResources, which owns
  * and caches one instance per EResourceType and passes the resource type and the owner context.
  *
  * Concrete, not abstract: there is one hardcoded EResourceType per resource, no per-resource
  * subclass. The row never decides whether it should be expanded — a click only reports itself
- * upward via OnClicked, and UPlayerCharacterViewModel (the one that knows which single resource
+ * upward via OnClicked, and URtsHUDViewModel (the one that knows which single resource
  * is currently open) answers by pushing bIsExpanded back down through SetExpanded.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="Manual"))
@@ -39,7 +39,7 @@ public:
 
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnResourceClicked, UResourceViewModel*, ClickedResource);
 
-	/** UPlayerCharacterViewModel binds one handler here for every resource row it creates; that
+	/** URtsHUDViewModel binds one handler here for every resource row it creates; that
 	 * handler decides which resource ends up expanded and re-pushes SetExpanded across all rows.
 	 * Bind a button's OnClicked to CallOnClicked() below, not directly to this delegate. */
 	UPROPERTY(BlueprintAssignable, Category="Resource")
