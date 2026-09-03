@@ -211,253 +211,203 @@ public:
 private:
 	/** Mirrors ARtsPlayer::ControlledCharacterId — pulled in BindPlayer and kept current by
 	 * HandleControlledCharacterChanged, never pushed in from a widget. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FCharacterId ControlledCharacterId;
 
 	/** The played character as a plain read-only view model, re-pointed at ControlledCharacterId
 	 * whenever the player switches. Everything a widget wants to *show* about them binds through
 	 * here; nothing in this class reads its values back. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	TObjectPtr<UCharacterViewModel> PlayedCharacter;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	EMapMode ActiveMapMode = EMapMode::EMM_Political;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FProvinceId SelectedProvinceId;
 
 	/** SelectedProvinceId as a plain int32, for widgets that cannot bind the id struct. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	int32 SelectedProvinceIdValue = INDEX_NONE;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FProvinceId HoveredProvinceId;
 
 	/** The selected province's name, so a form showing the picked site does not need UProvinces of
 	 * its own. Derived in SetSelectedProvinceId, never pushed. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FText SelectedProvinceName;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	int32 SelectedBuildingCost = 0;
 
 	/** Same reason as SelectedProvinceName: a form showing what is about to be built binds this
 	 * rather than reaching for the asset. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FText SelectedBuildingName;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FText PendingOrganizationName;
 
 	/** One row per mode, cached rather than rebuilt: the set of modes is fixed, only which one is
 	 * active changes. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	TArray<TObjectPtr<UMapModeEntryViewModel>> MapModes;
 
 	//~ Position selection --------------------------------------------------------------------------
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Positions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Positions", meta = (AllowPrivateAccess))
 	int32 SelectedPositionIndex = INDEX_NONE;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsActingAsSelf, Category = "Rts HUD ViewModel|Positions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Positions", meta = (AllowPrivateAccess))
 	bool bIsActingAsSelf = true;
 
 	/** The picker row that is currently selected, or null while acting as self — the same state
 	 * SelectedPositionIndex holds, as the object a widget can bind a highlight against. Written in
 	 * exactly one place (ApplySelection) so the two can never disagree. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Positions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Positions", meta = (AllowPrivateAccess))
 	TObjectPtr<USelectablePositionViewModel> SelectedPosition;
 
 	/** One picker row per position the character holds, in the order the facade reports them. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Positions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Positions", meta = (AllowPrivateAccess))
 	TArray<TObjectPtr<USelectablePositionViewModel>> SelectablePositions;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Positions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Positions", meta = (AllowPrivateAccess))
 	int32 SelectablePositionCount = 0;
 
 	//~ Modals -------------------------------------------------------------------------------------
 
 	/** PM_None is a real state, so no separate "any modal open" flag exists to fall out of sync. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	EPlayerModal ActiveModal = EPlayerModal::PM_None;
 
 	/** So a widget can drive its visibility without an enum comparison node. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsFoundOrganizationModalOpen, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	bool bIsFoundOrganizationModalOpen = false;
 
 	/** Same idea as bIsFoundOrganizationModalOpen, for the join-organization modal. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsJoinOrganizationModalOpen, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	bool bIsJoinOrganizationModalOpen = false;
 
 	/** Same idea as bIsFoundOrganizationModalOpen, for the view-province modal. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsViewProvinceModalOpen, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	bool bIsViewProvinceModalOpen = false;
 
 	/** Same idea as bIsFoundOrganizationModalOpen, for the view-organization modal. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsViewOrganizationModalOpen, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	bool bIsViewOrganizationModalOpen = false;
 
 	/** Same idea as bIsFoundOrganizationModalOpen, for the recruit-character modal. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsRecruitCharacterModalOpen, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	bool bIsRecruitCharacterModalOpen = false;
 
 	/** The organization PM_ViewOrganization shows. Bound as a CreateInstance UOrganizationViewModel's
 	 * Initialize(FOrganizationId) destination in Blueprint — same shape as SelectedProvinceId. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	FOrganizationId SelectedOrganizationId;
 
 	/** SelectedOrganizationId as a plain int32, for widgets that cannot bind the id struct. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	int32 SelectedOrganizationIdValue = INDEX_NONE;
 
 	/** Which organization the join-organization modal will join, invalid until one is picked. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	FOrganizationId PendingJoinOrganizationId;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	int32 PendingJoinOrganizationIdValue = INDEX_NONE;
 
 	/** One row per organization present where the character currently stands, minus the ones it
 	 * already belongs to. Rebuilt whenever the modal opens or the character moves/joins/leaves. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	TArray<TObjectPtr<USelectableOrganizationViewModel>> JoinableOrganizations;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	int32 JoinableOrganizationCount = 0;
 
 	/** The picked row, or null while none is — same shape as SelectedPosition. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	TObjectPtr<USelectableOrganizationViewModel> SelectedJoinOrganization;
 
 	/** Which character the recruit modal will recruit, invalid until one is picked. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	FCharacterId PendingRecruitCharacterId;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	int32 PendingRecruitCharacterIdValue = INDEX_NONE;
 
 	/** One row per character standing where the acting position's organization is headquartered,
 	 * minus the ones who already hold a position there. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	TArray<TObjectPtr<USelectableCharacterViewModel>> RecruitableCharacters;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	int32 RecruitableCharacterCount = 0;
 
 	/** The picked row, or null while none is — same shape as SelectedJoinOrganization. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	TObjectPtr<USelectableCharacterViewModel> SelectedRecruitCharacter;
 
 	/** Empty while the current input is usable. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	FText ModalErrorText;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=CanConfirmModal, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	bool bCanConfirmModal = false;
 
 	//~ Actions — one fixed button per action, there is no per-action view model or list, see
 	//~ ActionButtonWidget.h. Name and icon are constants the button's own Blueprint carries; only
 	//~ visible/enabled/tooltip move with the current selection and are pushed from here. -----------
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsFoundOrganizationVisible, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	bool bIsFoundOrganizationVisible = false;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsFoundOrganizationEnabled, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	bool bIsFoundOrganizationEnabled = false;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	FText FoundOrganizationTooltip;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsJoinOrganizationVisible, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	bool bIsJoinOrganizationVisible = false;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsJoinOrganizationEnabled, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	bool bIsJoinOrganizationEnabled = false;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	FText JoinOrganizationTooltip;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsLeaveOrganizationVisible, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	bool bIsLeaveOrganizationVisible = false;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsLeaveOrganizationEnabled, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	bool bIsLeaveOrganizationEnabled = false;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	FText LeaveOrganizationTooltip;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsRecruitCharacterVisible, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	bool bIsRecruitCharacterVisible = false;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter=IsRecruitCharacterEnabled, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	bool bIsRecruitCharacterEnabled = false;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Actions", meta = (AllowPrivateAccess))
 	FText RecruitCharacterTooltip;
 
 	/** One row per resource the current owner has — see MakeResourceContext. Same function of the
 	 * position selection the action buttons are. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	TArray<TObjectPtr<UResourceViewModel>> Resources;
 
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Getter, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	int32 ResourceCount = 0;
 
 public:
-	FCharacterId GetControlledCharacterId() const { return ControlledCharacterId; }
-	UCharacterViewModel* GetPlayedCharacter() const { return PlayedCharacter; }
-	EMapMode GetActiveMapMode() const { return ActiveMapMode; }
+	/** Read externally by UFoundOrganizationModalWidget::Confirm, which is why this is the one
+	 * FieldNotify property here with a public accessor — everything else binds through Blueprint
+	 * reflection and has no C++ reader. */
 	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
-	int32 GetSelectedProvinceIdValue() const { return SelectedProvinceIdValue; }
-	FProvinceId GetHoveredProvinceId() const { return HoveredProvinceId; }
-	FText GetSelectedProvinceName() const { return SelectedProvinceName; }
-	const TArray<TObjectPtr<UMapModeEntryViewModel>>& GetMapModes() const { return MapModes; }
-	int32 GetSelectedBuildingCost() const { return SelectedBuildingCost; }
-	FText GetSelectedBuildingName() const { return SelectedBuildingName; }
-	FText GetPendingOrganizationName() const { return PendingOrganizationName; }
-
-	int32 GetSelectedPositionIndex() const { return SelectedPositionIndex; }
-	bool IsActingAsSelf() const { return bIsActingAsSelf; }
-	USelectablePositionViewModel* GetSelectedPosition() const { return SelectedPosition; }
-	const TArray<TObjectPtr<USelectablePositionViewModel>>& GetSelectablePositions() const { return SelectablePositions; }
-	int32 GetSelectablePositionCount() const { return SelectablePositionCount; }
-
-	EPlayerModal GetActiveModal() const { return ActiveModal; }
-	bool IsFoundOrganizationModalOpen() const { return bIsFoundOrganizationModalOpen; }
-	bool IsJoinOrganizationModalOpen() const { return bIsJoinOrganizationModalOpen; }
-	bool IsViewProvinceModalOpen() const { return bIsViewProvinceModalOpen; }
-	bool IsViewOrganizationModalOpen() const { return bIsViewOrganizationModalOpen; }
-	bool IsRecruitCharacterModalOpen() const { return bIsRecruitCharacterModalOpen; }
-	FOrganizationId GetSelectedOrganizationId() const { return SelectedOrganizationId; }
-	int32 GetSelectedOrganizationIdValue() const { return SelectedOrganizationIdValue; }
-	FOrganizationId GetPendingJoinOrganizationId() const { return PendingJoinOrganizationId; }
-	int32 GetPendingJoinOrganizationIdValue() const { return PendingJoinOrganizationIdValue; }
-	const TArray<TObjectPtr<USelectableOrganizationViewModel>>& GetJoinableOrganizations() const { return JoinableOrganizations; }
-	int32 GetJoinableOrganizationCount() const { return JoinableOrganizationCount; }
-	USelectableOrganizationViewModel* GetSelectedJoinOrganization() const { return SelectedJoinOrganization; }
-	FCharacterId GetPendingRecruitCharacterId() const { return PendingRecruitCharacterId; }
-	int32 GetPendingRecruitCharacterIdValue() const { return PendingRecruitCharacterIdValue; }
-	const TArray<TObjectPtr<USelectableCharacterViewModel>>& GetRecruitableCharacters() const { return RecruitableCharacters; }
-	int32 GetRecruitableCharacterCount() const { return RecruitableCharacterCount; }
-	USelectableCharacterViewModel* GetSelectedRecruitCharacter() const { return SelectedRecruitCharacter; }
-	FText GetModalErrorText() const { return ModalErrorText; }
-	bool CanConfirmModal() const { return bCanConfirmModal; }
-
-	bool IsFoundOrganizationVisible() const { return bIsFoundOrganizationVisible; }
-	bool IsFoundOrganizationEnabled() const { return bIsFoundOrganizationEnabled; }
-	FText GetFoundOrganizationTooltip() const { return FoundOrganizationTooltip; }
-	bool IsJoinOrganizationVisible() const { return bIsJoinOrganizationVisible; }
-	bool IsJoinOrganizationEnabled() const { return bIsJoinOrganizationEnabled; }
-	FText GetJoinOrganizationTooltip() const { return JoinOrganizationTooltip; }
-	bool IsLeaveOrganizationVisible() const { return bIsLeaveOrganizationVisible; }
-	bool IsLeaveOrganizationEnabled() const { return bIsLeaveOrganizationEnabled; }
-	FText GetLeaveOrganizationTooltip() const { return LeaveOrganizationTooltip; }
-	bool IsRecruitCharacterVisible() const { return bIsRecruitCharacterVisible; }
-	bool IsRecruitCharacterEnabled() const { return bIsRecruitCharacterEnabled; }
-	FText GetRecruitCharacterTooltip() const { return RecruitCharacterTooltip; }
-
-	const TArray<TObjectPtr<UResourceViewModel>>& GetResources() const { return Resources; }
-	int32 GetResourceCount() const { return ResourceCount; }
 
 private:
 	UFUNCTION()
