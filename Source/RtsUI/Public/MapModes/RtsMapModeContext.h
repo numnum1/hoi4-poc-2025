@@ -4,6 +4,7 @@
 #include "RtsMapModeContext.generated.h"
 
 class UBuildings;
+class UCharacters;
 class UDepartments;
 class UNations;
 class UOrganizations;
@@ -44,4 +45,7 @@ struct RTSUI_API FRtsMapModeContext
 
 	UPROPERTY(BlueprintReadOnly, Category="Map Mode")
 	TObjectPtr<UPopulations> Populations;
+
+	UPROPERTY(BlueprintReadOnly, Category="Map Mode")
+	TObjectPtr<UCharacters> Characters;
 };

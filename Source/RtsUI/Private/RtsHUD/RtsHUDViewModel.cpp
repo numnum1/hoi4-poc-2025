@@ -11,14 +11,11 @@
 #include "Characters/SelectableCharacterViewModel.h"
 #include "Departments.h"
 #include "Kismet/GameplayStatics.h"
-#include "MapModes/MapModeEntryViewModel.h"
-#include "MapModes/RtsMapModes.h"
-#include "Nations.h"
+#include "MapModes/UseWorldMapView.h"
 #include "OrganizationInfo.h"
 #include "Organizations.h"
 #include "Organizations/SelectableOrganizationViewModel.h"
 #include "Organizations/SelectablePositionViewModel.h"
-#include "Populations.h"
 #include "Presence/RtsPresence.h"
 #include "Provinces.h"
 #include "Resources/ResourceViewModel.h"
@@ -38,11 +35,9 @@ void URtsHUDViewModel::Initialize()
 	UnbindFacades();
 
 	Provinces = FindRtsGameStateComponent<UProvinces>(this);
-	Nations = FindRtsGameStateComponent<UNations>(this);
 	Organizations = FindRtsGameStateComponent<UOrganizations>(this);
 	Departments = FindRtsGameStateComponent<UDepartments>(this);
 	Buildings = FindRtsGameStateComponent<UBuildings>(this);
-	Populations = FindRtsGameStateComponent<UPopulations>(this);
 	Banking = FindRtsGameStateComponent<UBanking>(this);
 	Characters = FindRtsGameStateComponent<UCharacters>(this);
 	Roles = FindRtsGameStateComponent<URoles>(this);
@@ -53,16 +48,19 @@ void URtsHUDViewModel::Initialize()
 		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(PlayedCharacter);
 	}
 
+	if (MapView == nullptr)
+	{
+		MapView = NewObject<UUseWorldMapView>(this);
+		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(MapView);
+	}
+	MapView->Initialize();
+
 	BindFacades();
-	RefreshMapModeEntries();
 	RefreshBuildMenu();
 
 	// Last, because it pulls the controlled character in and everything derived from it expects the
 	// facades above to be resolved already.
 	BindPlayer();
-
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetNationData);
 }
 
 void URtsHUDViewModel::BeginDestroy()
@@ -80,19 +78,6 @@ void URtsHUDViewModel::BeginDestroy()
 	}
 
 	Super::BeginDestroy();
-}
-
-void URtsHUDViewModel::SetActiveMapMode(const EMapMode InActiveMapMode)
-{
-	if (ActiveMapMode == InActiveMapMode)
-	{
-		return;
-	}
-
-	UE_MVVM_SET_PROPERTY_VALUE(ActiveMapMode, InActiveMapMode);
-
-	RefreshMapModeEntries();
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
 }
 
 void URtsHUDViewModel::SetSelectedProvinceId(const FProvinceId InSelectedProvinceId)
@@ -132,77 +117,6 @@ void URtsHUDViewModel::SetSelectedProvinceId(const FProvinceId InSelectedProvinc
 	{
 		UGameplayStatics::PlaySound2D(this, InspectionSound);
 	}
-}
-
-void URtsHUDViewModel::SetHoveredProvinceId(const FProvinceId InHoveredProvinceId)
-{
-	if (UE_MVVM_SET_PROPERTY_VALUE(HoveredProvinceId, InHoveredProvinceId))
-	{
-		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeTooltip);
-	}
-}
-
-TMap<FProvinceId, FProvinceVisuals> URtsHUDViewModel::GetProvinceVisuals() const
-{
-	// While a site is being picked, eligibility *is* what the map is for.
-	if (ActiveModal == EPlayerModal::PM_FoundOrganization && SelectedBuildingType != nullptr)
-	{
-		return BuildFoundingSiteVisuals();
-	}
-
-	FRtsMapModeContext Context;
-	Context.Provinces = Provinces;
-	Context.Nations = Nations;
-	Context.Organizations = Organizations;
-	Context.Departments = Departments;
-	Context.Buildings = Buildings;
-	Context.Populations = Populations;
-
-	return URtsMapModes::BuildVisuals(ActiveMapMode, Context);
-}
-
-TMap<FNationId, FWorldMapNationData> URtsHUDViewModel::GetNationData() const
-{
-	TMap<FNationId, FWorldMapNationData> Result;
-	if (Nations == nullptr || Provinces == nullptr)
-	{
-		return Result;
-	}
-
-	for (int32 Index = 0; Index < Nations->Num(); ++Index)
-	{
-		const FNationId NationId(Index);
-		if (!Nations->IsAlive(NationId))
-		{
-			continue;
-		}
-
-		FWorldMapNationData Data;
-		Data.Name = Nations->GetNationInfo(NationId).NationName;
-		Data.OwnedProvinces = Provinces->CollectProvincesOfNation(NationId);
-
-		// A nation without a single province has nothing on the map to label.
-		if (!Data.OwnedProvinces.IsEmpty())
-		{
-			Result.Add(NationId, MoveTemp(Data));
-		}
-	}
-
-	return Result;
-}
-
-FMapTooltipContent URtsHUDViewModel::ComputeTooltip() const
-{
-	FMapTooltipContent Tooltip;
-
-	if (Provinces == nullptr || !Provinces->IsAlive(HoveredProvinceId))
-	{
-		return Tooltip;
-	}
-
-	Tooltip.Headline = Provinces->GetDisplayInfo(HoveredProvinceId).Name;
-
-	return Tooltip;
 }
 
 //~ Position selection ------------------------------------------------------------------------------
@@ -384,10 +298,7 @@ void URtsHUDViewModel::ApplyModal(const EPlayerModal InModal)
 	ApplyJoinTarget(FOrganizationId());
 	ApplyRecruitTarget(FCharacterId());
 
-	// A modal may paint the map for its own purposes while it is open (the founding dialog colors
-	// provinces by eligibility). Repainting the active mode on every modal change is what puts the
-	// map back afterwards, so no modal has to undo its own colors.
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+	RefreshMapOverlay();
 }
 
 void URtsHUDViewModel::ToggleModal(const EPlayerModal InModal)
@@ -900,11 +811,16 @@ void URtsHUDViewModel::ApplySelectedBuildingType(UBuildingType* InBuildingType)
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingCost, InBuildingType ? InBuildingType->GetBuildCost() : 0);
 	UE_MVVM_SET_PROPERTY_VALUE(SelectedBuildingName, InBuildingType ? InBuildingType->GetBuildingName() : FText::GetEmpty());
 
-	// What the tooltip says about a hovered province depends on what is about to be placed there,
-	// and so does where the map says a site is free.
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ComputeTooltip);
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
+	RefreshMapOverlay();
 	BroadcastFoundOrganizationVerdict();
+}
+
+void URtsHUDViewModel::RefreshMapOverlay()
+{
+	if (MapView)
+	{
+		MapView->SetFoundingSiteOverlay(ControlledCharacterId, ComputeIsBuildMenuOpen() ? SelectedBuildingType : nullptr);
+	}
 }
 
 void URtsHUDViewModel::RefreshBuildMenu()
@@ -1011,187 +927,10 @@ void URtsHUDViewModel::BroadcastFoundOrganizationVerdict()
 	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(CanConfirmFoundOrganization);
 }
 
-FNationId URtsHUDViewModel::GetActingNationId() const
-{
-	const FProvinceId ActorProvinceId = Characters ? Characters->GetCurrentProvince(ControlledCharacterId) : FProvinceId();
-	return Provinces && ActorProvinceId.IsValid() ? Provinces->GetOwningNation(ActorProvinceId) : FNationId();
-}
-
-TMap<FProvinceId, FProvinceVisuals> URtsHUDViewModel::BuildFoundingSiteVisuals() const
-{
-	TMap<FProvinceId, FProvinceVisuals> Visuals;
-	if (Provinces == nullptr)
-	{
-		return Visuals;
-	}
-
-	const FNationId ActingNationId = GetActingNationId();
-
-	for (int32 Index = 0; Index < Provinces->Num(); ++Index)
-	{
-		const FProvinceId CandidateId(Index);
-		if (!Provinces->IsAlive(CandidateId))
-		{
-			continue;
-		}
-
-		const FNationId OwningNation = Provinces->GetOwningNation(CandidateId);
-		if (OwningNation.IsValid() && OwningNation != ActingNationId)
-		{
-			Visuals.Add(CandidateId).PrimaryColor = FColor(128, 128, 128);
-			continue;
-		}
-
-		if (!URtsActions::CanFoundHeadquartersIn(CandidateId, Provinces, ActingNationId))
-		{
-			Visuals.Add(CandidateId).PrimaryColor = FColor::Red;
-			continue;
-		}
-
-		bool bAlreadyHasType = false;
-		if (Buildings)
-		{
-			for (const FBuildingId ExistingId : Buildings->CollectBuildingsInProvince(CandidateId))
-			{
-				if (Buildings->GetBuildingType(ExistingId) == SelectedBuildingType
-					&& Buildings->GetOwnerCharacter(ExistingId) == ControlledCharacterId)
-				{
-					bAlreadyHasType = true;
-					break;
-				}
-			}
-		}
-
-		Visuals.Add(CandidateId).PrimaryColor = bAlreadyHasType ? FColor::Blue : FColor::Green;
-	}
-
-	return Visuals;
-}
-
-//~ Map modes ---------------------------------------------------------------------------------------
-
-void URtsHUDViewModel::RefreshMapModeEntries()
-{
-	const TArray<EMapMode> AvailableModes = URtsMapModes::GetMapModes();
-
-	if (MapModes.Num() != AvailableModes.Num())
-	{
-		MapModes.Empty(AvailableModes.Num());
-
-		for (const EMapMode MapMode : AvailableModes)
-		{
-			UMapModeEntryViewModel* Entry = NewObject<UMapModeEntryViewModel>(this);
-			Entry->SetMapMode(MapMode);
-			Entry->OnClicked.AddDynamic(this, &URtsHUDViewModel::HandleMapModeClicked);
-			MapModes.Add(Entry);
-		}
-
-		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(MapModes);
-	}
-
-	for (const TObjectPtr<UMapModeEntryViewModel>& Entry : MapModes)
-	{
-		Entry->SetActive(Entry->GetMapMode() == ActiveMapMode);
-	}
-}
-
-void URtsHUDViewModel::HandleMapModeClicked(UMapModeEntryViewModel* InClickedEntry)
-{
-	if (InClickedEntry)
-	{
-		SetActiveMapMode(InClickedEntry->GetMapMode());
-	}
-}
-
 //~ Facade events -----------------------------------------------------------------------------------
-
-void URtsHUDViewModel::HandleProvincesSetup()
-{
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetNationData);
-}
-
-void URtsHUDViewModel::HandleProvinceChanged(FProvinceId InProvinceId)
-{
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
-	// Which provinces a nation holds is what the country labels are laid out over, so a change of
-	// owner moves the labels, not just the colors.
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetNationData);
-}
-
-void URtsHUDViewModel::HandleOrganizationsChanged()
-{
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
-}
-
-void URtsHUDViewModel::HandleOrganizationChanged(FOrganizationId InOrganizationId)
-{
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
-}
-
-void URtsHUDViewModel::HandleDepartmentChanged(FDepartmentId InDepartmentId)
-{
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
-}
-
-void URtsHUDViewModel::HandlePopulationsSetup()
-{
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
-}
-
-void URtsHUDViewModel::HandlePopulationsGrown()
-{
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
-}
-
-void URtsHUDViewModel::HandlePopChanged(FPopId InPopId)
-{
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetProvinceVisuals);
-}
-
-void URtsHUDViewModel::HandleNationDestroyed(FNationId InNationId)
-{
-	UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetNationData);
-}
 
 void URtsHUDViewModel::BindFacades()
 {
-	if (Provinces)
-	{
-		Provinces->OnProvincesSetup.AddDynamic(this, &URtsHUDViewModel::HandleProvincesSetup);
-		Provinces->OnOwningNationChanged.AddDynamic(this, &URtsHUDViewModel::HandleProvinceChanged);
-	}
-
-	if (Nations)
-	{
-		Nations->OnNationDestroyed.AddDynamic(this, &URtsHUDViewModel::HandleNationDestroyed);
-	}
-
-	if (Organizations)
-	{
-		Organizations->OnOrganizationAdded.AddDynamic(this, &URtsHUDViewModel::HandleOrganizationsChanged);
-		Organizations->OnNationSettled.AddDynamic(this, &URtsHUDViewModel::HandleOrganizationChanged);
-		Organizations->OnOrganizationDissolved.AddDynamic(this, &URtsHUDViewModel::HandleOrganizationChanged);
-		Organizations->OnRootDepartmentChanged.AddDynamic(this, &URtsHUDViewModel::HandleOrganizationChanged);
-	}
-
-	// A headquarters province comes from the root department's seat, so a reseated department moves
-	// the map even though no organization changed.
-	if (Departments)
-	{
-		Departments->OnDepartmentSeatChanged.AddDynamic(this, &URtsHUDViewModel::HandleDepartmentChanged);
-	}
-
-	// A pop shrinking below its neighbour flips the province's dominant ethnicity, so the ethnicity
-	// mode has to follow size changes, not just creation.
-	if (Populations)
-	{
-		Populations->OnPopulationsSetup.AddDynamic(this, &URtsHUDViewModel::HandlePopulationsSetup);
-		Populations->OnPopulationsGrown.AddDynamic(this, &URtsHUDViewModel::HandlePopulationsGrown);
-		Populations->OnPopSizeChanged.AddDynamic(this, &URtsHUDViewModel::HandlePopChanged);
-		Populations->OnPopDestroyed.AddDynamic(this, &URtsHUDViewModel::HandlePopChanged);
-	}
-
 	if (Banking)
 	{
 		Banking->OnBalanceChanged.AddDynamic(this, &URtsHUDViewModel::HandleBalanceChanged);
@@ -1210,38 +949,6 @@ void URtsHUDViewModel::BindFacades()
 
 void URtsHUDViewModel::UnbindFacades()
 {
-	if (Provinces)
-	{
-		Provinces->OnProvincesSetup.RemoveAll(this);
-		Provinces->OnOwningNationChanged.RemoveAll(this);
-	}
-
-	if (Nations)
-	{
-		Nations->OnNationDestroyed.RemoveAll(this);
-	}
-
-	if (Organizations)
-	{
-		Organizations->OnOrganizationAdded.RemoveAll(this);
-		Organizations->OnNationSettled.RemoveAll(this);
-		Organizations->OnOrganizationDissolved.RemoveAll(this);
-		Organizations->OnRootDepartmentChanged.RemoveAll(this);
-	}
-
-	if (Departments)
-	{
-		Departments->OnDepartmentSeatChanged.RemoveAll(this);
-	}
-
-	if (Populations)
-	{
-		Populations->OnPopulationsSetup.RemoveAll(this);
-		Populations->OnPopulationsGrown.RemoveAll(this);
-		Populations->OnPopSizeChanged.RemoveAll(this);
-		Populations->OnPopDestroyed.RemoveAll(this);
-	}
-
 	if (Banking)
 	{
 		Banking->OnBalanceChanged.RemoveAll(this);
@@ -1287,6 +994,7 @@ void URtsHUDViewModel::HandleControlledCharacterChanged()
 		// checks.
 		RefreshBuildMenu();
 		BroadcastFoundOrganizationVerdict();
+		RefreshMapOverlay();
 	}
 
 	if (PlayedCharacter)

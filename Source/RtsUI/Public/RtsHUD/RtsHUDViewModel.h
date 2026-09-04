@@ -3,11 +3,7 @@
 #include "CoreMinimal.h"
 #include "Actions/RtsActionContext.h"
 #include "Actions/RtsActionInput.h"
-#include "MapModes/MapModeType.h"
-#include "MapTypes.h"
 #include "MVVMViewModelBase.h"
-#include "ProvinceVisuals.h"
-#include "MapTooltip/MapTooltipContent.h"
 #include "Resources/ResourceType.h"
 #include "Resources/RtsResourceContext.h"
 #include "RtsHUD/PlayerModal.h"
@@ -21,23 +17,21 @@ class UBuildingType;
 class UCharacters;
 class UCharacterViewModel;
 class UDepartments;
-class UMapModeEntryViewModel;
-class UNations;
 class UOrganizations;
-class UPopulations;
 class UProvinces;
 class UResourceViewModel;
 class URoles;
 class USelectableCharacterViewModel;
 class USelectableOrganizationViewModel;
 class USelectablePositionViewModel;
+class UUseWorldMapView;
 struct FPosition;
 
 /**
  * Root view model for the HUD, owned by the HUD's root widget — every piece of state the UI itself
- * invents rather than derives from one domain: which map mode is showing, what the player picked on
- * the map and in the build menu, which of the played character's positions they are acting as,
- * which modal is open and what it has collected so far.
+ * invents rather than derives from one domain: what the player picked on the map and in the build
+ * menu, which of the played character's positions they are acting as, which modal is open and what
+ * it has collected so far.
  *
  * All of it lives here rather than split across a second view model per screen, because it is all a
  * function of the same two things — the controlled character and the current selection. A second
@@ -49,10 +43,10 @@ struct FPosition;
  * instead, never through that child — both hang off the same UCharacters delegates, and the order
  * two handlers on one multicast run in is the order they were registered.
  *
- * It is also where the world map gets its colors. Which map mode is showing is HUD state, and the
- * colors that follow from it are a pure function of that mode plus the facades, so ProvinceVisuals
- * is computed rather than stored: nothing can push a color in, and nothing can drift out of sync.
- * The map itself derives nothing — it is handed the finished result through UWorldMapWidget.
+ * MapView is the same arrangement for the world map: a UUseWorldMapView this class owns, holding
+ * the active mode and computing the colors that follow from it. What this class pushes into it is
+ * the founding overlay's two inputs, never a finished color map, so nothing here can drift out of
+ * sync with what the map shows.
  */
 UCLASS(BlueprintType, meta=(MVVMAllowedContextCreationType="CreateInstance"))
 class RTSUI_API URtsHUDViewModel : public UMVVMViewModelBase
@@ -61,13 +55,10 @@ class RTSUI_API URtsHUDViewModel : public UMVVMViewModelBase
 public:
 	URtsHUDViewModel();
 
-	/** Resolves the facades everything here reads, builds the mode picker and starts following
-	 * whichever character the local player controls. Until this runs, ProvinceVisuals is empty. */
+	/** Resolves the facades everything here reads, creates PlayedCharacter and MapView and starts
+	 * following whichever character the local player controls. */
 	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
 	void Initialize();
-
-	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
-	void SetActiveMapMode(EMapMode InActiveMapMode);
 
 	/** Set from the world map click — see CLAUDE.md on the world map being *the* province
 	 * interaction. An invalid id (also reached from a right click anywhere on the map, see
@@ -80,24 +71,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
 	void SetSelectedProvinceId(FProvinceId InSelectedProvinceId);
 
-	/** Set from UWorldMapWidget::OnHoveredProvinceIdChanged. Purely for what the HUD wants to say
-	 * about the province under the cursor - the map draws its own highlight and needs nothing from
-	 * here. An invalid id means the cursor is on no province. */
-	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel")
-	void SetHoveredProvinceId(FProvinceId InHoveredProvinceId);
-
-	/** The color of every living province under the active map mode. Computed on demand — see the
-	 * class comment for why this is not a stored property. */
-	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
-	TMap<FProvinceId, FProvinceVisuals> GetProvinceVisuals() const;
-
-	/** Every living nation's name and the provinces it holds, for the map's country labels. Computed
-	 * on demand for the same reason ProvinceVisuals is — see the class comment. */
-	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
-	TMap<FNationId, FWorldMapNationData> GetNationData() const;
-
 #pragma region Position selection
-	/** Act as the played character themselves. */
 	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel|Positions")
 	void SelectSelf();
 
@@ -170,8 +144,8 @@ public:
 
 	/** What the player has picked in the build menu, or null. The authority on the pick — the row's
 	 * own bIsSelected is display only, the same split UBuildMenuEntryViewModel documents. Read by
-	 * whichever process is collecting a building, and by ComputeTooltip so hovering a province can
-	 * say something about the building about to be placed there. */
+	 * whichever process is collecting a building, and pushed into MapView as the founding overlay's
+	 * subject. */
 	UBuildingType* GetSelectedBuildingType() const { return SelectedBuildingType; }
 
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
@@ -191,7 +165,7 @@ public:
 	void SetPendingOrganizationName(const FText& InPendingOrganizationName);
 
 	/** Why founding would be refused right now, or empty. Computed rather than stored, the same
-	 * reason ProvinceVisuals is: nothing can push a verdict in and none of its inputs can drift out
+	 * reason the map colors are: nothing can push a verdict in and none of its inputs can drift out
 	 * of sync with it. Still only UX feedback — HandleFoundOrganizationConfirmed re-runs both gates
 	 * on confirm, which is what actually decides. */
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
@@ -200,13 +174,6 @@ public:
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
 	bool CanConfirmFoundOrganization() const;
 #pragma endregion
-
-#pragma region Tooltip
-	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
-	FMapTooltipContent ComputeTooltip() const;
-#pragma endregion
-
-	virtual void BeginDestroy() override;
 
 private:
 	/** Mirrors ARtsPlayer::ControlledCharacterId — pulled in BindPlayer and kept current by
@@ -221,7 +188,7 @@ private:
 	TObjectPtr<UCharacterViewModel> PlayedCharacter;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
-	EMapMode ActiveMapMode = EMapMode::EMM_Political;
+	TObjectPtr<UUseWorldMapView> MapView;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FProvinceId SelectedProvinceId;
@@ -229,9 +196,6 @@ private:
 	/** SelectedProvinceId as a plain int32, for widgets that cannot bind the id struct. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	int32 SelectedProvinceIdValue = INDEX_NONE;
-
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
-	FProvinceId HoveredProvinceId;
 
 	/** The selected province's name, so a form showing the picked site does not need UProvinces of
 	 * its own. Derived in SetSelectedProvinceId, never pushed. */
@@ -248,11 +212,6 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FText PendingOrganizationName;
-
-	/** One row per mode, cached rather than rebuilt: the set of modes is fixed, only which one is
-	 * active changes. */
-	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
-	TArray<TObjectPtr<UMapModeEntryViewModel>> MapModes;
 
 	//~ Position selection --------------------------------------------------------------------------
 
@@ -404,15 +363,11 @@ private:
 	int32 ResourceCount = 0;
 
 public:
-	/** Read externally by UFoundOrganizationModalWidget::Confirm, which is why this is the one
-	 * FieldNotify property here with a public accessor — everything else binds through Blueprint
-	 * reflection and has no C++ reader. */
 	FProvinceId GetSelectedProvinceId() const { return SelectedProvinceId; }
 
-private:
-	UFUNCTION()
-	void HandleMapModeClicked(UMapModeEntryViewModel* InClickedEntry);
+	UUseWorldMapView* GetMapView() const { return MapView; }
 
+private:
 	//~ Build menu ---------------------------------------------------------------------------------
 
 	/** The one writer of SelectedBuildingType, and through the rebuild below of the row highlight
@@ -420,6 +375,8 @@ private:
 	void ApplySelectedBuildingType(UBuildingType* InBuildingType);
 
 	void RefreshBuildMenu();
+
+	void RefreshMapOverlay();
 
 	/** Whether the menu currently offers headquarters only. Derived from ActiveModal rather than
 	 * pushed in when the menu is opened: the founding process is the only thing that narrows the
@@ -539,51 +496,8 @@ private:
 	 * setter to hang it off, since the name, the building and the site all arrive separately. */
 	void BroadcastFoundOrganizationVerdict();
 
-	/** The acting character's own nation: whoever owns the province they are standing in, the same
-	 * derivation UCharacterViewModel::CurrentNationId makes for display. */
-	FNationId GetActingNationId() const;
-
-	/** Every living province colored by founding eligibility for the picked building — grey for
-	 * another nation's territory, red where founding is refused for another reason, blue where the
-	 * character already has one, green where a site is free.
-	 *
-	 * Returned from GetProvinceVisuals instead of painted onto the map directly, so the founding
-	 * overlay is a derivation like every other map coloring here and nothing has to undo it: the
-	 * moment the modal closes or the pick is dropped, the active map mode is what comes back. */
-	TMap<FProvinceId, FProvinceVisuals> BuildFoundingSiteVisuals() const;
-
-	//~ Anything that can move a province's color under the active mode ---------------------------
-
-	UFUNCTION()
-	void HandleProvincesSetup();
-
-	UFUNCTION()
-	void HandleProvinceChanged(FProvinceId InProvinceId);
-
-	UFUNCTION()
-	void HandleOrganizationsChanged();
-
-	UFUNCTION()
-	void HandleOrganizationChanged(FOrganizationId InOrganizationId);
-
-	UFUNCTION()
-	void HandleDepartmentChanged(FDepartmentId InDepartmentId);
-
-	UFUNCTION()
-	void HandlePopulationsSetup();
-
-	UFUNCTION()
-	void HandlePopulationsGrown();
-
-	UFUNCTION()
-	void HandlePopChanged(FPopId InPopId);
-
-	UFUNCTION()
-	void HandleNationDestroyed(FNationId InNationId);
-
 	void BindFacades();
 	void UnbindFacades();
-	void RefreshMapModeEntries();
 
 	/** Resolves the local ARtsPlayer, binds HandleControlledCharacterChanged to it and pulls the
 	 * current controlled character in — called from Initialize(), so neither the id nor the
@@ -607,9 +521,6 @@ private:
 	TObjectPtr<UProvinces> Provinces;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UNations> Nations;
-
-	UPROPERTY(Transient)
 	TObjectPtr<UOrganizations> Organizations;
 
 	UPROPERTY(Transient)
@@ -617,9 +528,6 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UBuildings> Buildings;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UPopulations> Populations;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UBanking> Banking;

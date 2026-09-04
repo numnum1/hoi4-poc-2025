@@ -9,6 +9,8 @@
 #include "Styling/SlateBrush.h"
 #include "RtsMapModes.generated.h"
 
+class UBuildingType;
+
 /**
  * The map mode catalogue, hardcoded as small switches over EMapMode rather than a registry or a
  * UObject subclass per mode. Adding a mode means adding one EMapMode entry and one case to each
@@ -42,6 +44,8 @@ public:
 	 * caller can safely push: painting nothing leaves the map as it was.
 	 */
 	static TMap<FProvinceId, FProvinceVisuals> BuildVisuals(EMapMode InMapMode, const FRtsMapModeContext& InContext);
+
+	static TMap<FProvinceId, FProvinceVisuals> BuildFoundingSiteVisuals(const FRtsMapModeContext& InContext, FCharacterId InActorId, const UBuildingType* InHeadquartersType);
 
 	/**
 	 * A stable, readable color for an organization. FOrganizationInfo carries no map color, and

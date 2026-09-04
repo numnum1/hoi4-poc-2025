@@ -1,7 +1,10 @@
 #include "MapModes/RtsMapModes.h"
 
+#include "Actions/RtsActions.h"
 #include "Brushes/SlateNoResource.h"
+#include "BuildingType.h"
 #include "Buildings.h"
+#include "Characters.h"
 #include "Departments.h"
 #include "Nations.h"
 #include "Organizations.h"
@@ -215,6 +218,59 @@ TMap<FProvinceId, FProvinceVisuals> URtsMapModes::BuildVisuals(const EMapMode In
 	}
 
 	return TMap<FProvinceId, FProvinceVisuals>();
+}
+
+TMap<FProvinceId, FProvinceVisuals> URtsMapModes::BuildFoundingSiteVisuals(const FRtsMapModeContext& InContext, const FCharacterId InActorId, const UBuildingType* InHeadquartersType)
+{
+	TMap<FProvinceId, FProvinceVisuals> Visuals;
+	if (InContext.Provinces == nullptr)
+	{
+		return Visuals;
+	}
+
+	UProvinces* Provinces = InContext.Provinces;
+	const FProvinceId ActorProvinceId = InContext.Characters ? InContext.Characters->GetCurrentProvince(InActorId) : FProvinceId();
+	const FNationId ActingNationId = ActorProvinceId.IsValid() ? Provinces->GetOwningNation(ActorProvinceId) : FNationId();
+
+	for (int32 Index = 0; Index < Provinces->Num(); ++Index)
+	{
+		const FProvinceId CandidateId(Index);
+		if (!Provinces->IsAlive(CandidateId))
+		{
+			continue;
+		}
+
+		const FNationId OwningNation = Provinces->GetOwningNation(CandidateId);
+		if (OwningNation.IsValid() && OwningNation != ActingNationId)
+		{
+			Visuals.Add(CandidateId).PrimaryColor = FColor(128, 128, 128);
+			continue;
+		}
+
+		if (!URtsActions::CanFoundHeadquartersIn(CandidateId, Provinces, ActingNationId))
+		{
+			Visuals.Add(CandidateId).PrimaryColor = FColor::Red;
+			continue;
+		}
+
+		bool bAlreadyHasType = false;
+		if (InContext.Buildings)
+		{
+			for (const FBuildingId ExistingId : InContext.Buildings->CollectBuildingsInProvince(CandidateId))
+			{
+				if (InContext.Buildings->GetBuildingType(ExistingId) == InHeadquartersType
+					&& InContext.Buildings->GetOwnerCharacter(ExistingId) == InActorId)
+				{
+					bAlreadyHasType = true;
+					break;
+				}
+			}
+		}
+
+		Visuals.Add(CandidateId).PrimaryColor = bAlreadyHasType ? FColor::Blue : FColor::Green;
+	}
+
+	return Visuals;
 }
 
 FColor URtsMapModes::GetOrganizationColor(const FOrganizationId InOrganizationId)

@@ -5,6 +5,7 @@
 #include "OrganizationDetail/OrganizationDetailWidget.h"
 #include "ProvinceDetail/ProvinceDetailWidget.h"
 #include "RecruitCharacterModal/RecruitCharacterModalWidget.h"
+#include "MapModes/UseWorldMapView.h"
 #include "RtsHUD/RtsHUDViewModel.h"
 #include "WorldMapWidget.h"
 
@@ -17,15 +18,19 @@ void URtsHUDWidget::NativeOnInitialized()
 		HUDViewModel = NewObject<URtsHUDViewModel>(this);
 	}
 
-	HUDViewModel->AddFieldValueChangedDelegate(
-		URtsHUDViewModel::FFieldNotificationClassDescriptor::GetProvinceVisuals,
-		INotifyFieldValueChanged::FFieldValueChangedDelegate::CreateUObject(this, &URtsHUDWidget::HandleProvinceVisualsChanged));
-
-	HUDViewModel->AddFieldValueChangedDelegate(
-		URtsHUDViewModel::FFieldNotificationClassDescriptor::GetNationData,
-		INotifyFieldValueChanged::FFieldValueChangedDelegate::CreateUObject(this, &URtsHUDWidget::HandleNationDataChanged));
-
 	HUDViewModel->Initialize();
+
+	// After Initialize, which is what creates the map view.
+	if (UUseWorldMapView* MapView = HUDViewModel->GetMapView())
+	{
+		MapView->AddFieldValueChangedDelegate(
+			UUseWorldMapView::FFieldNotificationClassDescriptor::GetProvinceVisuals,
+			INotifyFieldValueChanged::FFieldValueChangedDelegate::CreateUObject(this, &URtsHUDWidget::HandleProvinceVisualsChanged));
+
+		MapView->AddFieldValueChangedDelegate(
+			UUseWorldMapView::FFieldNotificationClassDescriptor::GetNationData,
+			INotifyFieldValueChanged::FFieldValueChangedDelegate::CreateUObject(this, &URtsHUDWidget::HandleNationDataChanged));
+	}
 
 	// A child widget is fully initialized before its parent, so every one of these already exists.
 	if (FoundOrganizationModal)
@@ -59,7 +64,11 @@ void URtsHUDWidget::NativeOnInitialized()
 	if (UWorldMapWidget* MapWidget = ResolveMapWidget())
 	{
 		MapWidget->OnProvinceClicked.AddDynamic(ViewModel, &URtsHUDViewModel::SetSelectedProvinceId);
-		MapWidget->OnHoveredProvinceIdChanged.AddDynamic(ViewModel, &URtsHUDViewModel::SetHoveredProvinceId);
+
+		if (UUseWorldMapView* MapView = ViewModel->GetMapView())
+		{
+			MapWidget->OnHoveredProvinceIdChanged.AddDynamic(MapView, &UUseWorldMapView::SetHoveredProvinceId);
+		}
 	}
 
 	// Initialize broadcasts on its own, but the map actor may not have resolved its province lookup
@@ -72,12 +81,20 @@ void URtsHUDWidget::NativeDestruct()
 {
 	if (HUDViewModel)
 	{
-		HUDViewModel->RemoveAllFieldValueChangedDelegates(this);
+		UUseWorldMapView* MapView = HUDViewModel->GetMapView();
+		if (MapView)
+		{
+			MapView->RemoveAllFieldValueChangedDelegates(this);
+		}
 
 		if (WorldMapWidget)
 		{
 			WorldMapWidget->OnProvinceClicked.RemoveAll(HUDViewModel.Get());
-			WorldMapWidget->OnHoveredProvinceIdChanged.RemoveAll(HUDViewModel.Get());
+
+			if (MapView)
+			{
+				WorldMapWidget->OnHoveredProvinceIdChanged.RemoveAll(MapView);
+			}
 		}
 	}
 
@@ -129,17 +146,19 @@ UWorldMapWidget* URtsHUDWidget::ResolveMapWidget()
 void URtsHUDWidget::PushProvinceVisuals()
 {
 	UWorldMapWidget* MapWidget = ResolveMapWidget();
-	if (MapWidget && HUDViewModel)
+	UUseWorldMapView* MapView = HUDViewModel ? HUDViewModel->GetMapView() : nullptr;
+	if (MapWidget && MapView)
 	{
-		MapWidget->SetProvinceVisuals(HUDViewModel->GetProvinceVisuals());
+		MapWidget->SetProvinceVisuals(MapView->GetProvinceVisuals());
 	}
 }
 
 void URtsHUDWidget::PushNationData()
 {
 	UWorldMapWidget* MapWidget = ResolveMapWidget();
-	if (MapWidget && HUDViewModel)
+	UUseWorldMapView* MapView = HUDViewModel ? HUDViewModel->GetMapView() : nullptr;
+	if (MapWidget && MapView)
 	{
-		MapWidget->SetNationData(HUDViewModel->GetNationData());
+		MapWidget->SetNationData(MapView->GetNationData());
 	}
 }
