@@ -1,5 +1,7 @@
 #include "RtsHUD/RtsHUDWidget.h"
 
+#include "FocusTree/FocusEventWidget.h"
+#include "FocusTree/FocusTreeWidget.h"
 #include "FoundOrganizationModal/FoundOrganizationModalWidget.h"
 #include "JoinOrganizationModal/JoinOrganizationModalWidget.h"
 #include "OrganizationDetail/OrganizationDetailWidget.h"
@@ -56,6 +58,16 @@ void URtsHUDWidget::NativeOnInitialized()
 	if (RecruitCharacterModal)
 	{
 		RecruitCharacterModal->SetHUDViewModel(HUDViewModel);
+	}
+
+	if (FocusTree)
+	{
+		FocusTree->SetHUDViewModel(HUDViewModel);
+	}
+
+	if (FocusEvent)
+	{
+		FocusEvent->SetHUDViewModel(HUDViewModel);
 	}
 
 	// Bound here rather than in the HUD Blueprint's graph: this class holds both the map and the

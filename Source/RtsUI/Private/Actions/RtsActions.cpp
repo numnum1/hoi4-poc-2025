@@ -64,40 +64,6 @@ namespace
 		return FText::GetEmpty();
 	}
 
-	/** The shared gate every position-scoped action opens with: the player really is acting as a
-	 * position, really holds the (organization, role) pair the context claims, and that role grants
-	 * InRequiredPermissions. Self-scoped actions call GetSelfScopeReason instead. */
-	FText GetPositionScopeReason(const FRtsActionContext& InContext, const int32 InRequiredPermissions)
-	{
-		const FText ActorReason = GetActorReason(InContext);
-		if (!ActorReason.IsEmpty())
-		{
-			return ActorReason;
-		}
-
-		if (InContext.Scope != ERtsActionScope::RAS_Position)
-		{
-			return LOCTEXT("WrongScope", "Not available in this role.");
-		}
-
-		if (!HoldsClaimedPosition(InContext))
-		{
-			return LOCTEXT("PositionNotHeld", "You do not hold that position.");
-		}
-
-		if (InContext.Roles == nullptr)
-		{
-			return LOCTEXT("NoRoleLibrary", "Role library unavailable.");
-		}
-
-		if (!InContext.Roles->HasPermissions(InContext.RoleId, InRequiredPermissions))
-		{
-			return LOCTEXT("MissingPermission", "Your role does not grant this.");
-		}
-
-		return FText::GetEmpty();
-	}
-
 	/** The counterpart for actions a character takes as themselves rather than for an organization. */
 	FText GetSelfScopeReason(const FRtsActionContext& InContext)
 	{
@@ -152,6 +118,37 @@ namespace
 
 		return Remaining == 0;
 	}
+}
+
+FText URtsActions::GetPositionScopeReason(const FRtsActionContext& InContext, const int32 InRequiredPermissions)
+{
+	const FText ActorReason = GetActorReason(InContext);
+	if (!ActorReason.IsEmpty())
+	{
+		return ActorReason;
+	}
+
+	if (InContext.Scope != ERtsActionScope::RAS_Position)
+	{
+		return LOCTEXT("WrongScope", "Not available in this role.");
+	}
+
+	if (!HoldsClaimedPosition(InContext))
+	{
+		return LOCTEXT("PositionNotHeld", "You do not hold that position.");
+	}
+
+	if (InContext.Roles == nullptr)
+	{
+		return LOCTEXT("NoRoleLibrary", "Role library unavailable.");
+	}
+
+	if (!InContext.Roles->HasPermissions(InContext.RoleId, InRequiredPermissions))
+	{
+		return LOCTEXT("MissingPermission", "Your role does not grant this.");
+	}
+
+	return FText::GetEmpty();
 }
 
 FText URtsActions::GetFoundOrganizationBlockedReason(const FRtsActionContext& InContext)

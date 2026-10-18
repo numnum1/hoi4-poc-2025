@@ -8,6 +8,9 @@
 #include "Characters.h"
 #include "Departments.h"
 #include "Economy/RtsEconomy.h"
+#include "Focuses.h"
+#include "Focuses/RtsFocusContext.h"
+#include "Focuses/RtsFocuses.h"
 #include "Nations.h"
 #include "Organizations.h"
 #include "Populations.h"
@@ -27,6 +30,7 @@ ARtsGameState::ARtsGameState()
 	DepartmentsContainer = CreateDefaultSubobject<UDepartments>(TEXT("DepartmentsContainer"));
 	RolesContainer = CreateDefaultSubobject<URoles>(TEXT("RolesContainer"));
 	BankingContainer = CreateDefaultSubobject<UBanking>(TEXT("BankingContainer"));
+	OrganizationFocusesContainer = CreateDefaultSubobject<UOrganizationFocuses>(TEXT("OrganizationFocusesContainer"));
 
 	SchedulesContainer = CreateDefaultSubobject<USchedules>(TEXT("SchedulesContainer"));
 	Time = CreateDefaultSubobject<UTime>(TEXT("Time"));
@@ -65,6 +69,15 @@ void ARtsGameState::HandleHourElapsed(const int32 InHoursElapsed)
 	{
 		URtsEconomy::SettleDay(Context);
 	}
+
+	FRtsFocusContext FocusContext;
+	FocusContext.Organizations = OrganizationsContainer;
+	FocusContext.Departments = DepartmentsContainer;
+	FocusContext.Banking = BankingContainer;
+	FocusContext.OrganizationFocuses = OrganizationFocusesContainer;
+	FocusContext.Now = Time ? Time->GetCurrentTime() : FDateTime();
+
+	URtsFocuses::AdvanceDay(FocusContext);
 }
 
 TArray<FOrganizationInfo> ARtsGameState::CollectOrganizationsForCharacter(const FCharacterId InCharacterId) const

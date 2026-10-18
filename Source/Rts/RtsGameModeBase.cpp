@@ -7,6 +7,7 @@
 #include "BuildingType.h"
 #include "CharacterEntitySubsystem.h"
 #include "Characters.h"
+#include "Focuses.h"
 #include "Nations.h"
 #include "Organizations.h"
 #include "Populations.h"
@@ -50,6 +51,8 @@ void ARtsGameModeBase::LoadScenario(UScenario* InScenario)
 	
 	BuildingTypes.Reset();
 	BuildingTypes.Append(InScenario->GetBuildingTypes());
+
+	RtsGameState->GetOrganizationFocusesContainer()->Setup(InScenario->GetFocusTrees());
 
 	const auto [Categories, LifeTypes, Species, Races, RaceIndexes] =
 		ScenarioLoader::ExtractRaces(InScenario->GetCharacters(), InScenario->GetProvinces());

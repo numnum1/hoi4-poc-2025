@@ -8,7 +8,7 @@ public class Rts : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "RtsCore", "Buildings", "Characters", "Nations", "Provinces", "Populations", "Organizations", "Banking", "Races", "Schedules", "Scenario", "Time" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "RtsCore", "Buildings", "Characters", "Nations", "Provinces", "Populations", "Organizations", "Banking", "Races", "Schedules", "Scenario", "Time", "Focuses" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			// ARtsGameState::HandleHourElapsed calls URtsEconomy::SettleDay once per elapsed game
