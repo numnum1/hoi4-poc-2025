@@ -15,7 +15,9 @@ public class Scenario : ModuleRules
                 // UScheduleAsset authors an FSchedule in a public header
                 "Schedules",
                 // UScenario authors the building catalogue as UBuildingType* in a public header
-                "Buildings"
+                "Buildings",
+                // UScenario authors the organization focus trees as UOrganizationFocusTreeAsset* in a public header
+                "Focuses"
                 // UEthnicityAsset needs no domain module: it authors plain data, and the conversion
                 // to FEthnicityInfo/FPopSpawnData happens in ScenarioLoading.h like every other asset
             }

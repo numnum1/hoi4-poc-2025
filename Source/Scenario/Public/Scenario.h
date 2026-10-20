@@ -10,6 +10,7 @@ class UOrganizationAsset;
 class URoleAsset;
 class UBankAsset;
 class UBuildingType;
+class UOrganizationFocusTreeAsset;
 
 class FScenarioModule : public IModuleInterface
 {
@@ -42,6 +43,9 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Buildings", meta=(AllowPrivateAccess=true))
     TArray<UBuildingType*> BuildingTypes;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Focuses", meta=(AllowPrivateAccess=true))
+    TArray<UOrganizationFocusTreeAsset*> FocusTrees;
 public:
     FORCEINLINE const TArray<UProvinceAsset*>& GetProvinces() const { return Provinces; }
     FORCEINLINE const TArray<UCharacterAsset*>& GetCharacters() const { return Characters; }
@@ -49,4 +53,5 @@ public:
     FORCEINLINE const TArray<URoleAsset*>& GetRoles() const { return Roles; }
     FORCEINLINE const TArray<UBankAsset*>& GetBanks() const { return Banks; }
     FORCEINLINE const TArray<UBuildingType*>& GetBuildingTypes() const { return BuildingTypes; }
+    FORCEINLINE const TArray<UOrganizationFocusTreeAsset*>& GetFocusTrees() const { return FocusTrees; }
 };

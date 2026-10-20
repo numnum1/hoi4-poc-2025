@@ -65,7 +65,10 @@ public class RtsUI : ModuleRules
                 "Ecology",
                 // Only to resolve ARtsMapPawn in the .cpp and bind OnRightMouseButtonClicked; the
                 // header forward-declares it.
-                "MapCamera"
+                "MapCamera",
+                // URtsFocuses gates and runs organization foci and the focus tree hook shows them;
+                // the focus assets and UOrganizationFocuses are only forward-declared on headers
+                "Focuses"
             }
         );
     }

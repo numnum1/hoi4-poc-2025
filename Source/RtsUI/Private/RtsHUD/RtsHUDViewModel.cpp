@@ -10,6 +10,9 @@
 #include "Characters/CharacterViewModel.h"
 #include "Characters/SelectableCharacterViewModel.h"
 #include "Departments.h"
+#include "Focuses.h"
+#include "Focuses/RtsFocuses.h"
+#include "Focuses/UseOrganizationFocusTree.h"
 #include "Kismet/GameplayStatics.h"
 #include "MapModes/UseWorldMapView.h"
 #include "OrganizationInfo.h"
@@ -24,6 +27,7 @@
 #include "RtsGameStateComponent.h"
 #include "RtsMapPawn.h"
 #include "RtsPlayer.h"
+#include "Time.h"
 
 URtsHUDViewModel::URtsHUDViewModel()
 {
@@ -41,6 +45,8 @@ void URtsHUDViewModel::Initialize()
 	Banking = FindRtsGameStateComponent<UBanking>(this);
 	Characters = FindRtsGameStateComponent<UCharacters>(this);
 	Roles = FindRtsGameStateComponent<URoles>(this);
+	OrganizationFocuses = FindRtsGameStateComponent<UOrganizationFocuses>(this);
+	Time = FindRtsGameStateComponent<UTime>(this);
 
 	if (PlayedCharacter == nullptr)
 	{
@@ -54,6 +60,13 @@ void URtsHUDViewModel::Initialize()
 		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(MapView);
 	}
 	MapView->Initialize();
+
+	if (FocusTree == nullptr)
+	{
+		FocusTree = NewObject<UUseOrganizationFocusTree>(this);
+		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(FocusTree);
+	}
+	FocusTree->Initialize();
 
 	BindFacades();
 	RefreshBuildMenu();
@@ -147,6 +160,7 @@ void URtsHUDViewModel::ApplySelection(const int32 InPositionIndex)
 
 	RefreshActions();
 	RefreshResources();
+	RefreshFocusTree();
 }
 
 void URtsHUDViewModel::RefreshSelectablePositions()
@@ -276,6 +290,7 @@ void URtsHUDViewModel::ApplyModal(const EPlayerModal InModal)
 	UE_MVVM_SET_PROPERTY_VALUE(bIsViewProvinceModalOpen, InModal == EPlayerModal::PM_ViewProvince);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsViewOrganizationModalOpen, InModal == EPlayerModal::PM_ViewOrganization);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsRecruitCharacterModalOpen, InModal == EPlayerModal::PM_RecruitCharacter);
+	UE_MVVM_SET_PROPERTY_VALUE(bIsFocusTreeModalOpen, InModal == EPlayerModal::PM_FocusTree);
 
 	// The build menu belongs to whichever process needs a building picked, and today that is
 	// founding an organization - so the modal opening brings the one menu up and closing it takes
@@ -619,6 +634,8 @@ FRtsActionContext URtsHUDViewModel::MakeContext() const
 	Context.Departments = Departments;
 	Context.Banking = Banking;
 	Context.Provinces = Provinces;
+	Context.OrganizationFocuses = OrganizationFocuses;
+	Context.Time = Time;
 
 	if (Characters && !bIsActingAsSelf)
 	{
@@ -671,6 +688,38 @@ void URtsHUDViewModel::RefreshActions()
 	UE_MVVM_SET_PROPERTY_VALUE(bIsRecruitCharacterVisible, !bIsActingAsSelf);
 	UE_MVVM_SET_PROPERTY_VALUE(bIsRecruitCharacterEnabled, RecruitCharacterReason.IsEmpty());
 	UE_MVVM_SET_PROPERTY_VALUE(RecruitCharacterTooltip, RecruitCharacterReason);
+}
+
+void URtsHUDViewModel::RefreshFocusTree()
+{
+	if (FocusTree == nullptr)
+	{
+		return;
+	}
+
+	FocusTree->SetOrganizationId(MakeContext().OrganizationId);
+}
+
+void URtsHUDViewModel::StartFocus(UOrganizationFocusAsset* InFocus)
+{
+	const FRtsActionContext Context = MakeContext();
+	if (!URtsFocuses::GetStartFocusBlockedReason(Context, InFocus).IsEmpty())
+	{
+		return;
+	}
+
+	URtsFocuses::ExecuteStartFocus(Context, InFocus);
+}
+
+void URtsHUDViewModel::ChooseFocusEventOption(const int32 InOptionIndex)
+{
+	const FRtsActionContext Context = MakeContext();
+	if (!URtsFocuses::GetChooseEventOptionBlockedReason(Context, InOptionIndex).IsEmpty())
+	{
+		return;
+	}
+
+	URtsFocuses::ExecuteChooseEventOption(Context, InOptionIndex);
 }
 
 FRtsResourceContext URtsHUDViewModel::MakeResourceContext() const

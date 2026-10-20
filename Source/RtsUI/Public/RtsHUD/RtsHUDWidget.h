@@ -5,6 +5,8 @@
 #include "FieldNotificationId.h"
 #include "RtsHUDWidget.generated.h"
 
+class UFocusEventWidget;
+class UFocusTreeWidget;
 class UFoundOrganizationModalWidget;
 class UJoinOrganizationModalWidget;
 class UOrganizationDetailWidget;
@@ -67,6 +69,12 @@ protected:
 	/** Same optionality reasoning as FoundOrganizationModal. */
 	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
 	TObjectPtr<URecruitCharacterModalWidget> RecruitCharacterModal;
+
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+	TObjectPtr<UFocusTreeWidget> FocusTree;
+
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidgetOptional))
+	TObjectPtr<UFocusEventWidget> FocusEvent;
 
 private:
 	void HandleProvinceVisualsChanged(UObject* InViewModel, UE::FieldNotification::FFieldId InFieldId);

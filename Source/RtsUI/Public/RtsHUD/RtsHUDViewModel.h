@@ -17,10 +17,14 @@ class UBuildingType;
 class UCharacters;
 class UCharacterViewModel;
 class UDepartments;
+class UOrganizationFocusAsset;
+class UOrganizationFocuses;
 class UOrganizations;
 class UProvinces;
 class UResourceViewModel;
 class URoles;
+class UTime;
+class UUseOrganizationFocusTree;
 class USelectableCharacterViewModel;
 class USelectableOrganizationViewModel;
 class USelectablePositionViewModel;
@@ -138,6 +142,14 @@ public:
 	void ClickRecruitCharacter();
 #pragma endregion
 
+#pragma region Focuses
+	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel|Focuses")
+	void StartFocus(UOrganizationFocusAsset* InFocus);
+
+	UFUNCTION(BlueprintCallable, Category = "Rts HUD ViewModel|Focuses")
+	void ChooseFocusEventOption(int32 InOptionIndex);
+#pragma endregion
+
 #pragma region Build Menu
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "Rts HUD ViewModel")
 	bool ComputeIsBuildMenuOpen() const;
@@ -189,6 +201,9 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	TObjectPtr<UUseWorldMapView> MapView;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
+	TObjectPtr<UUseOrganizationFocusTree> FocusTree;
 
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel", meta = (AllowPrivateAccess))
 	FProvinceId SelectedProvinceId;
@@ -259,6 +274,9 @@ private:
 	/** Same idea as bIsFoundOrganizationModalOpen, for the recruit-character modal. */
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
 	bool bIsRecruitCharacterModalOpen = false;
+
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "Rts HUD ViewModel|Modal", meta = (AllowPrivateAccess))
+	bool bIsFocusTreeModalOpen = false;
 
 	/** The organization PM_ViewOrganization shows. Bound as a CreateInstance UOrganizationViewModel's
 	 * Initialize(FOrganizationId) destination in Blueprint — same shape as SelectedProvinceId. */
@@ -367,6 +385,8 @@ public:
 
 	UUseWorldMapView* GetMapView() const { return MapView; }
 
+	UUseOrganizationFocusTree* GetFocusTree() const { return FocusTree; }
+
 private:
 	//~ Build menu ---------------------------------------------------------------------------------
 
@@ -465,6 +485,8 @@ private:
 
 	void RefreshActions();
 
+	void RefreshFocusTree();
+
 	/** The owner the resource list is asked about, built from the same selection MakeContext reads:
 	 * the selected position's organization, or the played character itself while acting as self. */
 	FRtsResourceContext MakeResourceContext() const;
@@ -537,6 +559,12 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<URoles> Roles;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UOrganizationFocuses> OrganizationFocuses;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTime> Time;
 
 	UPROPERTY()
 	TObjectPtr<ARtsPlayer> Player;

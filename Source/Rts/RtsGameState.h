@@ -19,6 +19,7 @@ class UNations;
 class UCharacters;
 class USchedules;
 class URoles;
+class UOrganizationFocuses;
 
 /**
  * 
@@ -52,6 +53,8 @@ private:
 	URoles* RolesContainer;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	UBanking* BankingContainer;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+	UOrganizationFocuses* OrganizationFocusesContainer;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
 	USchedules* SchedulesContainer;
@@ -77,6 +80,7 @@ public:
 	FORCEINLINE UDepartments* GetDepartmentsContainer() const { return DepartmentsContainer; }
 	FORCEINLINE URoles* GetRoles() const { return RolesContainer; }
 	FORCEINLINE UBanking* GetBankingContainer() const { return BankingContainer; }
+	FORCEINLINE UOrganizationFocuses* GetOrganizationFocusesContainer() const { return OrganizationFocusesContainer; }
 
 	FORCEINLINE USchedules* GetSchedules() const { return SchedulesContainer; }
 	FORCEINLINE UTime* GetTime() const { return Time; }

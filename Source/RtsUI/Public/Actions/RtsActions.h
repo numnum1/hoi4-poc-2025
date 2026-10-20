@@ -41,6 +41,8 @@ class RTSUI_API URtsActions : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
+	static FText GetPositionScopeReason(const FRtsActionContext& InContext, int32 InRequiredPermissions);
+
 	static FText GetFoundOrganizationBlockedReason(const FRtsActionContext& InContext);
 	static FText GetFoundOrganizationInvalidInputReason(const FRtsActionContext& InContext, const FRtsActionInput& InInput);
 	static void ExecuteFoundOrganization(const FRtsActionContext& InContext, const FRtsActionInput& InInput);

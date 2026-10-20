@@ -78,6 +78,11 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "Focuses",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "Ideologies",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"

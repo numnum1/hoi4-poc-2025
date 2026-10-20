@@ -19,5 +19,6 @@ enum class EPlayerModal : uint8
 	PM_JoinOrganization  UMETA(DisplayName = "Join Organization"),
 	PM_ViewProvince      UMETA(DisplayName = "View Province"),
 	PM_ViewOrganization  UMETA(DisplayName = "View Organization"),
-	PM_RecruitCharacter  UMETA(DisplayName = "Recruit Character")
+	PM_RecruitCharacter  UMETA(DisplayName = "Recruit Character"),
+	PM_FocusTree         UMETA(DisplayName = "Focus Tree")
 };

@@ -8,9 +8,11 @@ class UBanking;
 class UBuildings;
 class UCharacters;
 class UDepartments;
+class UOrganizationFocuses;
 class UOrganizations;
 class UProvinces;
 class URoles;
+class UTime;
 
 /** Which role the acting character plays for this action: themselves, or one of their positions. */
 UENUM(BlueprintType)
@@ -79,4 +81,10 @@ struct RTSUI_API FRtsActionContext
 	 * URtsActions::CanFoundHeadquartersIn. */
 	UPROPERTY(BlueprintReadOnly, Category="Action")
 	TObjectPtr<UProvinces> Provinces;
+
+	UPROPERTY(BlueprintReadOnly, Category="Action")
+	TObjectPtr<UOrganizationFocuses> OrganizationFocuses;
+
+	UPROPERTY(BlueprintReadOnly, Category="Action")
+	TObjectPtr<UTime> Time;
 };
