@@ -8,6 +8,13 @@ books balanced while the world simulates hour by hour.
 This started as a proof of concept and UX test. The focus is on the architecture underneath the
 gameplay, not on content or visuals.
 
+## Project status
+
+This prototype is finished and no longer developed. It was built to find out whether playing as a
+single character works as the core of a grand strategy game, and it answered that question: the
+character-level perspective didn't hold up as well as hoped. The game continues in a separate
+project with different gameplay, built on what this prototype showed.
+
 ## Features
 
 - **Interactive globe.** Provinces are colored on the GPU from a lookup texture. Map modes (political,
