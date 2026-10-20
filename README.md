@@ -11,7 +11,7 @@ gameplay, not on content or visuals.
 ## Features
 
 - **Interactive globe.** Provinces are colored on the GPU from a lookup texture. Map modes (political,
-  (political, population, …) and click/hover resolution from pixel to province.
+  organizations, ethnicities) and click/hover resolution from pixel to province.
 - **Simulated world.** Characters follow hourly schedules in their local time zone, populations grow,
   and bank accounts and daily economic settlement run on a speed-adjustable game clock.
 - **Organizations.** Found, join and recruit through context-sensitive actions. Permissions come from
