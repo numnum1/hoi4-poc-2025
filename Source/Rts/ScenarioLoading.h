@@ -31,7 +31,7 @@ namespace ScenarioLoader
 	 * an ethnicity's race that no character happens to have would otherwise be missing from the
 	 * library, and FEthnicityInfo::RaceId would come out invalid for it.
 	 */
-	__inline TTuple<TArray<FRaceCategory>, TArray<FLifeType>, TArray<FSpecies>, TArray<FRace>, TArray<URaceAsset*>>
+	inline TTuple<TArray<FRaceCategory>, TArray<FLifeType>, TArray<FSpecies>, TArray<FRace>, TArray<URaceAsset*>>
 	ExtractRaces(const TArray<UCharacterAsset*>& InCharacters, const TArray<UProvinceAsset*>& InProvinces)
 	{
 		TArray<URaceAsset*>        RaceAssets;
@@ -124,7 +124,7 @@ namespace ScenarioLoader
 	}
 
 
-	__inline TTuple<TArray<FNationInfo>, TArray<FProvinceSpawnData>> ExtractNationsAndProvinces(const TArray<UProvinceAsset*>& InProvinces)
+	inline TTuple<TArray<FNationInfo>, TArray<FProvinceSpawnData>> ExtractNationsAndProvinces(const TArray<UProvinceAsset*>& InProvinces)
 	{
 		TTuple<TArray<FNationInfo>, TArray<FProvinceSpawnData>> Res;
 
@@ -186,7 +186,7 @@ namespace ScenarioLoader
 	 * would land in the wrong province. InRaceIndex is the asset array ExtractRaces returned, so an
 	 * ethnicity's race resolves to the same FRaceId URaces stores it under.
 	 */
-	__inline TTuple<TArray<FEthnicityInfo>, TArray<FPopSpawnData>> ExtractPopulations(const TArray<UProvinceAsset*>& InProvinces,
+	inline TTuple<TArray<FEthnicityInfo>, TArray<FPopSpawnData>> ExtractPopulations(const TArray<UProvinceAsset*>& InProvinces,
 	                                                                                  const TArray<URaceAsset*>& InRaceIndex)
 	{
 		TTuple<TArray<FEthnicityInfo>, TArray<FPopSpawnData>> Res;
@@ -265,7 +265,7 @@ namespace ScenarioLoader
 	 * asset array they came from, so ExtractCharacters can resolve an asset back to its
 	 * FScheduleId by position.
 	 */
-	__inline TTuple<TArray<FScheduleInfo>, TArray<UScheduleAsset*>>
+	inline TTuple<TArray<FScheduleInfo>, TArray<UScheduleAsset*>>
 	ExtractSchedules(const TArray<UCharacterAsset*>& InCharacters)
 	{
 		TArray<UScheduleAsset*> ScheduleAssets;
@@ -306,7 +306,7 @@ namespace ScenarioLoader
 	 * for index — the same shape ExtractSchedules returns ScheduleAssets in — so RtsGameModeBase can
 	 * read a character's BankAccount asset field back after Create() without redoing the null-filter.
 	 */
-	__inline TTuple<TArray<FCharacterSpawnData>, TArray<UCharacterAsset*>>
+	inline TTuple<TArray<FCharacterSpawnData>, TArray<UCharacterAsset*>>
 	ExtractCharacters(const TArray<UCharacterAsset*>& InCharacters, const TArray<UProvinceAsset*>& InProvinces,
 	                  const TArray<FProvinceSpawnData>& InProvinceInfos, const TArray<URaceAsset*>& InRaceIndex,
 	                  const TArray<FRace>& InRaces, const TArray<UScheduleAsset*>& InScheduleIndex)
@@ -367,7 +367,7 @@ namespace ScenarioLoader
 	 *
 	 * Also returns the filtered source asset array alongside, same reason as ExtractCharacters.
 	 */
-	__inline TTuple<TArray<FOrganizationInfo>, TArray<UOrganizationAsset*>> ExtractOrganizations(const TArray<UOrganizationAsset*>& InOrganizations)
+	inline TTuple<TArray<FOrganizationInfo>, TArray<UOrganizationAsset*>> ExtractOrganizations(const TArray<UOrganizationAsset*>& InOrganizations)
 	{
 		TArray<FOrganizationInfo> Out;
 		TArray<UOrganizationAsset*> OrganizationAssets;
@@ -393,7 +393,7 @@ namespace ScenarioLoader
 	 * a character's/organization's FBankAccountAsset::Bank can resolve to the same FBankId
 	 * RtsGameModeBase's AddBank loop assigned it, by position — same shape as ExtractSchedules.
 	 */
-	__inline TTuple<TArray<FBankInfo>, TArray<UBankAsset*>> ExtractBanks(const TArray<UBankAsset*>& InBanks)
+	inline TTuple<TArray<FBankInfo>, TArray<UBankAsset*>> ExtractBanks(const TArray<UBankAsset*>& InBanks)
 	{
 		TArray<FBankInfo> Out;
 		TArray<UBankAsset*> BankAssets;
@@ -418,7 +418,7 @@ namespace ScenarioLoader
 	 * Roles offered across every organization. RtsGameModeBase feeds each entry to URoles::Setup
 	 * before organizations are founded, so a founder position can already resolve a leadership role.
 	 */
-	__inline TArray<FRoleInfo> ExtractRoles(const TArray<URoleAsset*>& InRoles)
+	inline TArray<FRoleInfo> ExtractRoles(const TArray<URoleAsset*>& InRoles)
 	{
 		TArray<FRoleInfo> Out;
 		Out.Reserve(InRoles.Num());
