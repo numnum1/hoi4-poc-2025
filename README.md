@@ -5,6 +5,11 @@ written in C++ on Unreal Engine 5.8. You play a single character on a 3D globe: 
 see who is present, found or join an organization, recruit other characters, build, and keep the
 books balanced while the world simulates hour by hour.
 
+<p align="center">
+  <img src="docs/political-map.png" alt="Political map mode over Central Europe with nation names" width="58%">
+  <img src="docs/globe.png" alt="The full globe with provinces colored by owner" width="40%">
+</p>
+
 This started as a proof of concept and UX test. The focus is on the architecture underneath the
 gameplay, not on content or visuals.
 
